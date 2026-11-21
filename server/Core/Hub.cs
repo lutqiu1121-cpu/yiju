@@ -62,8 +62,11 @@ namespace Qipai
                 "account", string.IsNullOrEmpty(p.AccountId) ? null : Accounts.State(p.AccountId),
                 "titleCatalog", TitleBook.Catalog(),
                 "rankCatalog", TitleBook.RankCatalog(),
-                "season", TitleBook.SeasonKey(DateTime.UtcNow),
-                "seasonName", TitleBook.SeasonName(TitleBook.SeasonKey(DateTime.UtcNow)));
+                "season", SeasonAuthority.Key(),
+                "seasonName", SeasonCalendar.Name(SeasonAuthority.Key()),
+                "seasonSpan", SeasonCalendar.Span(SeasonAuthority.Key()),
+                "seasonVerified", SeasonAuthority.Verified,
+                "seasonSource", SeasonAuthority.Source);
             return d;
         }
 
@@ -183,6 +186,22 @@ namespace Qipai
                     "ok", true, "name", p.Name, "save",
                     string.IsNullOrEmpty(p.AccountId) ? null : Accounts.State(p.AccountId))));
                 if (!okWear) outFrames.Add(Err(p, "此衔尚未得，或不在席上"));
+                return;
+            }
+            if (t == "season")
+            {
+                string mode = J.Str(m, "mode", "local");
+                long ts = J.Int(m, "ts", 0);
+                object[] proof = m.ContainsKey("proof") ? m["proof"] as object[] : null;
+                string note;
+                bool ok = SeasonAuthority.Accept(mode, ts, proof, out note);
+                string key = SeasonAuthority.Key();
+                Dictionary<string, object> sf = J.Frame("t", "season", "key", key,
+                    "name", SeasonCalendar.Name(key), "span", SeasonCalendar.Span(key),
+                    "verified", SeasonAuthority.Verified, "source", SeasonAuthority.Source,
+                    "ok", ok, "note", note);
+                foreach (KeyValuePair<int, Player> kv in players)
+                    outFrames.Add(new KeyValuePair<Player, object>(kv.Value, sf));
                 return;
             }
             if (t == "ping")
@@ -440,9 +459,9 @@ namespace Qipai
             if (a == "setBotLevel")
             {
                 if (p.Seat != 0) { outFrames.Add(Err(p, "只有房主可以调隐士棋力")); return; }
-                r.BotLevel = Math.Max(0, Math.Min(6, J.Int(m, "v", 0)));
-                string[] lvName = { "随性", "试探", "进取", "老成", "谋势", "精算", "通玄" };
-                r.SaySys("隐士棋力调整为 " + lvName[Math.Max(0, Math.Min(6, r.BotLevel))]);
+                r.BotLevel = Math.Max(0, Math.Min(9, J.Int(m, "v", 0)));
+                string[] lvName = { "随性", "试探", "进取", "老成", "谋势", "精算", "通玄", "入微", "忘机", "弈圣" };
+                r.SaySys("隐士棋力调整为 " + lvName[Math.Max(0, Math.Min(9, r.BotLevel))]);
                 r.Collect(outFrames, ForceAll(r));
                 return;
             }
@@ -514,7 +533,7 @@ namespace Qipai
             if (_cats != null) return _cats;
             _cats = new Dictionary<string, object>();
             string[] chess = { "xiangqi","jieqi","xiangqidark","chess","chess960","go","gomoku","renju","connect6","connect4","othello","checkers","junqi","doushou","tiaogi","mills","shogi","tictactoe","dots","hex","nim","endgame","junqi4","diefeng" };
-            string[] card = { "doudizhu","doudizhu2","laizi","guandan","shengji","paodekuai","gongzhu","hongshi","texas","zhajinhua","niuniu","sangong","shisanszhang","uno","bridge","mahjong","gouji","baohuang","chudadi","shuangkou","showhand","blackjack" };
+            string[] card = { "doudizhu","doudizhu2","laizi","guandan","shengji","paodekuai","gongzhu","hongshi","texas","zhajinhua","niuniu","sangong","shisanszhang","uno","bridge","mahjong","gouji","baohuang","chudadi","shuangkou","showhand","blackjack","yijuan" };
             for (int i = 0; i < chess.Length; i++) _cats[chess[i]] = "chess";
             for (int i = 0; i < card.Length; i++) _cats[card[i]] = "card";
             _cats["feixingqi"] = "party"; _cats["monopoly"] = "party"; _cats["werewolf"] = "party";
@@ -528,7 +547,7 @@ namespace Qipai
         {
             string[] chess = { "xiangqi","jieqi","xiangqidark","chess","chess960","go","gomoku","renju","connect6","connect4","othello","checkers","junqi","doushou","tiaogi","mills","shogi","tictactoe","dots","hex","nim","endgame","junqi4","diefeng" };
             if (Array.IndexOf(chess, game) >= 0) return "chess";
-            string[] card = { "doudizhu","doudizhu2","laizi","guandan","shengji","paodekuai","gongzhu","hongshi","texas","zhajinhua","niuniu","sangong","shisanszhang","uno","bridge","mahjong","gouji","baohuang","chudadi","shuangkou","showhand","blackjack" };
+            string[] card = { "doudizhu","doudizhu2","laizi","guandan","shengji","paodekuai","gongzhu","hongshi","texas","zhajinhua","niuniu","sangong","shisanszhang","uno","bridge","mahjong","gouji","baohuang","chudadi","shuangkou","showhand","blackjack","yijuan" };
             if (Array.IndexOf(card, game) >= 0) return "card";
             return "party";
         }
@@ -718,7 +737,8 @@ namespace Qipai
 
         public void RecordEnd(Room r)
         {
-            if (r.S == null || !r.S.Ended) return;
+            if (r.S == null || !r.S.Ended || r.RankRecorded) return;
+            r.RankRecorded = true;
             string today = DateTime.UtcNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
             for (int i = 0; i < r.Seats.Length; i++)
             {
@@ -764,10 +784,11 @@ namespace Qipai
                         feats.Add("long_think");
                     Accounts.Record(pl.AccountId, r.Game, r.Variant, win,
                         r.Game == "juben" ? r.Variant : "", feats.ToArray());
-                    if (r.Opt != null && r.Opt.RankMode == "hall")
+                    if (r.Opt != null && (r.Opt.RankMode == "hall" || r.Opt.RankMode == "local"))
                     {
                         bool draw = winStr.Length == 0;
-                        Accounts.RecordRank(pl.AccountId, r.Game, win, draw, r.BotLevel, r.Opt.RankRate);
+                        int rate = r.Opt.RankMode == "local" ? 100 : r.Opt.RankRate;
+                        Accounts.RecordRank(pl.AccountId, r.Game, win, draw, r.BotLevel, rate);
                     }
                 }
             }

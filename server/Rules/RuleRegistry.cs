@@ -81,6 +81,7 @@ namespace Qipai
             Add(new DirectorGame());
             Add(new PeakGame());
             Add(new TournamentGame());
+            Add(new YiJuanGame());
         }
 
         private static void Add(IGameRule r)

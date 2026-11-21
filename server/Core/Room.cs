@@ -39,6 +39,7 @@ namespace Qipai
         public int BotDelayMs = 900;
         public long BotNextAt = 0;
         public int BotLevel = 0;
+        public bool RankRecorded = false;
         public IGameRule Rule;
         public GameState S;
         public int Seq = 0;
@@ -155,6 +156,7 @@ namespace Qipai
         }
         public void Start()
         {
+            RankRecorded = false;
             if (Started && S != null && S.Phase != "end") return;
             Rule = RuleRegistry.Get(Game) ?? RuleRegistry.Fallback;
             RuleBase rb = Rule as RuleBase;
@@ -389,16 +391,23 @@ namespace Qipai
                 if (!Seats[i].Bot) continue;
                 List<string> legal = Rule.Legal(S, i);
                 if (legal.Count == 0) continue;
-                string code = PickBot(legal);
+                string code = PickBot(legal, i);
                 if (code.Length == 0) continue;
                 string err = DoMove(null, code, i, Seats[i].Name);
                 if (err.Length == 0) { BotNextAt = now + BotDelayMs; return true; }
             }
             return false;
         }
-        private string PickBot(List<string> legal)
+        private string PickBot(List<string> legal, int seat)
         {
-
+            RuleBase rb = Rule as RuleBase;
+            if (rb != null && S != null)
+            {
+                string custom = rb.BotPick(S, seat, BotLevel, legal);
+                if (custom.Length > 0) return custom;
+                string think = rb.BotThink(S, seat, BotLevel, legal);
+                if (think.Length > 0) return think;
+            }
             if (legal.Contains("say:*")) return "say:" + BotSay();
             List<string> plain = new List<string>();
             foreach (string c in legal)
@@ -410,7 +419,7 @@ namespace Qipai
             foreach (string c in plain) if (!skip.Contains(c)) main.Add(c);
             List<string> pool = main.Count > 0 ? main : (skip.Count > 0 ? skip : plain);
 
-            int lv = Math.Max(0, Math.Min(6, BotLevel));
+            int lv = Math.Max(0, Math.Min(9, BotLevel));
             if (lv >= 1 && main.Count > 0) pool = main;
             if (pool.Count == 0) return "";
             long x = seed + S.MoveNo * 2654435761L + S.Seats * 97L;

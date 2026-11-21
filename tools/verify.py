@@ -38,9 +38,9 @@ vectors = data.get("rules/vectors.json", {})
 games = manifest.get("games", [])
 ids = [g["id"] for g in games]
 check(len(ids) == len(set(ids)), "玩法 id 无重复")
-check(len(ids) == 59, "玩法数量 = 59（实际 %d）" % len(ids))
+check(len(ids) == 60, "玩法数量 = 60（实际 %d）" % len(ids))
 check(len(themes.get("themes", [])) == 10, "主题数量 = 10")
-check(len(vectors.get("rules", [])) == 59, "回归向量覆盖 59 个玩法")
+check(len(vectors.get("rules", [])) == 60, "回归向量覆盖 60 个玩法")
 
 # 2) 每个 manifest id 都在规则源码里注册；元数据合法
 rules_src = "\n".join(
@@ -284,6 +284,8 @@ NEW_IDS = ["dots","hex","nim","endgame","junqi4","gouji","baohuang","chudadi","s
 check(all(x in ids for x in NEW_IDS), "18 个新玩法都在 manifest")
 check(all(('"'+x+'"') in registry or "new ExtraGame(\"" + x + "\")" in registry or x == "juben" or x == "tournament"
           for x in NEW_IDS), "18 个新玩法都已注册")
+check("yijuan" in ids and "new YiJuanGame()" in registry,
+      "第 60 局弈卷已入清单并注册")
 check("class DirectorGame" in extra_src and "class TournamentGame" in extra_src,
       "剧本导演与多轮积分赛规则存在")
 check("ScriptGateway.GetForRoom" in extra_src and "PutRoom" in local and "ScriptGateway.List" in local, "剧本现场导入按房间挂且网关已注入")
@@ -337,7 +339,7 @@ check("scripts" in (ROOT / "build.sh").read_text(encoding="utf-8") and
 check("yiju.apk \\" in pub_src or "yiju.apk" in pub_src, "Release 只上传 APK")
 check("只上传 1 个文件" in pub_src and "1 个文件 `yiju.apk`" in (ROOT / "RELEASE_LIST.md").read_text(encoding="utf-8"),
       "发布提示词与清单明确只发 APK")
-check("59 个玩法" in (ROOT / "README.md").read_text(encoding="utf-8"), "README 玩法数已更新")
+check("60 个玩法" in (ROOT / "README.md").read_text(encoding="utf-8"), "README 玩法数已更新")
 check(not re.search(r"qipai-archive|棋牌档案|WORD //", html_all + app + (ROOT / "README.md").read_text(encoding="utf-8")),
       "无旧品牌残留")
 
@@ -432,9 +434,39 @@ check(gz < 90 * 1024, "客户端 gzip < 90 KiB（%.1f KiB）" % (gz / 1024))
 
 print("=" * 52)
 for m in ok: print("  PASS  " + m)
+acc = (ROOT / "server/Core/Accounts.cs").read_text(encoding="utf-8")
+hub = (ROOT / "server/Core/Hub.cs").read_text(encoding="utf-8")
+igr = (ROOT / "server/Rules/IGameRule.cs").read_text(encoding="utf-8")
+room = (ROOT / "server/Core/Room.cs").read_text(encoding="utf-8")
+opts = (ROOT / "server/Core/RoomOptions.cs").read_text(encoding="utf-8")
+html = (ROOT / "client/index.html").read_text(encoding="utf-8")
+app = (ROOT / "client/app.js").read_text(encoding="utf-8")
+yj = (ROOT / "server/Rules/YiJuan.cs").read_text(encoding="utf-8")
+check("class SeasonCalendar" in acc and "2026, 11, 22" in acc and "2027, 1, 1" in acc,
+      "赛季历起点与服务端同源")
+check("Date.UTC(2026, 10, 22)" in app and "Date.UTC(2027, 0, 1)" in app and "seasonSelfCheck" in app,
+      "手机端同源历法与联网自检")
+check("class SeasonAuthority" in acc and "Accept(" in acc and '"season"' in hub,
+      "天时凭据由棋馆校验，不采信报来的赛季号")
+check('foreach (string rf in rankFields) d.Remove(rf);' in acc and '"rankBase"' in acc,
+      "导入存档剔除段位字段、段位承袭落加密档")
+check('"seasonVerified"' in hub and 'RankMode == "local"' in hub,
+      "馆赛与自修统一由棋馆结算")
+check("TIME_SOURCES" in app and "qipai.timeUrl" in app and "seasonRecheck" in html,
+      "天时源可换、可关、可重校")
+check("BotThink" in igr and "EvalBotMove" in igr and "rb.BotThink" in room,
+      "六十局共用分级隐士策略")
+check('9|弈圣 · 无咎' in opts and 'value="9"' in html and '"弈圣"' in hub,
+      "隐士十阶贯通房规、界面与服务端")
+check("ROLE_SETS" in yj and "roleNames" in yj and "roleSet" in opts,
+      "弈卷两册共四十八家、名册可换")
+check("yjCard(la, info)" in (ROOT / "client/render.js").read_text(encoding="utf-8") and "yjLabel(c, rn)" in app,
+      "卷面与手牌都显示人物姓名")
+
+print("静态自检： %d 通过 / %d 失败" % (len(ok), len(err)))
 for m in err: print("  FAIL  " + m)
 print("=" * 52)
-print("静态自检： %d 通过 / %d 失败" % (len(ok), len(err)))
+
 print("体积：客户端 %.1f KiB 原始 / %.1f KiB gzip / 全仓 %.1f KiB" %
       (raw / 1024, gz / 1024, all_raw / 1024))
 sys.exit(1 if err else 0)

@@ -101,6 +101,7 @@ export function drawBoard(canvas, view, onPick) {
   if (be) be.style.display = empty ? 'flex' : 'none';
   if (empty) { canvas.onclick = null; return; }
   if (view.renderer === 'path') { drawPath(ctx, W, H, p, view); canvas.onclick = null; return; }
+  if (view.renderer === 'scroll') { drawScroll(ctx, W, H, p, view); canvas.onclick = null; return; }
   if (view.renderer !== 'grid') { drawTable(ctx, W, H, p, view); canvas.onclick = null; return; }
   if (g === 'dots' || g === 'hex' || g === 'nim' || g === 'endgame') {
     drawGridExtra(ctx, W, H, p, view, onPick); return;
@@ -733,4 +734,119 @@ export function sparkline(svg, values, opts) {
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.innerHTML = `<path class="grid" d="${grid}"/><path d="${area}" fill="rgba(255,255,255,.06)"/><path class="line" d="${line}"/>` +
     pts.map(p => `<circle class="pt" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6"/>`).join('');
+}
+
+
+function yjCard(c, info) {
+  if (!c || c.length < 6) return '空简';
+  const y = +c[1], f = +c[3], m = +c[5];
+  const fn = ['东', '西', '南', '北'][f] || '？';
+  const names = info && info.roleNames;
+  const nm = names && names[(y - 1) * 4 + f] ? '「' + names[(y - 1) * 4 + f] + '」 · ' : '';
+  return nm + y + ' 序 · ' + fn + ' · ' + m + ' 墨';
+}
+function drawScroll(ctx, W, H, p, view) {
+  const info = view.info || {};
+  const n = Math.max(5, +(info.lineN || 9));
+  const mid = Math.floor((n - 1) / 2);
+  const line = Math.max(0, Math.min(n - 1, +(info.line || mid)));
+  const horizontal = W >= H * 1.15;
+  ctx.save();
+  ctx.textBaseline = 'middle';
+
+  const pad = Math.max(26, Math.min(W, H) * 0.09);
+  const title = '弈卷 · 双卷夹一线';
+  ctx.fillStyle = mix(p.ink2, p.tile, 0.42);
+  ctx.textAlign = 'center';
+  ctx.font = `${Math.round(Math.min(W, H) * 0.045)}px "Songti SC",serif`;
+  ctx.fillText(title, W / 2, pad * 0.52);
+
+  const a = horizontal ? { x: pad, y: H / 2 } : { x: W / 2, y: pad * 1.6 };
+  const b = horizontal ? { x: W - pad, y: H / 2 } : { x: W / 2, y: H - pad * 1.6 };
+  const x0 = horizontal ? a.x + 30 : a.x;
+  const x1 = horizontal ? b.x - 30 : b.x;
+  const y0 = horizontal ? a.y : a.y + 30;
+  const y1 = horizontal ? b.y : b.y - 30;
+  const len = horizontal ? (x1 - x0) : (y1 - y0);
+  const step = len / Math.max(1, n - 1);
+
+  function roll(cx, cy, label, side) {
+    const rw = horizontal ? 30 : Math.min(W * 0.32, 150);
+    const rh = horizontal ? Math.min(H * 0.30, 130) : 26;
+    ctx.save();
+    ctx.shadowColor = p.shadow; ctx.shadowBlur = 16;
+    ctx.fillStyle = mix(p.ink, p.tile, 0.83);
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(cx - rw / 2, cy - rh / 2, rw, rh, 6);
+    else ctx.rect(cx - rw / 2, cy - rh / 2, rw, rh);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = p.line; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.strokeStyle = mix(p.accent, p.tile, 0.35); ctx.lineWidth = 2;
+    const off = side === 0 ? -rw / 2 : rw / 2;
+    if (horizontal) { ctx.beginPath(); ctx.moveTo(cx + off, cy - rh / 2); ctx.lineTo(cx + off, cy + rh / 2); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.moveTo(cx - rw / 2, cy + off); ctx.lineTo(cx + rw / 2, cy + off); ctx.stroke(); }
+    ctx.fillStyle = p.accent;
+    ctx.font = `${Math.round(Math.min(W, H) * 0.032)}px "Songti SC",serif`;
+    ctx.fillText(label, cx, cy);
+    ctx.restore();
+  }
+  roll(a.x, a.y, '甲卷端', 0);
+  roll(b.x, b.y, '乙卷端', 1);
+
+  ctx.strokeStyle = mix(p.line, p.tile, 0.55); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+
+  const box = Math.max(9, Math.min(step * 0.52, Math.min(W, H) * 0.055));
+  for (let i = 0; i < n; i++) {
+    const cx = horizontal ? x0 + i * step : x0;
+    const cy = horizontal ? y0 : y0 + i * step;
+    const isMid = i === mid, isHere = i === line;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(cx - box / 2, cy - box / 2, box, box, 3);
+    else ctx.rect(cx - box / 2, cy - box / 2, box, box);
+    ctx.fillStyle = isHere ? mix(p.accent, p.tile, 0.15) : mix(p.ink, p.tile, 0.92);
+    ctx.fill();
+    ctx.lineWidth = isHere ? 2 : 1;
+    ctx.strokeStyle = isHere ? p.accent : (isMid ? mix(p.ink2, p.tile, 0.5) : mix(p.line, p.tile, 0.5));
+    ctx.stroke();
+    if (isHere) {
+      ctx.beginPath(); ctx.arc(cx, cy, box * 0.22, 0, 7);
+      ctx.fillStyle = p.accent; ctx.fill();
+    } else if (isMid) {
+      ctx.beginPath(); ctx.arc(cx, cy, box * 0.10, 0, 7);
+      ctx.fillStyle = mix(p.ink2, p.tile, 0.55); ctx.fill();
+    }
+  }
+
+  const note = info.lastNote || '';
+  const la = info.lastA || '', lb = info.lastB || '';
+  const footY = horizontal ? H - pad * 0.72 : H - pad * 0.34;
+  if (la && lb) {
+    ctx.font = `${Math.round(Math.min(W, H) * 0.030)}px "Songti SC",serif`;
+    ctx.fillStyle = mix(p.ink2, p.tile, 0.35);
+    ctx.fillText('启简 · 甲 ' + yjCard(la, info) + '　/　乙 ' + yjCard(lb, info), W / 2, footY - Math.min(W, H) * 0.032);
+    ctx.fillStyle = p.accent;
+    ctx.fillText(note, W / 2, footY);
+  } else {
+    ctx.font = `${Math.round(Math.min(W, H) * 0.030)}px "Songti SC",serif`;
+    ctx.fillStyle = mix(p.ink2, p.tile, 0.45);
+    ctx.fillText('两席各择一简覆下，同时启简', W / 2, footY);
+  }
+
+  const da = info.discardA || [], db = info.discardB || [];
+  const ink = info.ink || [0, 0], pick = info.pick || [0, 0];
+  ctx.font = `${Math.round(Math.min(W, H) * 0.024)}px "Songti SC",serif`;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = mix(p.ink2, p.tile, 0.45);
+  const sx = pad * 0.55, sy = pad * 1.25;
+  ctx.fillText('甲弃简 ' + da.length + ' · 余墨 ' + ink[0] + ' · 可拾 ' + pick[0], sx, sy);
+  ctx.fillText('乙弃简 ' + db.length + ' · 余墨 ' + ink[1] + ' · 可拾 ' + pick[1], sx, sy + Math.min(W, H) * 0.030);
+  if (horizontal) {
+    ctx.textAlign = 'right';
+    ctx.fillText('界墨 ' + line + ' / ' + (n - 1) + '　·　第 ' + (+(info.round || 0) + 1) + ' 巡', W - pad * 0.55, sy);
+  } else {
+    ctx.fillText('界墨 ' + line + ' / ' + (n - 1) + '　·　第 ' + (+(info.round || 0) + 1) + ' 巡', sx, sy + Math.min(W, H) * 0.060);
+  }
+  ctx.restore();
 }

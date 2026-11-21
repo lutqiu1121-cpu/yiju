@@ -65,7 +65,8 @@ namespace Qipai
             a.Add(T("spectators", "开放旁观", true, "局仪"));
             a.Add(S("botLevel", "隐士棋力", "0", "局仪",
                 new string[] { "0|随性 · 信手", "1|试探 · 略识", "2|进取 · 争先",
-                    "3|老成 · 择要", "4|谋势 · 深算", "5|精算 · 无漏", "6|通玄 · 坐照" }));
+                    "3|老成 · 择要", "4|谋势 · 深算", "5|精算 · 无漏", "6|通玄 · 坐照",
+                    "7|入微 · 察势", "8|忘机 · 穷变", "9|弈圣 · 无咎" }));
             a.Add(S("rankMode", "排位", "none", "局仪",
                 new string[] { "none|闲局 · 不计", "hall|馆赛 · 本馆排位", "local|自修 · 本机排位" }));
             a.Add(N("rankRate", "馆赛折算（%）", 50L, 0, 100, 5, "局仪", "馆赛所得按此比例计入段位"));
@@ -140,6 +141,24 @@ namespace Qipai
                 case "guandan": case "shengji": case "paodekuai": case "gouji": case "baohuang":
                 case "shuangkou": case "hongshi": case "gongzhu":
                     a.Add(N("decks", "牌副数", 2L, 1, 4, 1, "规制")); break;
+                case "yijuan":
+                    a.Add(S("lineN", "弈线格数", "9", "规制",
+                        new string[] { "7|七格 · 短卷", "9|九格 · 常式", "11|十一格", "13|十三格 · 长卷" }));
+                    a.Add(N("handN", "每席史简张数", 12L, 8, 16, 2, "规制"));
+                    a.Add(S("diffThresh", "年序差加成门槛", "3", "规制",
+                        new string[] { "0|不加成", "2|差二即加", "3|差三即加", "4|差四即加" }));
+                    a.Add(N("clashBonus", "相冲再推格数", 1L, 1, 2, 1, "规制"));
+                    a.Add(T("flatClash", "平序相冲按游方定势", true, "规制"));
+                    a.Add(N("centerPull", "同简归中格数", 1L, 1, 2, 1, "规制"));
+                    a.Add(N("comeback", "卷端背水年序加成", 2L, 0, 2, 1, "规制", "距败一席本巡年序暂加"));
+                    a.Add(N("pickLimit", "拾简次数", 2L, 0, 4, 1, "局仪"));
+                    a.Add(N("pickCost", "拾简耗墨", 2L, 1, 4, 1, "局仪"));
+                    a.Add(N("inkStart", "余墨起数", 0L, 0, 4, 1, "规制"));
+                    a.Add(T("discardPublic", "弃简区公开", true, "局仪"));
+                    a.Add(S("endRule", "简尽判法", "0", "规制",
+                        new string[] { "0|墨偏优先", "1|余墨优先" }));
+                    a.Add(S("roleSet", "史简名册", "2", "规制",
+                        new string[] { "0|甲册 · 廿四家", "1|乙册 · 廿四家", "2|轮用 · 随本局种子" })); break;
                 case "chudadi":
                     a.Add(N("decks", "牌副数", 1L, 1, 4, 1, "规制"));
                     a.Add(S("scoreMode", "记分口径", "ladder", "规制",
@@ -263,7 +282,7 @@ namespace Qipai
             o.AllowDraw = AsBool(Get(src, m, "allowDraw"), true);
             o.SpectatorChat = AsBool(Get(src, m, "spectatorChat"), false);
             o.AllowSpectators = AsBool(Get(src, m, "spectators"), true);
-            o.BotLevel = (int)ClampLong(Get(src, m, "botLevel"), 0, 0, 6);
+            o.BotLevel = (int)ClampLong(Get(src, m, "botLevel"), 0, 0, 9);
             o.RankMode = AsStr(Get(src, m, "rankMode"), "none", new string[] { "none", "hall", "local" });
             o.RankRate = (int)ClampLong(Get(src, m, "rankRate"), 50, 0, 100);
             o.MaxTurns = (int)ClampLong(Get(src, m, "maxTurns"), 0, 0, 2000);

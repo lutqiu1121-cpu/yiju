@@ -253,7 +253,8 @@ namespace Qipai
                 "plays", 0, "wins", 0, "streak", 0, "lastDay", "",
                 "games", new Dictionary<string, object>(), "scripts", new string[0],
                 "titleKeys", new string[0], "worn", "", "featCount", new Dictionary<string, object>(),
-                "season", TitleBook.SeasonKey(DateTime.UtcNow),
+                "season", SeasonAuthority.Key(),
+                 "rankBase", 0,
                 "rankPts", new Dictionary<string, object>(), "lastSeason", "", "lastRank", "初执",
                 "created", UnixNow(), "updated", UnixNow());
         }
@@ -444,15 +445,26 @@ namespace Qipai
             if (rp != null)
                 foreach (KeyValuePair<string, object> kv in rp)
                 { int v; try { v = Convert.ToInt32(kv.Value); } catch (Exception) { v = 0; } if (v > top) top = v; }
-            return top;
+            return Math.Max(top, J.Int(d, "rankBase", 0));
         }
         public static void RollSeason(Dictionary<string, object> d, string key)
         {
             if (J.Str(d, "season", "") == key) return;
-            d["lastSeason"] = J.Str(d, "season", "");
-            d["lastRank"] = TitleBook.RankName(TopPts(d));
+            string prev = J.Str(d, "season", "");
+            string last = TitleBook.RankName(TopPts(d));
+            d["lastSeason"] = prev;
+            d["lastRank"] = last;
+            if (prev.Length > 0)
+            {
+                string seal = "season_" + prev;
+                string[] keys = d.ContainsKey("titleKeys") ? d["titleKeys"] as string[] : new string[0];
+                List<string> l = keys == null ? new List<string>() : new List<string>(keys);
+                if (!l.Contains(seal)) l.Add(seal);
+                d["titleKeys"] = l.ToArray();
+            }
             d["season"] = key;
             d["rankPts"] = new Dictionary<string, object>();
+            d["rankBase"] = prev.Length > 0 ? TitleBook.InheritPts(last) : 0;
         }
         public static Dictionary<string, object> RecordRank(string accountId, string game, bool win, bool draw,
             int botLevel, int ratePercent, string seasonOverride = null)
@@ -466,9 +478,9 @@ namespace Qipai
                 Dictionary<string, object> d = LoadSave(target);
                 if (d == null) d = NewSave(target.Id, target.Name);
                 string season = string.IsNullOrEmpty(seasonOverride)
-                    ? TitleBook.SeasonKey(DateTime.UtcNow) : seasonOverride;
+                    ? SeasonAuthority.Key() : seasonOverride;
                 RollSeason(d, season);
-                int lv = Math.Max(0, Math.Min(6, botLevel));
+                int lv = Math.Max(0, Math.Min(9, botLevel));
                 int raw = draw ? 6 : win ? 30 + 4 * lv : -12;
                 int rate = Math.Max(0, Math.Min(100, ratePercent));
                 int pts = (int)Math.Round(raw * rate / 100.0, MidpointRounding.AwayFromZero);
@@ -493,8 +505,11 @@ namespace Qipai
                 "rankNames", TitleBook.RankMap(d["rankPts"] as Dictionary<string, object>),
                 "rankIdx", TitleBook.RankIndex(TopPts(d)),
                 "rankNext", TitleBook.RankNext(TopPts(d)),
-                "rankSum", TitleBook.SumPts(d["rankPts"] as Dictionary<string, object>),
+                "rankSum", J.Int(d, "rankBase", 0) + TitleBook.SumPts(d["rankPts"] as Dictionary<string, object>),
+                "rankBase", J.Int(d, "rankBase", 0),
                 "season", J.Str(d, "season", ""), "seasonName", TitleBook.SeasonName(J.Str(d, "season", "")),
+                "seasonSpan", SeasonCalendar.Span(J.Str(d, "season", "")),
+                "seasonVerified", SeasonAuthority.Verified,
                 "lastSeason", J.Str(d, "lastSeason", ""), "lastRank", J.Str(d, "lastRank", "初执"),
                 "titles", TitleBook.Names(d["titleKeys"] as string[]),
                 "titleKeys", d.ContainsKey("titleKeys") ? d["titleKeys"] : new string[0],
@@ -600,6 +615,16 @@ namespace Qipai
                 foreach (KeyValuePair<string, User> kv in users)
                     if (kv.Value.Id == id) { id = "u_" + BitConverter.ToString(Random(8)).Replace("-", "").ToLowerInvariant(); break; }
                 d["id"] = id; d["name"] = name; d["updated"] = UnixNow();
+                string[] rankFields = { "season", "rankPts", "rankBase", "lastSeason", "lastRank" };
+                foreach (string rf in rankFields) d.Remove(rf);
+                d["season"] = SeasonAuthority.Key();
+                d["rankPts"] = new Dictionary<string, object>();
+                d["rankBase"] = 0;
+                d["lastSeason"] = ""; d["lastRank"] = "初执";
+                List<string> tk = new List<string>();
+                string[] oldTitles = d.ContainsKey("titleKeys") ? d["titleKeys"] as string[] : null;
+                if (oldTitles != null) foreach (string t in oldTitles) if (t == null || !t.StartsWith("season_")) tk.Add(t);
+                d["titleKeys"] = tk.ToArray();
 
                 byte[] loginSalt = Random(16);
                 User u = new User
@@ -637,9 +662,6 @@ namespace Qipai
             "国手|国手|五百六十墨分，一方称手",
             "弈圣|弈圣|八百墨分后，坐隐忘机" };
         private static readonly int[] GATES = { 0, 40, 100, 200, 350, 560, 800 };
-        private static readonly string[] MONTHS = {
-            "正月", "杏月", "桃月", "槐月", "榴月", "荷月",
-            "兰月", "桂月", "菊月", "阳月", "葭月", "腊月" };
 
         private static readonly string[,] GAME = {
             {"xiangqi","橘中客","楚汉棋首胜"},{"jieqi","掀帘人","覆局棋首胜"},
@@ -671,7 +693,7 @@ namespace Qipai
             {"liarsdice","验点客","隐点令首胜"},{"avalon","遣使臣","遣使局首胜"},
             {"turtlesoup","问底人","问底令首胜"},{"mastermind","隐数客","隐数局首胜"},
             {"drawguess","丹青手","丹青令首胜"},{"juben","折狱生","折狱录首胜"},
-            {"tournament","累墨客","累墨赛首胜"} };
+            {"tournament","累墨客","累墨赛首胜"},{"yijuan","执卷人","弈卷首胜"} };
 
         private static readonly string[,] FEAT = {
             {"seven_pairs","七对","竹牌戏 · 国标七对成和"},
@@ -680,7 +702,11 @@ namespace Qipai
             {"lone_peak","一峰独秀","叠峰局 · 四邻同根，独峰加二"},
             {"no_stack","不叠","云笺令 · 不叠帖仍取胜"},
             {"undo_denied_win","让先","乞复被拒后仍胜"},
-            {"long_think","长考","读秒将尽时落子取胜"} };
+            {"long_think","长考","读秒将尽时落子取胜"},
+             {"yijuan_same","同简生","弈卷 · 一局两度同简归中"},
+             {"yijuan_center","归中手","弈卷 · 界墨偏时引回中军"},
+             {"yijuan_comeback","背水客","弈卷 · 卷端背水反推取胜"},
+             {"yijuan_pick","拾简客","弈卷 · 拾简复出而执卷"} };
 
         private static T Parse(string row)
         {
@@ -713,16 +739,16 @@ namespace Qipai
             }
             return r.ToArray();
         }
-        public static string SeasonKey(DateTime utcNow)
+        public static string SeasonKey(DateTime utcNow) { return SeasonCalendar.Key(utcNow); }
+        public static string SeasonName(string key) { return SeasonCalendar.Name(key); }
+        public static int InheritPts(string lastRank)
         {
-            return utcNow.AddHours(8).ToString("yyyy-MM", CultureInfo.InvariantCulture);
-        }
-        public static string SeasonName(string key)
-        {
-            if (string.IsNullOrEmpty(key) || key.Length < 7) return "本月";
-            int m;
-            if (!int.TryParse(key.Substring(5, 2), out m) || m < 1 || m > 12) return "本月";
-            return MONTHS[m - 1] + " · " + key.Substring(0, 4) + " 年" + m + " 月";
+            if (lastRank == "弈圣") return GATES[5];
+            if (lastRank == "国手") return GATES[4];
+            if (lastRank == "妙手") return GATES[3];
+            if (lastRank == "知味") return GATES[2];
+            if (lastRank == "入室") return GATES[1];
+            return 0;
         }
         public static int SumPts(Dictionary<string, object> rp)
         {
@@ -797,6 +823,109 @@ namespace Qipai
             for (int i = 0; i < FEAT.GetLength(0); i++)
                 r.Add(J.Frame("kind", "feat", "key", "f:" + FEAT[i, 0], "name", FEAT[i, 1], "note", FEAT[i, 2]));
             return r.ToArray();
+        }
+    }
+
+    public static class SeasonCalendar
+    {
+        private static readonly DateTime S1 = new DateTime(2026, 11, 22, 0, 0, 0);
+        private static readonly DateTime S2 = new DateTime(2027, 1, 1, 0, 0, 0);
+        private static readonly string[] CN = { "零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十" };
+
+        public static string Han(int n)
+        {
+            if (n <= 10) return CN[Math.Max(0, Math.Min(10, n))];
+            if (n < 20) return "十" + CN[n - 10];
+            if (n < 100) return CN[n / 10] + "十" + (n % 10 == 0 ? "" : CN[n % 10]);
+            return n.ToString(CultureInfo.InvariantCulture);
+        }
+        public static int Index(string key)
+        {
+            if (string.IsNullOrEmpty(key) || key[0] != 'S') return 1;
+            int n; return int.TryParse(key.Substring(1), out n) && n >= 1 ? n : 1;
+        }
+        public static string Key(DateTime utcNow)
+        {
+            DateTime cst = utcNow.AddHours(8);
+            if (cst < S1) return "S1";
+            if (cst < S2) return "S1";
+            long days = (long)(cst.Date - S2).TotalDays;
+            if (days < 0) days = 0;
+            return "S" + ((int)(days / 30) + 2).ToString(CultureInfo.InvariantCulture);
+        }
+        public static DateTime StartUtc(string key)
+        {
+            int n = Index(key);
+            DateTime cst = n <= 1 ? S1 : S2.AddDays((n - 2) * 30);
+            return DateTime.SpecifyKind(cst.AddHours(-8), DateTimeKind.Utc);
+        }
+        public static DateTime EndUtc(string key)
+        {
+            int n = Index(key);
+            DateTime cst = n <= 1 ? S2 : S2.AddDays((n - 1) * 30);
+            return DateTime.SpecifyKind(cst.AddHours(-8), DateTimeKind.Utc);
+        }
+        public static string Span(string key)
+        {
+            int n = Index(key);
+            DateTime a = StartUtc(key).AddHours(8), b = EndUtc(key).AddHours(8).AddSeconds(-1);
+            int len = n <= 1 ? 40 : 30;
+            return "自 " + a.Month + "月" + a.Day + "日 · 历" + Han(len) + "日 · 至 " + b.Month + "月" + b.Day + "日";
+        }
+        public static string Name(string key)
+        {
+            int n = Index(key);
+            return "第" + Han(n) + "赛季" + (n == 1 ? " · 开卷" : "");
+        }
+        public static string KeyAtUtcMs(long ms)
+        {
+            return Key(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMilliseconds(ms));
+        }
+    }
+
+    public static class SeasonAuthority
+    {
+        public static bool Verified = false;
+        public static long UtcMs = 0;
+        public static string Source = "";
+        public static DateTime NowUtc
+        {
+            get
+            {
+                if (!Verified || UtcMs <= 0) return DateTime.UtcNow;
+                try { return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMilliseconds(UtcMs); }
+                catch (Exception) { return DateTime.UtcNow; }
+            }
+        }
+        public static string Key() { return SeasonCalendar.Key(NowUtc); }
+        public static bool Accept(string mode, long ts, object[] proof, out string note)
+        {
+            note = "";
+            if (mode == "local")
+            {
+                if (Verified) { note = "仍依前次天时"; return true; }
+                Verified = false; UtcMs = 0; Source = "本席更漏";
+                note = "未连天时 · 依本席更漏";
+                return true;
+            }
+            if (mode != "net" || ts <= 0) { note = "天时凭据不合"; return false; }
+            List<long> vals = new List<long>();
+            if (proof != null)
+                foreach (object o in proof)
+                {
+                    string t = o == null ? "" : Convert.ToString(o);
+                    DateTime dt;
+                    if (DateTime.TryParse(t, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out dt))
+                        vals.Add((long)(dt - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds);
+                }
+            if (vals.Count < 2) { note = "天时需两处相证"; return false; }
+            vals.Sort();
+            long mid = vals[vals.Count / 2];
+            foreach (long v in vals) if (Math.Abs(v - mid) > 120000L) { note = "两处天时不合"; return false; }
+            if (Math.Abs(mid - ts) > 120000L) { note = "天时与本席不合"; return false; }
+            Verified = true; UtcMs = mid; Source = "联网校时";
+            note = "天时已校 · " + SeasonCalendar.Name(SeasonCalendar.KeyAtUtcMs(mid));
+            return true;
         }
     }
 }

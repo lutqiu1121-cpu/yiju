@@ -5,7 +5,8 @@
     "grid",
     "table",
     "path",
-    "party"
+    "party",
+    "scroll"
   ],
   "categories": [
     {
@@ -14703,6 +14704,384 @@
           "group": "规制",
           "def": true,
           "hint": ""
+        }
+      ]
+    },
+    {
+      "id": "yijuan",
+      "name": "弈卷",
+      "cat": "card",
+      "renderer": "scroll",
+      "min": 2,
+      "max": 2,
+      "variants": [
+        "常式",
+        "长卷",
+        "短卷"
+      ],
+      "tag": "对卷 · 覆简启简",
+      "desc": "两卷夹一线，两席同时覆简、同时启简；年序与游方共推界墨，抵对方卷端者执卷。弃简可推余牌，拾简可复出。",
+      "options": [
+        {
+          "key": "clock",
+          "label": "出牌时间（毫秒）",
+          "type": "number",
+          "group": "更漏",
+          "def": 60000,
+          "hint": "更漏尽依缓急处置",
+          "min": 5000,
+          "max": 900000,
+          "step": 1000
+        },
+        {
+          "key": "firstClock",
+          "label": "首手加刻（毫秒）",
+          "type": "number",
+          "group": "更漏",
+          "def": 15000,
+          "hint": "开枰首手留余裕",
+          "min": 0,
+          "max": 300000,
+          "step": 1000
+        },
+        {
+          "key": "bankMs",
+          "label": "每方总刻（毫秒，0=不限）",
+          "type": "number",
+          "group": "更漏",
+          "def": 0,
+          "hint": "棋钟：累计尽则判负",
+          "min": 0,
+          "max": 3600000,
+          "step": 10000
+        },
+        {
+          "key": "incrMs",
+          "label": "每步回补（毫秒）",
+          "type": "number",
+          "group": "更漏",
+          "def": 0,
+          "hint": "落子后回补之刻",
+          "min": 0,
+          "max": 30000,
+          "step": 500
+        },
+        {
+          "key": "botDelay",
+          "label": "隐士落子之隔（毫秒）",
+          "type": "number",
+          "group": "更漏",
+          "def": 900,
+          "hint": "",
+          "min": 200,
+          "max": 5000,
+          "step": 100
+        },
+        {
+          "key": "timeout",
+          "label": "更漏尽时",
+          "type": "select",
+          "group": "缓急",
+          "def": "auto",
+          "hint": "",
+          "values": [
+            "auto|自动托管（推荐）",
+            "skip|跳过本手",
+            "lose|直接判负"
+          ]
+        },
+        {
+          "key": "autoStartSec",
+          "label": "席满自开（秒，0=待主开枰）",
+          "type": "number",
+          "group": "缓急",
+          "def": 0,
+          "hint": "",
+          "min": 0,
+          "max": 60,
+          "step": 1
+        },
+        {
+          "key": "allowUndo",
+          "label": "允许乞复",
+          "type": "toggle",
+          "group": "局仪",
+          "def": true,
+          "hint": ""
+        },
+        {
+          "key": "allowDraw",
+          "label": "允许请和",
+          "type": "toggle",
+          "group": "局仪",
+          "def": true,
+          "hint": ""
+        },
+        {
+          "key": "spectatorChat",
+          "label": "旁观者可留语",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": ""
+        },
+        {
+          "key": "spectators",
+          "label": "开放旁观",
+          "type": "toggle",
+          "group": "局仪",
+          "def": true,
+          "hint": ""
+        },
+        {
+          "key": "botLevel",
+          "label": "隐士棋力",
+          "type": "select",
+          "group": "局仪",
+          "def": "0",
+          "hint": "",
+          "values": [
+            "0|随性 · 信手",
+            "1|试探 · 略识",
+            "2|进取 · 争先",
+            "3|老成 · 择要",
+            "4|谋势 · 深算",
+            "5|精算 · 无漏",
+            "6|通玄 · 坐照"
+          ]
+        },
+        {
+          "key": "rankMode",
+          "label": "排位",
+          "type": "select",
+          "group": "局仪",
+          "def": "none",
+          "hint": "",
+          "values": [
+            "none|闲局 · 不计",
+            "hall|馆赛 · 本馆排位",
+            "local|自修 · 本机排位"
+          ]
+        },
+        {
+          "key": "rankRate",
+          "label": "馆赛折算（%）",
+          "type": "number",
+          "group": "局仪",
+          "def": 50,
+          "hint": "馆赛所得按此比例计入段位",
+          "min": 0,
+          "max": 100,
+          "step": 5
+        },
+        {
+          "key": "maxTurns",
+          "label": "最大手数（0=不限，到点言和）",
+          "type": "number",
+          "group": "局仪",
+          "def": 0,
+          "hint": "免长局久缠",
+          "min": 0,
+          "max": 2000,
+          "step": 10
+        },
+        {
+          "key": "seedOffset",
+          "label": "本局种子偏移",
+          "type": "number",
+          "group": "局仪",
+          "def": 0,
+          "hint": "同种子可复现此局",
+          "min": 0,
+          "max": 999999,
+          "step": 1
+        },
+        {
+          "key": "ruleNote",
+          "label": "本席规制备注（开枰播报）",
+          "type": "text",
+          "group": "局仪",
+          "def": "",
+          "hint": "例如：本席依云笺古法、不叠帖"
+        },
+        {
+          "key": "ph_play",
+          "label": "落牌之刻（毫秒）",
+          "type": "number",
+          "group": "节候",
+          "def": 45000,
+          "hint": "",
+          "min": 3000,
+          "max": 300000,
+          "step": 1000
+        },
+        {
+          "key": "ph_bid",
+          "label": "叫分 / 落帖之刻（毫秒）",
+          "type": "number",
+          "group": "节候",
+          "def": 30000,
+          "hint": "",
+          "min": 3000,
+          "max": 180000,
+          "step": 1000
+        },
+        {
+          "key": "ph_claim",
+          "label": "吃碰杠 / 应手之刻（毫秒）",
+          "type": "number",
+          "group": "节候",
+          "def": 12000,
+          "hint": "",
+          "min": 2000,
+          "max": 60000,
+          "step": 1000
+        },
+        {
+          "key": "lineN",
+          "label": "弈线格数",
+          "type": "select",
+          "group": "规制",
+          "def": "9",
+          "hint": "",
+          "values": [
+            "7|七格 · 短卷",
+            "9|九格 · 常式",
+            "11|十一格",
+            "13|十三格 · 长卷"
+          ]
+        },
+        {
+          "key": "handN",
+          "label": "每席史简张数",
+          "type": "number",
+          "group": "规制",
+          "def": 12,
+          "hint": "",
+          "min": 8,
+          "max": 16,
+          "step": 2
+        },
+        {
+          "key": "diffThresh",
+          "label": "年序差加成门槛",
+          "type": "select",
+          "group": "规制",
+          "def": "3",
+          "hint": "",
+          "values": [
+            "0|不加成",
+            "2|差二即加",
+            "3|差三即加",
+            "4|差四即加"
+          ]
+        },
+        {
+          "key": "clashBonus",
+          "label": "相冲再推格数",
+          "type": "number",
+          "group": "规制",
+          "def": 1,
+          "hint": "",
+          "min": 1,
+          "max": 2,
+          "step": 1
+        },
+        {
+          "key": "flatClash",
+          "label": "平序相冲按游方定势",
+          "type": "toggle",
+          "group": "规制",
+          "def": true,
+          "hint": ""
+        },
+        {
+          "key": "centerPull",
+          "label": "同简归中格数",
+          "type": "number",
+          "group": "规制",
+          "def": 1,
+          "hint": "",
+          "min": 1,
+          "max": 2,
+          "step": 1
+        },
+        {
+          "key": "comeback",
+          "label": "卷端背水年序加成",
+          "type": "number",
+          "group": "规制",
+          "def": 2,
+          "hint": "距败一席本巡年序暂加",
+          "min": 0,
+          "max": 2,
+          "step": 1
+        },
+        {
+          "key": "pickLimit",
+          "label": "拾简次数",
+          "type": "number",
+          "group": "局仪",
+          "def": 2,
+          "hint": "",
+          "min": 0,
+          "max": 4,
+          "step": 1
+        },
+        {
+          "key": "pickCost",
+          "label": "拾简耗墨",
+          "type": "number",
+          "group": "局仪",
+          "def": 2,
+          "hint": "",
+          "min": 1,
+          "max": 4,
+          "step": 1
+        },
+        {
+          "key": "inkStart",
+          "label": "余墨起数",
+          "type": "number",
+          "group": "规制",
+          "def": 0,
+          "hint": "",
+          "min": 0,
+          "max": 4,
+          "step": 1
+        },
+        {
+          "key": "discardPublic",
+          "label": "弃简区公开",
+          "type": "toggle",
+          "group": "局仪",
+          "def": true,
+          "hint": ""
+        },
+        {
+          "key": "endRule",
+          "label": "简尽判法",
+          "type": "select",
+          "group": "规制",
+          "def": "0",
+          "hint": "",
+          "values": [
+            "0|墨偏优先",
+            "1|余墨优先"
+          ]
+        },
+        {
+          "key": "roleSet",
+          "label": "史简名册",
+          "type": "select",
+          "group": "规制",
+          "def": "2",
+          "hint": "",
+          "values": [
+            "0|甲册 · 廿四家",
+            "1|乙册 · 廿四家",
+            "2|轮用 · 随本局种子"
+          ]
         }
       ]
     }

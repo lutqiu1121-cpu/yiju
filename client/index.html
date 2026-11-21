@@ -138,7 +138,7 @@
         <button class="btn ghost small" id="mrFillBots">隐士满席</button>
         <button class="btn ghost small" id="mrRemoveBot">－ 送一隐士</button>
       </div>
-      <div class="hint">人未齐亦可开枰：邀隐士后点「壹 · 对局 → 开枰」。真人入席自替隐士。</div>
+      <div class="hint">人未齐亦可开枰：邀隐士后点「壹 · 对局 → 开枰」。真人入席自替隐士；观卷者可投签闲谈，不落子。</div>
     </div>
     <div class="variant-row" id="variantRow"></div>
   </section>
@@ -187,10 +187,16 @@
     <div class="setting-row"><span>匾额（主家）</span><input id="hallName" class="url-input" maxlength="24" placeholder="奕局棋馆"></div>
     <div class="setting-row"><span>馆名录</span><button class="toggle on" id="hallDirToggle">启</button></div>
     <div class="setting-row"><span>名录所在</span><input id="hallDirUrl" class="url-input" placeholder="留空用默认公共公告板"></div>
+    <div class="side-h" style="margin-top:22px">天时 · 赛季</div>
+    <div class="setting-row"><span>当前赛季</span><span id="seasonState" class="season-state">候校</span>
+      <button class="btn ghost" id="seasonRecheck">重校</button></div>
+    <div class="setting-row"><span>校时帖（可选）</span><input id="timeUrl" class="url-input" placeholder="留空用公共天时"></div>
     <div class="setting-row"><span>隐士手段</span><select id="botLevel" class="url-input">
       <option value="0">随性 · 信手</option><option value="1">试探 · 略识</option><option value="2">进取 · 争先</option>
       <option value="3">老成 · 择要</option><option value="4">谋势 · 深算</option><option value="5">精算 · 无漏</option>
-      <option value="6">通玄 · 坐照</option></select></div>
+      <option value="6">通玄 · 坐照</option>
+      <option value="7">入微 · 察势</option><option value="8">忘机 · 穷变</option>
+      <option value="9">弈圣 · 无咎</option></select></div>
     <div class="side-h" style="margin-top:22px">题名 · 本馆</div>
     <div id="accountState" class="board-row"><span class="bname">未题名</span></div>
     <div class="btn-row">
@@ -214,7 +220,7 @@
       <button class="btn ghost" id="openSource">观谱源</button>
       <button class="btn ghost" id="openGuide2">入门小引</button>
     </div>
-    <div class="foot-note">五十九局，纸色十品 · 横竖皆宜，随手开枰<br>断线自续，终局可覆 · 谱可携可还<br>源码公开 · 禁商用 · 与君同弈</div>
+    <div class="foot-note">六十局，纸色十品 · 横竖皆宜，随手开枰<br>断线自续，终局可覆 · 谱可携可还<br>源码公开 · 禁商用 · 与君同弈</div>
   </section>
 </main>
 

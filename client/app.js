@@ -26,7 +26,7 @@ const S = {
   hall: null, scripts: [], board: [], halls: [], stageCue: '', baseTheme: null,
   botLevel: 0, hallOn: true, hallUrl: '', drawing: false, stroke: [],
   account: null, saveData: '', titleCatalog: [], wornKey: '', rafPending: false, lastChatLen: 0,
-  rankCatalog: [], season: '', seasonName: '' 
+  rankCatalog: [], season: '', seasonName: '', seasonSpan: '', seasonVerified: false, seasonSource: '', seasonNote: '', rankPending: '', rankBefore: null 
 };
 const DEFAULT_HALL_DIR = 'https://gist.githubusercontent.com/yiju-archive/board/raw/halls.json';
 const RANK_FALLBACK = [
@@ -45,25 +45,48 @@ function rankInfo(pts) {
   return { name:g[i].name, idx:i, gate:g[i].gate, nextGate,
     next: nextGate === null ? 0 : Math.max(0, nextGate - pts) };
 }
-function seasonKey() { return new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 7); }
-function localRankData() {
-  let r = store('qipai.rank', { season:'', pts:{}, lastSeason:'', lastRank:'初执' });
-  if (!r.pts || typeof r.pts !== 'object') r.pts = {};
-  const k = seasonKey();
-  if (r.season !== k) {
-    const vals = Object.values(r.pts).map(Number).filter(n => !isNaN(n));
-    r.lastSeason = r.season; r.lastRank = rankInfo(vals.length ? Math.max(...vals) : 0).name;
-    r.season = k; r.pts = {};
-    save('qipai.rank', r);
-  }
-  return r;
+const S1_START = Date.UTC(2026, 10, 22) - 8 * 3600e3;
+const S2_START = Date.UTC(2027, 0, 1) - 8 * 3600e3;
+function seasonKey(ms) {
+  const t = (ms == null ? Date.now() : ms) + 8 * 3600e3;
+  if (t < S1_START) return 'S1';
+  if (t < S2_START) return 'S1';
+  const day = Math.floor((t - S2_START) / 86400e3);
+  return 'S' + (Math.floor(day / 30) + 2);
+}
+const TIME_SOURCES = [
+  { url:'https://worldtimeapi.org/api/timezone/Etc/UTC', pick:j => j.utc_datetime },
+  { url:'https://timeapi.io/api/Time/current/zone?timeZone=Etc/UTC', pick:j => j.dateTime },
+  { url:'https://www.qq.com/', head:true }
+];
+let seasonProofAt = 0;
+async function probeUtc(src) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 3200);
+  try {
+    const r = await fetch(src.url + (src.url.indexOf('?') < 0 ? '?_=' : '&_=') + Date.now(),
+      { cache:'no-store', signal:ctl.signal });
+    if (src.head) { const d = r.headers.get('date'); return d ? new Date(d).toUTCString() : null; }
+    const j = await r.json(); const v = src.pick(j);
+    return v ? new Date(v.length === 24 ? v + 'Z' : v).toUTCString() : null;
+  } catch (e) { return null; } finally { clearTimeout(timer); }
+}
+async function seasonSelfCheck(quiet) {
+  const custom = (store('qipai.timeUrl', '') || '').trim();
+  const list = custom ? [{ url:custom, pick:j => j.utc_datetime || j.dateTime || j.time }, ...TIME_SOURCES] : TIME_SOURCES;
+  const got = (await Promise.all(list.map(probeUtc))).filter(Boolean);
+  seasonProofAt = Date.now();
+  const el = $('#seasonState'); if (el) el.textContent = got.length >= 2 ? '天时已校 · 待席上确认' : '未连天时 · 依本席更漏';
+  if (S.net) S.net.send(got.length >= 2
+    ? { t:'season', mode:'net', ts:Date.parse(got[0]), key:seasonKey(Date.parse(got[0])), proof:got }
+    : { t:'season', mode:'local', ts:Date.now(), key:seasonKey(), proof:[] });
+  if (!quiet && got.length < 2) toast('未连天时 · 段位照常记，仅标未校');
 }
 function rankApplyLocal(game, win, draw, botLvl) {
-  const r = localRankData();
-  const base = draw ? 6 : win ? 30 + 4 * Math.max(0, Math.min(6, botLvl | 0)) : -12;
-  r.pts[game] = Math.max(0, (r.pts[game] || 0) + base);
-  save('qipai.rank', r);
-  return { delta:base, info:rankInfo(r.pts[game]) };
+  if (!S.account || !S.account.ok) { toast('自修排位需先题名 · 段位记于加密存档'); return { delta:0, info:rankInfo(0) }; }
+  S.rankBefore = (S.account.save && S.account.save.rankSum) || 0;
+  S.net.send({ t:'accountState' });
+  return { delta:0, info:rankInfo(0) };
 }
 function rankBadgeHtml(id) {
   const rk = rankNameOf(id);
@@ -72,14 +95,12 @@ function rankBadgeHtml(id) {
 function rankNameOf(game) {
   const v = (S.account && S.account.save) || {};
   if (v.rankNames && v.rankNames[game] && v.rankNames[game].name) return v.rankNames[game].name;
-  const r = localRankData();
-  return rankInfo(r.pts[game] || 0).name;
+  return rankInfo(0).name;
 }
 function rankIdxOf(game) {
   const v = (S.account && S.account.save) || {};
   if (v.rankNames && v.rankNames[game]) return v.rankNames[game].idx || 0;
-  const r = localRankData();
-  return rankInfo(r.pts[game] || 0).idx;
+  return 0;
 }
 
 async function boot() {
@@ -227,6 +248,8 @@ function askRoomPassword(code) {
 }
 function gameName(id) { const g = S.games.find(x => x.id === id); return g ? g.name : '对局'; }
 
+setInterval(() => { if (S.conn === 'online' && Date.now() - seasonProofAt > 30 * 60e3) seasonSelfCheck(true); }, 60e3);
+window.addEventListener('online', () => { if (S.conn === 'online') seasonSelfCheck(true); });
 function onStatus(s) {
   S.conn = s;
   const el = $('#conn');
@@ -248,9 +271,18 @@ function onFrame(m) {
       if (m.reconnected) toast('已续前局');
       if (Array.isArray(m.titleCatalog)) S.titleCatalog = m.titleCatalog;
       if (Array.isArray(m.rankCatalog)) S.rankCatalog = m.rankCatalog;
-      if (m.season) { S.season = m.season; S.seasonName = m.seasonName || ''; }
-      renderAccount(); renderAccountCard(); renderGames();
+      if (m.season) { S.season = m.season; S.seasonName = m.seasonName || '';
+        S.seasonSpan = m.seasonSpan || ''; S.seasonVerified = m.seasonVerified !== false;
+        S.seasonSource = m.seasonSource || ''; }
+      renderAccount(); renderAccountCard(); renderGames(); renderSeasonState();
+      seasonSelfCheck(true);
       S.net.send({ t:'halls' }); S.net.send({ t:'scripts' }); S.net.send({ t:'rooms' });
+      break;
+    case 'season':
+      S.season = m.key || S.season; S.seasonName = m.name || S.seasonName;
+      S.seasonSpan = m.span || ''; S.seasonVerified = !!m.verified; S.seasonSource = m.source || '';
+      renderSeasonState(); renderAccountCard();
+      if (m.note && m.note !== S.seasonNote) { S.seasonNote = m.note; if (m.ok) toast(m.note); }
       break;
     case 'scripts': S.scripts = m.list || []; if (S.curGame === 'juben') renderVariants(); break;
     case 'board': S.board = m.rows || []; renderBoards(); break;
@@ -267,8 +299,15 @@ function onFrame(m) {
       if (S.screen === 'stats') S.net.send({ t:'board' });
       break;
     case 'accountState':
-      if (m.save && m.save.id) S.account = { ok:true, id:m.save.id, name:m.name || m.save.name, save:m.save };
-      renderAccount(); renderAccountCard();
+      if (m.save && m.save.id) {
+        const before = S.rankBefore == null ? (m.save.rankSum || 0) : S.rankBefore;
+        const after = m.save.rankSum || 0;
+        S.account = { ok:true, id:m.save.id, name:m.name || m.save.name, save:m.save };
+        renderAccount(); renderAccountCard();
+        if (S.rankPending) { const d = after - before;
+          toast(S.rankPending + ' · ' + (d >= 0 ? '+' : '') + d + ' 墨分 · 现为' + (m.save.rank || rankInfo(after).name));
+          S.rankPending = ''; S.rankBefore = null; }
+      }
       if (m.note) toast(m.note);
       break;
     case 'save': downloadSave(m.data, m.name); break;
@@ -325,10 +364,15 @@ function onEnd() {
   let endMsg = v.result || '此局已终';
   const rm = S.meta && S.meta.rankMode;
   if (rm === 'local') {
-    const r = rankApplyLocal(v.game, win, !win && !String(v.winner || '').length, (S.meta && S.meta.botLevel) || 0);
-    endMsg += ' · 自修排位 ' + (r.delta >= 0 ? '+' : '') + r.delta + ' 墨分 · 现为' + r.info.name;
+    S.rankBefore = (S.account && S.account.save && S.account.save.rankSum) || 0;
+    S.rankPending = '自修排位';
+    S.net.send({ t: 'accountState' });
     renderGames();
-  } else if (rm === 'hall') S.net.send({ t: 'accountState' });
+  } else if (rm === 'hall') {
+    S.rankBefore = (S.account && S.account.save && S.account.save.rankSum) || 0;
+    S.rankPending = '馆赛排位';
+    S.net.send({ t: 'accountState' });
+  }
   toast(endMsg);
   updateToday(); updateStats();
 }
@@ -353,7 +397,8 @@ function renderMyRoom() {
 function canAct(v) {
   if (!v || S.you < 0 || v.ended) return false;
   const simultaneous = ['point24', 'werewolf', 'undercover', 'solitaire',
-    'juben', 'avalon', 'turtlesoup', 'mastermind', 'drawguess', 'tournament'].includes(v.game);
+    'juben', 'avalon', 'turtlesoup', 'mastermind', 'drawguess', 'tournament',
+    'yijuan'].includes(v.game);
   return simultaneous ? (v.legal || []).length > 0 : v.turn === S.you;
 }
 function renderPlayNow() {
@@ -482,7 +527,7 @@ function renderActions() {
   const boardLike = v.renderer === 'party' || v.renderer === 'path';
 
   const extras = act && !boardLike ? legal.filter(c => !c.endsWith(':*') && !c.endsWith(':') &&
-    !/^(c|f|x|m|o|d|p|solve|vote|night|poison):/.test(c) &&
+    !/^(c|r|f|x|m|o|d|p|solve|vote|night|poison):/.test(c) &&
     !['roll', 'skip'].includes(c)) : [];
   extras.slice(0, 18).forEach(c => {
     const b = document.createElement('button');
@@ -508,6 +553,7 @@ function chipLabel(c) {
   if (c.startsWith('poison:')) return '毒 ' + c.slice(7);
   if (c.startsWith('b:')) return '落帖 · ' + c.slice(2);
   if (c.startsWith('p:')) return '出牌 ' + c.slice(2);
+  if (c.startsWith('r:')) return '拾简 · 第 ' + (+c.slice(2) + 1) + ' 张';
 
   return c.replace(/^([a-z]+):(.*)$/, (_, a, b) => a + ' · ' + (b || '确认'));
 }
@@ -596,12 +642,12 @@ function openGuide() {
         <p>记下五字房号，另一席填之点「赴局」。人未齐可一键请隐士补满，寻局八息亦自补齐；真人入席，隐士自退。</p></div>
       <div class="guide-step"><b>叁 · 落子出牌</b>
         <p>棋盘小圆点是可落处；走子类先点己子再点目标格，牌类先点手牌再按「出牌」。房内可打字闲谈、发一键短句，还看得见谁正在打字。</p>
-        <p>折狱录跟幕卡走：旁白逐句浮现、线索翻牌、轮流打字发言、终幕指认；私本只你自己看得见。</p></div>
+        <p>折狱录跟幕卡走：旁白逐句浮现、线索翻牌、轮流打字发言、终幕指认；私本只你自己看得见。弈卷则两席同时覆简，启简后界墨按年序与游方推移，弃简区可推对方余牌，余墨够还能拾简复出。</p></div>
       <div class="guide-step"><b>肆 · 横竖与外观</b>
         <p>竖屏：盘在上、牌在下、底部「〇—肆」为引；横屏：左盘右席，导航收作侧边细条。「肆 · 案牍」可换十品纸色；折狱开卷自依本中设色，散场复归君选。落子发牌有轻动画，系统开了减动效便自动收敛。</p></div>
       <div class="guide-step"><b>伍 · 存档 / 段位 / 剧本 / 源码</b>
         <p>不题名照样玩，战绩记本机榜；题名后自动建一份加密存档，每局终了自动写回，可导出 <code>.yijusave</code> 携往别馆，导入须再验口令。</p>
-        <p>段位七阶按月重置，馆赛所得折半计入，自修全额且隐士随段位增强。「叁 · 战绩」有本机榜与棋馆目录。剧本只在房主本地 <code>scripts/</code>，丢一个新 JSON 即更新，亦可当场呈本。</p>
+        <p>段位七阶按赛季重置：第一赛季自 2026 年 11 月 22 日至 12 月 31 日，其后自 2027 年 1 月 1 日起每三十日一季。赛季由手机端联网校时、棋馆依凭据判定，改本机更漏或改存档都动不了段位；换季归档上季最高段位并承袭一部分墨分。馆赛所得折半计入，自修全额，隐士十阶随段位增强。纯局域网无外网时照常记段位，只标「未校天时」，体验不缺。「叁 · 战绩」有本机榜与棋馆目录。剧本只在房主本地 <code>scripts/</code>，丢一个新 JSON 即更新，亦可当场呈本。</p>
         <p>断线自续，终局可覆，「肆 · 案牍」可携谱还谱。源码与「源码公开 · 禁止商用」协议随版本发布。</p></div>
     </div>
     <button class="btn primary" id="guideOk">领了</button>`, null);
@@ -687,7 +733,8 @@ function openCreate() {
     S.curVariant = variant; renderVariants();
     const opts = collectOpts();
     if (opts.rankMode === 'local') {
-      opts.botLevel = Math.min(6, rankIdxOf(S.curGame));
+      const ladder = [0, 1, 2, 3, 5, 7, 9];
+      opts.botLevel = ladder[Math.max(0, Math.min(6, rankIdxOf(S.curGame)))];
       toast('自修排位 · 隐士随段位增强至第 ' + (opts.botLevel + 1) + ' 阶');
     }
     S.net.send({ t:'create', game:S.curGame, variant,
@@ -922,12 +969,49 @@ function syncScriptTheme() {
   }
 }
 
+function yjLabel(c, names) {
+  if (!c || c.length < 6) return '空简';
+  const y = +c[1], f = +c[3];
+  const nm = names && names[(y - 1) * 4 + f] ? '「' + names[(y - 1) * 4 + f] + '」 · ' : '';
+  return nm + y + ' 序 · ' + (['东', '西', '南', '北'][f] || '？') + ' · ' + c[5] + ' 墨';
+}
 function renderExtraActions() {
   const el = $('#extraActions'); if (!el) return;
   const v = S.view;
-  const ok = !!(v && ['nim', 'endgame', 'junqi4'].includes(v.game) && !v.ended);
+  const ok = !!(v && ['nim', 'endgame', 'junqi4', 'yijuan'].includes(v.game) && !v.ended);
   el.hidden = !ok;
   if (!ok) { el.innerHTML = ''; return; }
+  if (v.game === 'yijuan') {
+    const info = v.info || {}, legal = v.legal || [], hand = v.hand || [], rn = info.roleNames || null;
+    const covered = info.covered || [0, 0], you = S.you;
+    const ink = info.ink || [0, 0], pick = info.pick || [0, 0];
+    const myDisc = info.myDiscard || [], oppDisc = info.oppDiscard || [];
+    const n = +(info.lineN || 9);
+    let h = `<div class="side-h">覆简 · 第 ${(+(info.round || 0) + 1)} 巡 · 界墨 ${info.line}/${n - 1}</div>`;
+    h += `<div class="hint">年序大者推界墨，游方相冲再推；相承各得一墨，同简归中。余墨 ${ink[you] || 0} · 可拾 ${pick[you] || 0}</div>`;
+    if (info.lastA && info.lastB)
+      h += `<div class="hint">上巡 · 甲 ${yjLabel(info.lastA)} / 乙 ${yjLabel(info.lastB)} · ${escapeHtml(info.lastNote || '')}</div>`;
+    if (you < 0) h += '<div class="hint">观卷中 · 双卷夹一线，墨偏谁，谁势危</div>';
+    else if (covered[you]) h += '<div class="hint">此席已覆 · 静待另一席启简</div>';
+    else {
+      h += '<div class="side-h" style="margin-top:10px">覆简 · 择一简</div><div class="variant-row">' +
+        hand.map((c, i) => {
+          const code = 'c:' + i, on = legal.includes(code);
+          return `<button class="variant" data-ac="${code}" ${on ? '' : 'disabled'}>${escapeHtml(yjLabel(c, rn))}</button>`;
+        }).join('') + '</div>';
+      const rlegal = legal.filter(x => x.startsWith('r:'));
+      if (rlegal.length)
+        h += '<div class="side-h" style="margin-top:10px">拾简 · 花余墨复出一简</div><div class="variant-row">' +
+          myDisc.map((c, i) => {
+            const code = 'r:' + i, on = legal.includes(code);
+            return `<button class="variant" data-ac="${code}" ${on ? '' : 'disabled'}>${escapeHtml(yjLabel(c, rn))}</button>`;
+          }).join('') + '</div>';
+    }
+    h += `<div class="hint" style="margin-top:10px">己弃简 ${myDisc.length} 张 · 彼弃简 ${oppDisc.length} 张（公开）</div>`;
+    el.innerHTML = h;
+    $$('#extraActions [data-ac]').forEach(b => b.onclick = () => sendCode(b.dataset.ac));
+    return;
+  }
   const legal = (v.legal || []).filter(c => c.startsWith('c:'));
   el.innerHTML = `<div class="side-h">请择一手</div><div class="variant-row">` +
     legal.slice(0, 40).map(c => {
@@ -1106,6 +1190,9 @@ function bindExtraUI() {
   on('#hallName', 'change', profile);
   on('#hallDirUrl', 'change', profile);
   on('#hallDirToggle', 'click', () => { S.hallOn = !S.hallOn; renderHallInfo(); profile(); toast(S.hallOn ? '棋馆目录已开启' : '棋馆目录已关闭'); });
+  on('#seasonRecheck', 'click', () => seasonSelfCheck(false));
+  on('#timeUrl', 'change', e => { save('qipai.timeUrl', (e.target.value || '').trim()); seasonSelfCheck(false); });
+  if ($('#timeUrl')) $('#timeUrl').value = store('qipai.timeUrl', '') || '';
   on('#botLevel', 'change', e => {
     S.botLevel = +e.target.value;
     if (S.meta && !S.meta.started) S.net.send({ t: 'act', a: 'setBotLevel', v: S.botLevel });
@@ -1177,9 +1264,11 @@ function renderAccountCard() {
   const pct = ri.nextGate ? Math.min(100, Math.round((top - ri.gate) / (ri.nextGate - ri.gate) * 100)) : 100;
   const gamesRank = Object.keys(rn).sort((a, b) => (rn[b].pts || 0) - (rn[a].pts || 0)).slice(0, 8)
     .map(k => `<i>${escapeHtml(rn[k].name)}</i>${escapeHtml((S.games.find(x => x.id === k) || {}).name || k)} ${rn[k].pts} 墨分`).join(' · ');
-  const seasonHtml = `<div class="rank-season">${escapeHtml(v.seasonName || S.seasonName || '本月')} · 排位赛<br>
+  const seasonHtml = `<div class="rank-season">${escapeHtml(v.seasonName || S.seasonName || '本季')} · 排位赛<br>
+      <span class="season-span">${escapeHtml(v.seasonSpan || S.seasonSpan || '')}</span>
+      <span class="season-check">${S.seasonVerified === false ? '未校天时 · 依本席更漏' : '天时已校 · 段位不可自改'}</span><br>
       段位 <b>${escapeHtml(v.rank || ri.name)}</b> · 共 ${v.rankSum || 0} 墨分 · ${ri.next ? '距下段 ' + ri.next + ' 墨分' : '已至顶阶'}<br>
-      上赛季 ${escapeHtml(v.lastSeason || '—')} · ${escapeHtml(v.lastRank || '初执')}
+      ${v.rankBase ? '上季承袭 ' + v.rankBase + ' 墨分 · ' : ''}上赛季 ${escapeHtml(v.lastSeason || '—')} · ${escapeHtml(v.lastRank || '初执')}
       <div class="rank-bar"><span style="width:${pct}%"></span></div></div>
       ${gamesRank ? '<div class="rank-games">各局段位 · ' + gamesRank + '</div>' : ''}`;
   body.innerHTML = seasonHtml + `<div class="account-metrics">
@@ -1191,6 +1280,12 @@ function renderAccountCard() {
     <div class="account-games">题名：${escapeHtml(v.name || a.name || '')} · 最近 ${escapeHtml(v.lastDay || '—')}
       ${games.length ? '<br>常玩：' + games.map(escapeHtml).join(' / ') : ''}
       ${scripts.length ? '<br>剧本：' + scripts.map(escapeHtml).join(' / ') : ''}</div>`;
+}
+function renderSeasonState() {
+  const el = $('#seasonState'); if (!el) return;
+  el.textContent = (S.seasonName || '本季') + ' · ' +
+    (S.seasonVerified === false ? '未校天时' : '天时已校');
+  el.title = S.seasonSpan || '';
 }
 function accountField(id, label, type, placeholder) {
   return `<div class="field"><label>${label}</label><input id="${id}" class="url-input" type="${type}"

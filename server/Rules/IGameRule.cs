@@ -92,6 +92,110 @@ namespace Qipai
 
         public virtual string BotLine(GameState s, int seat) { return ""; }
 
+        public virtual string BotPick(GameState s, int seat, int level, List<string> legal) { return ""; }
+
+        public virtual double BotScore(GameState s, int seat, string code) { return 0; }
+
+        public virtual string BotThink(GameState s, int seat, int level, List<string> legal)
+        {
+            if (legal == null || legal.Count == 0) return "";
+            int lv = Math.Max(0, Math.Min(9, level));
+            List<string> plain = new List<string>();
+            foreach (string c in legal)
+                if (!c.EndsWith("*") && c != "solve" && c != "say" && !c.StartsWith("solve:")) plain.Add(c);
+            if (plain.Count == 0) plain.AddRange(legal);
+            if (lv == 0) return plain[NextRng(s, plain.Count)];
+            List<string> main = new List<string>();
+            foreach (string c in plain)
+                if (c != "pass" && c != "skip" && c != "next" && c != "save") main.Add(c);
+            List<string> pool = main.Count > 0 ? main : plain;
+            int budget = lv >= 8 ? 12 : (lv >= 5 ? 20 : (lv >= 3 ? 26 : 0));
+            if (budget == 0)
+            {
+                int span = lv == 1 ? pool.Count : Math.Max(2, 5 - lv / 2);
+                if (span > pool.Count) span = pool.Count;
+                return pool[NextRng(s, span)];
+            }
+            if (budget > pool.Count) budget = pool.Count;
+            string best = pool[0]; double bestSc = -1e18;
+            long noise = NextRng(s, 1000);
+            for (int i = 0; i < budget; i++)
+            {
+                string code = pool[i];
+                double sc = EvalBotMove(s, seat, code, lv);
+                sc += ((noise + i * 37) % 17) * (lv <= 4 ? 0.12 : 0.0);
+                if (sc > bestSc) { bestSc = sc; best = code; }
+            }
+            return best;
+        }
+
+        private double EvalBotMove(GameState s, int seat, string code, int lv)
+        {
+            GameState c;
+            try { c = J.CloneState(s); } catch (Exception) { return 0; }
+            string action = code.IndexOf(':') < 0 ? code : code.Substring(0, code.IndexOf(':'));
+            MoveResult r;
+            try { r = Act(c, seat, action, J.Frame("code", code, "seat", seat)); }
+            catch (Exception) { return -1e9; }
+            if (!r.Ok) return -1e9;
+            if (c.Ended)
+            {
+                string w = c.Winner ?? "";
+                bool win = w.Length > 0 && w.Split(',').Contains(seat.ToString(CultureInfo.InvariantCulture));
+                return win ? 1e6 : -1e6;
+            }
+            double sc = BotScore(c, seat, code);
+            int mine = 0, opp = 0;
+            for (int i = 0; i < c.Cells.Length; i++)
+            {
+                int sd = SideOf(Cell(c, i));
+                if (sd == seat) mine++; else if (sd >= 0) opp++;
+            }
+            sc += (mine - opp) * 10;
+            if (c.Hands.ContainsKey(seat)) sc -= c.Hands[seat].Count * 0.4;
+            foreach (KeyValuePair<int, List<string>> kv in c.Hands)
+                if (kv.Key != seat) sc += kv.Value.Count * 0.25;
+            int mx = c.Width > 0 ? c.Width / 2 : 0, my = c.Height > 0 ? c.Height / 2 : 0;
+            for (int i = 0; i < c.Cells.Length; i++)
+            {
+                if (SideOf(Cell(c, i)) != seat) continue;
+                int dx = Math.Abs(X(c, i) - mx), dy = Math.Abs(Y(c, i) - my);
+                sc += Math.Max(0, 6 - dx - dy) * 0.5;
+            }
+            if (lv >= 8 && c.Seats >= 2)
+            {
+                int other = (seat + 1) % c.Seats;
+                List<string> ol;
+                try { ol = Legal(c, other); } catch (Exception) { ol = new List<string>(); }
+                double worst = 1e18;
+                int ob = Math.Min(8, ol.Count);
+                for (int k = 0; k < ob; k++)
+                {
+                    GameState c2;
+                    try { c2 = J.CloneState(c); } catch (Exception) { break; }
+                    string oa = ol[k].IndexOf(':') < 0 ? ol[k] : ol[k].Substring(0, ol[k].IndexOf(':'));
+                    MoveResult or;
+                    try { or = Act(c2, other, oa, J.Frame("code", ol[k], "seat", other)); }
+                    catch (Exception) { continue; }
+                    if (!or.Ok) continue;
+                    if (c2.Ended)
+                    {
+                        string w2 = c2.Winner ?? "";
+                        bool lose = w2.Length > 0 && !w2.Split(',').Contains(seat.ToString(CultureInfo.InvariantCulture));
+                        if (lose) { worst = -1e6; break; }
+                        continue;
+                    }
+                    int m2 = 0, o2 = 0;
+                    for (int i = 0; i < c2.Cells.Length; i++)
+                    { int sd = SideOf(Cell(c2, i)); if (sd == seat) m2++; else if (sd >= 0) o2++; }
+                    double v = (m2 - o2) * 10;
+                    if (v < worst) worst = v;
+                }
+                if (worst < 1e17) sc = sc * 0.35 + worst * 0.65;
+            }
+            return sc;
+        }
+
         public GameState New(string variant, int seats, int seed, string room)
         {
             _buildSeed = seed == 0 ? 20261121L : (long)seed * 2654435761L;
