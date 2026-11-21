@@ -1,0 +1,176 @@
+{
+  "id": "dengxia-wuxin",
+  "name": "灯下无信",
+  "version": 1,
+  "min": 3,
+  "max": 5,
+  "minutes": 25,
+  "tags": [
+    "情感",
+    "轻推理",
+    "治愈"
+  ],
+  "theme": "宣纸",
+  "synopsis": "小镇邮局要拆了，最后一夜，几封没寄出的信被摊在桌上。",
+  "roles": [
+    {
+      "id": "youzhang",
+      "public": "老邮政",
+      "private": "你扣下了三封信，因为收件人都搬走了。",
+      "secret": "其中一封是你写给自己年轻时的。",
+      "goal": "决定今晚要不要把信发出去。",
+      "botLines": [
+        "邮戳我盖了三十年。",
+        "最后一班件，明早就不收了。"
+      ]
+    },
+    {
+      "id": "shaonian",
+      "public": "少年",
+      "private": "你来找一封父亲寄出的信，却从没收到过。",
+      "secret": "你其实已经知道内容了。",
+      "goal": "找到那封信。",
+      "botLines": [
+        "我爸说寄过。",
+        "灯太暗了，我看不清字。"
+      ]
+    },
+    {
+      "id": "kafei",
+      "public": "咖啡店主",
+      "private": "你替邮局保管过一阵钥匙，见过那三封信的封口。",
+      "secret": "有一封被你拆过又粘回去。",
+      "goal": "坦白那一封。",
+      "botLines": [
+        "要喝点热的吗，今晚不收钱。",
+        "封口的胶和我不太一样。"
+      ]
+    },
+    {
+      "id": "lvke",
+      "public": "过路客",
+      "private": "你只是躲雨进来的，却认得其中一只信封的字迹。",
+      "secret": "那是你多年前丢下的。",
+      "goal": "说出你认得谁的字。",
+      "botLines": [
+        "我只是路过。",
+        "这字…我好像在哪见过。"
+      ]
+    },
+    {
+      "id": "qingjie",
+      "public": "清扫员",
+      "private": "你每晚把桌上的信收进抽屉，今早抽屉是空的。",
+      "secret": "是你把它们摊回桌上的。",
+      "goal": "解释为什么摊回来。",
+      "botLines": [
+        "地我拖过三遍了。",
+        "摊着，总比锁着好。"
+      ]
+    }
+  ],
+  "acts": [
+    {
+      "no": 1,
+      "title": "第一幕 · 最后一夜",
+      "narration": [
+        "卷帘门拉下一半。",
+        "桌上三封信，收件人一栏都空着。"
+      ],
+      "revealDelay": 800,
+      "publicClues": [
+        "d1"
+      ],
+      "privateClues": {
+        "youzhang": [
+          "d2"
+        ]
+      },
+      "discussMs": 180000,
+      "cue": "paper"
+    },
+    {
+      "no": 2,
+      "title": "第二幕 · 谁的字",
+      "narration": [
+        "灯罩歪了一点，光只照到半张桌。",
+        "有人把最右边那封往里推了推。"
+      ],
+      "revealDelay": 800,
+      "publicClues": [
+        "d3",
+        "d4"
+      ],
+      "privateClues": {
+        "kafei": [
+          "d5"
+        ],
+        "lvke": [
+          "d6"
+        ]
+      },
+      "discussMs": 180000,
+      "cue": "clock"
+    },
+    {
+      "no": 3,
+      "title": "终幕 · 寄或不寄",
+      "vote": true,
+      "question": "最右边那封，是谁写的？",
+      "narration": [
+        "明早邮筒就要被搬走了。"
+      ],
+      "revealDelay": 900,
+      "publicClues": [],
+      "privateClues": {},
+      "discussMs": 0,
+      "cue": "gong"
+    }
+  ],
+  "clues": {
+    "d1": {
+      "title": "三只空信封",
+      "text": "收件人一栏都空着，邮戳却盖好了。"
+    },
+    "d2": {
+      "title": "写给年轻时",
+      "text": "抬头是「给二十岁的我」，没落款。"
+    },
+    "d3": {
+      "title": "歪掉的灯罩",
+      "text": "只有半张桌被照到，另外半张一直暗着。"
+    },
+    "d4": {
+      "title": "被推过的信",
+      "text": "最右边那封边缘有一道浅浅的指痕。"
+    },
+    "d5": {
+      "title": "重粘的封口",
+      "text": "胶痕比别处新，纸角起过毛。"
+    },
+    "d6": {
+      "title": "认得的字迹",
+      "text": "竖钩收笔往左带，和多年以前一样。"
+    }
+  },
+  "endings": [
+    {
+      "when": "solved",
+      "title": "都寄出去",
+      "text": "三封信一起投进邮筒。收件人空着也没关系，小镇会替它们找到人。"
+    },
+    {
+      "when": "else",
+      "title": "留一盏灯",
+      "text": "信被收回抽屉，灯没关。明早再来的人，会看见桌上是干净的。"
+    }
+  ],
+  "ambience": {
+    "drone": "hush",
+    "ink": 0.35,
+    "paper": 0.7,
+    "cueVolume": 0.5
+  },
+  "culprit": "youzhang",
+  "dm": true
+}

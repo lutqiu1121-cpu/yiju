@@ -1,0 +1,28 @@
+[
+  {
+    "v": 1,
+    "fp": "8f3a2c10d9b47e61",
+    "name": "楼下棋馆",
+    "addr": "ws://192.168.1.8:5080",
+    "version": 3,
+    "ts": 1774320000,
+    "online": 4,
+    "rooms": 1,
+    "scripts": 3,
+    "sessions7d": 27,
+    "protocol": "yiju-hall/1"
+  },
+  {
+    "v": 1,
+    "fp": "1d90e7aa4c62b38f",
+    "name": "周末手谈",
+    "addr": "ws://10.0.0.12:5080",
+    "version": 1,
+    "ts": 1774316400,
+    "online": 0,
+    "rooms": 0,
+    "scripts": 5,
+    "sessions7d": 9,
+    "protocol": "yiju-hall/1"
+  }
+]

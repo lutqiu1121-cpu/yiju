@@ -1,0 +1,26 @@
+# 构建产物（Release 从工作区直接取，不进 git）
+publish/
+SIZES.txt
+yiju-*.zip
+yiju.apk
+*.apk
+yiju-repo.bundle
+
+# .NET
+**/bin/
+**/obj/
+
+# Android / Gradle
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/
+android/local.properties
+android/gradlew
+android/gradlew.bat
+android/gradle/wrapper/gradle-wrapper.jar
+.gradle/
+
+# Python 缓存
+__pycache__/
+*.pyc

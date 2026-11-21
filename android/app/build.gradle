@@ -1,0 +1,52 @@
+apply plugin: 'com.android.application'
+
+// 版本号与签名固定：保证任何版本都能直接覆盖安装，而不是卸载重装。
+// 升级只改 ../version.json 的 versionCode(+1) 与 versionName；applicationId 与 keystore 永不改。
+def vj = new groovy.json.JsonSlurper().parse(file('../version.json'))
+def ksFile = System.getenv('YIJU_KEYSTORE') ?: '../keystore/yiju.jks'
+def ksPass = System.getenv('YIJU_STOREPASS') ?: 'yijuarchive'
+def ksKeyPass = System.getenv('YIJU_KEYPASS') ?: 'yijuarchive'
+def ksAlias = System.getenv('YIJU_ALIAS') ?: 'yiju'
+
+android {
+    namespace 'app.yiju.archive'
+    compileSdkVersion 33
+
+    defaultConfig {
+        applicationId vj.applicationId
+        minSdkVersion 24
+        targetSdkVersion 33
+        versionCode vj.versionCode as int
+        versionName vj.versionName
+    }
+
+    signingConfigs {
+        yiju {
+            storeFile file(ksFile)
+            storePassword ksPass
+            keyAlias ksAlias
+            keyPassword ksKeyPass
+        }
+    }
+
+    buildTypes {
+        debug   { minifyEnabled false; signingConfig signingConfigs.yiju }
+        release { minifyEnabled false; signingConfig signingConfigs.yiju }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    // assets/client/ 由 build-apk.sh 从仓库根目录同步，不提交进仓库
+    sourceSets {
+        main {
+            assets.srcDirs = ['src/main/assets']
+        }
+    }
+}
+
+dependencies {
+    // 故意留空：不引 AndroidX、不引图片库、不引网络库
+}

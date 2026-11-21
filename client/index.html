@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#f4f0e6">
+<title>奕局 · 棋牌雅集</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="paperNoise">
+    <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="3" stitchTiles="stitch"/>
+    <feColorMatrix type="saturate" values="0"/>
+  </filter>
+</svg>
+<div id="grain" aria-hidden="true"></div>
+<div id="dots" aria-hidden="true"></div>
+
+<header id="topbar">
+  <div class="brand">奕局 <span>◇</span> 雅集</div>
+  <div class="sub">棋 · 牌 · 雅 集</div>
+  <div id="conn" class="conn"><i></i><span>候馆中</span></div>
+</header>
+
+<main id="screens">
+
+  
+  <section class="screen active" id="screen-today">
+    <div class="chapter"><span class="chapter-no">〇</span><span class="chapter-txt">今日 · 题记</span></div>
+    <h1 class="display">落子<br>有痕<span class="period">。</span></h1>
+    <p class="lede" id="todayLine">一室棋牌，一页档案。横竖皆宜，随时开局。</p>
+
+    <div class="ink-card streak">
+      <div class="ink-head"><span>连日 · 不辍</span><span id="streakNum">0 天</span></div>
+      <svg id="streakChart" viewBox="0 0 300 88" preserveAspectRatio="none" aria-label="近期战绩曲线"></svg>
+      <div class="ink-foot"><span id="winrate">胜率 —</span><span id="playCount">对局 0</span></div>
+    </div>
+
+    <button class="guide-card" id="openGuide">
+      <span class="guide-no">小引 · 壹</span>
+      <span class="guide-t">初来？且看一遍小引</span>
+      <span class="guide-s">连馆 / 设席 / 闲谈 / 存档 / 段位 · 约一盏茶</span>
+      <span class="guide-arrow">▸</span>
+    </button>
+
+    <div class="row2">
+      <button class="btn primary" id="quickMatch">寻局 <small>▸</small></button>
+      <button class="btn" id="openCreate">设席 <small>＋</small></button>
+    </div>
+    <div class="join-line">
+      <input id="roomCode" maxlength="5" placeholder="填五字雅号" autocomplete="off">
+      <button class="btn" id="joinRoom">赴局</button>
+    </div>
+    <div class="hint" id="lastRoomLine"></div>
+    <div class="today-grid">
+      <div class="mini"><b id="gameCount">40</b><span>玩法 · 在册</span></div>
+      <div class="mini"><b id="themeCount">10</b><span>纸色 · 十品</span></div>
+      <div class="mini"><b id="rendererCount">4</b><span>画式</span></div>
+    </div>
+  </section>
+
+  
+  <section class="screen" id="screen-play">
+    <div class="chapter"><span class="chapter-no">壹</span><span class="chapter-txt">对局 · 手谈</span></div>
+    <div class="match-head">
+      <div class="match-title" id="matchTitle">尚未入席</div>
+      <div class="match-meta" id="matchMeta">—</div>
+    </div>
+    <div id="playLayout">
+      <div id="boardWrap">
+        <canvas id="board" aria-label="棋盘"></canvas>
+        <div id="boardEmpty" class="board-empty">尚未开枰<small>去「贰 · 雅集」挑一局，或直接「设席」</small></div>
+        <div id="boardOverlay"></div>
+      </div>
+      <aside id="sideInfo">
+        <div class="side-block"><div class="side-h">在席 · 诸君</div><div id="seatList" class="seat-list"></div></div>
+        <div class="side-block"><div class="side-h">局中 · 情状</div><div id="statusText" class="status-text">—</div>
+          <div class="clock"><span id="clockBar"></span></div></div>
+        <div class="side-block"><div class="side-h">谱 · 记事</div><div id="logList" class="log-list"></div></div>
+        <div class="side-block"><div class="side-h">闲语 · 席间</div><div id="chatList" class="chat-list"></div>
+          <div id="typingLine" class="typing-line"></div>
+          <div class="quick-row" id="quickRow"></div>
+          <div class="chat-input"><input id="chatText" maxlength="200" placeholder="留一句…"><button id="chatSend">投</button></div></div>
+      </aside>
+      <div id="handDock">
+        <div id="handHint" class="hand-hint"></div>
+        <div id="handRow" class="hand-row"></div>
+        <div id="tableCenter" class="table-center"></div>
+        <div id="partyPanel" class="party-panel"></div>
+        <div id="extraActions" class="extra-actions" hidden></div>
+        <div id="stageShow" class="stage-show" hidden>
+          <div id="showCurtain" class="show-curtain"></div>
+          <div id="showBody" class="show-body"></div>
+        </div>
+        <div id="drawWrap" class="draw-wrap" hidden>
+          <div class="side-h">丹青 · 画板</div>
+          <canvas id="drawCanvas" width="600" height="360" aria-label="画板"></canvas>
+          <div class="btn-row"><button class="btn ghost small" id="drawClear">洗砚</button>
+            <span class="hint" id="drawHint">观笔意，打字猜词</span></div>
+        </div>
+      </div>
+      <div id="actionBar" class="action-bar">
+        <button class="chip" data-act="ready">整襟</button>
+        <button class="chip" data-act="start">开枰</button>
+        <button class="chip" data-act="play-selected">落牌</button>
+        <button class="chip" data-act="pass">过手</button>
+        <button class="chip" data-act="roll">掷点</button>
+        <button class="chip" data-act="draw">拈牌</button>
+        <button class="chip" data-act="undo">乞复</button>
+        <button class="chip" data-act="draw-deal">请和</button>
+        <button class="chip" data-act="resign">投子</button>
+        <button class="chip" data-act="replay">覆局</button>
+        <button class="chip" data-act="leave">散席</button>
+      </div>
+    </div>
+  </section>
+
+  
+  <section class="screen" id="screen-rooms">
+    <div class="chapter"><span class="chapter-no">贰</span><span class="chapter-txt">雅集 · 设席</span></div>
+    <div class="filter-row">
+      <input id="gameSearch" placeholder="搜局 / 棋 / 牌 / 趣" autocomplete="off">
+      <button class="btn small" id="refreshRooms">重览</button>
+    </div>
+    <div class="room-cats" id="roomCats"></div>
+    <div class="game-list" id="gameList"></div>
+    <div class="chapter small"><span class="chapter-txt">已开 · 雅集</span></div>
+    <div class="open-rooms" id="openRooms"></div>
+    <div class="my-room" id="myRoomPanel" hidden>
+      <div class="side-h">本席 · 我设之局</div>
+      <div class="mr-title" id="mrTitle">—</div>
+      <div class="mr-line" id="mrInfo">—</div>
+      <div class="btn-row">
+        <button class="btn ghost small" id="mrAddBot">＋ 邀一隐士</button>
+        <button class="btn ghost small" id="mrFillBots">隐士满席</button>
+        <button class="btn ghost small" id="mrRemoveBot">－ 送一隐士</button>
+      </div>
+      <div class="hint">人未齐亦可开枰：邀隐士后点「壹 · 对局 → 开枰」。真人入席自替隐士。</div>
+    </div>
+    <div class="variant-row" id="variantRow"></div>
+  </section>
+
+  
+  <section class="screen" id="screen-stats">
+    <div id="accountCard" class="ink-card">
+      <div class="ink-head"><span>题名 · 存谱</span><span id="accountCardTag">未题名</span></div>
+      <div id="accountCardBody" class="hint">题名之后，战绩自入密谱；换馆可持谱与口令相还。</div>
+    </div>
+    <div class="chapter"><span class="chapter-no">叁</span><span class="chapter-txt">战绩 · 题名</span></div>
+    <div class="stat-grid">
+      <div class="stat"><b id="stPlays">0</b><span>对局</span></div>
+      <div class="stat"><b id="stWins">0</b><span>胜</span></div>
+      <div class="stat"><b id="stRate">—</b><span>胜率</span></div>
+      <div class="stat"><b id="stStreak">0</b><span>连日</span></div>
+    </div>
+    <div class="ink-card">
+      <div class="ink-head"><span>近况 · 起落</span><span id="formLabel">—</span></div>
+      <svg id="formChart" viewBox="0 0 300 96" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="side-h" style="margin-top:18px">近局 · 谱尾</div>
+    <div id="historyList" class="history-list"></div>
+    <button class="btn ghost" id="clearHistory">焚去旧谱</button>
+    <div class="side-h" style="margin-top:20px">本机 · 题名榜</div>
+    <div id="boardLocal" class="board-list"></div>
+    <div class="side-h" style="margin-top:20px">诸馆 · 名录</div>
+    <div id="boardHalls" class="board-list"></div>
+    <div class="btn-row"><button class="btn ghost small" id="refreshBoards">重览榜单</button>
+      <button class="btn ghost small" id="openHalls">择棋馆</button></div>
+  </section>
+
+  
+  <section class="screen" id="screen-settings">
+    <div class="chapter"><span class="chapter-no">肆</span><span class="chapter-txt">案牍 · 设置</span></div>
+    <div class="side-h">纸色 · 十品</div>
+    <div id="themeGrid" class="theme-grid"></div>
+    <div class="side-h" style="margin-top:22px">微调 · 笔意</div>
+    <div id="sliders" class="sliders"></div>
+    <div class="setting-row"><span>落子有声</span><button class="toggle on" id="soundToggle">启</button></div>
+    <div class="setting-row"><span>行云</span><button class="toggle on" id="motionToggle">启</button></div>
+    <div class="setting-row"><span>馆址</span><input id="serverUrl" class="url-input" placeholder="如 192.168.1.8:5080 · 留空=同源"></div>
+    <div class="setting-row"><span>谱源</span><input id="sourceUrl" class="url-input" placeholder="填仓库地址后可一键打开"></div>
+    <div class="setting-row"><span>雅号</span><input id="playerName" class="url-input" maxlength="12" placeholder="过客"></div>
+    <div class="side-h" style="margin-top:22px">本馆 · 匾额</div>
+    <div class="setting-row"><span>匾额（主家）</span><input id="hallName" class="url-input" maxlength="24" placeholder="奕局棋馆"></div>
+    <div class="setting-row"><span>馆名录</span><button class="toggle on" id="hallDirToggle">启</button></div>
+    <div class="setting-row"><span>名录所在</span><input id="hallDirUrl" class="url-input" placeholder="留空用默认公共公告板"></div>
+    <div class="setting-row"><span>隐士手段</span><select id="botLevel" class="url-input">
+      <option value="0">随性 · 信手</option><option value="1">试探 · 略识</option><option value="2">进取 · 争先</option>
+      <option value="3">老成 · 择要</option><option value="4">谋势 · 深算</option><option value="5">精算 · 无漏</option>
+      <option value="6">通玄 · 坐照</option></select></div>
+    <div class="side-h" style="margin-top:22px">题名 · 本馆</div>
+    <div id="accountState" class="board-row"><span class="bname">未题名</span></div>
+    <div class="btn-row">
+      <button class="btn ghost" id="acctRegister">题名</button>
+      <button class="btn ghost" id="acctLogin">入席</button>
+      <button class="btn ghost" id="acctExport">携谱</button>
+      <button class="btn ghost" id="acctImport">还谱</button>
+      <button class="btn ghost" id="acctLogout">离席</button>
+      <input type="file" id="saveFile" accept=".yijusave,.txt,.json" hidden>
+    </div>
+    <div class="hint">题名只存本馆，口令不落明文；谱以匣钥加密，携谱另加一层口令。换馆用「还谱」＋口令迁移。</div>
+    <div class="side-h" style="margin-top:22px">卷帙 · 内容</div>
+    <div class="btn-row">
+      <button class="btn ghost" id="openScriptImport">呈本</button>
+      <button class="btn ghost" id="exportRecord">录谱</button>
+      <button class="btn ghost" id="importRecord">读谱</button>
+      <input type="file" id="recordFile" accept=".json,.txt" hidden>
+    </div>
+    <div class="btn-row">
+      <button class="btn ghost" id="reconnectBtn">重续</button>
+      <button class="btn ghost" id="openSource">观谱源</button>
+      <button class="btn ghost" id="openGuide2">入门小引</button>
+    </div>
+    <div class="foot-note">五十九局，纸色十品 · 横竖皆宜，随手开枰<br>断线自续，终局可覆 · 谱可携可还<br>源码公开 · 禁商用 · 与君同弈</div>
+  </section>
+</main>
+
+<nav id="nav">
+  <button class="nav-item active" data-screen="today"><b>〇</b><span>今日</span></button>
+  <button class="nav-item" data-screen="play"><b>壹</b><span>对局</span></button>
+  <button class="nav-item" data-screen="rooms"><b>贰</b><span>雅集</span></button>
+  <button class="nav-item" data-screen="stats"><b>叁</b><span>战绩</span></button>
+  <button class="nav-item" data-screen="settings"><b>肆</b><span>案牍</span></button>
+</nav>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head"><span id="modalTitle">题</span><button id="modalClose">合</button></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script type="module" src="./app.js"></script>
+<script>
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>

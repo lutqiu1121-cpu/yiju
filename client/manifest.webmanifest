@@ -1,0 +1,20 @@
+{
+  "name": "奕局 · 棋牌雅集",
+  "short_name": "奕局",
+  "description": "同源联机的纸墨棋牌雅集 · 楚汉 / 手谈 / 竹戏 / 雅集",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#EBECDE",
+  "theme_color": "#EBECDE",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

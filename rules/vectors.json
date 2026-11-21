@@ -1,0 +1,382 @@
+{
+  "version": 2,
+  "games": [
+    {
+      "name": "井字棋三连判胜",
+      "game": "tictactoe",
+      "variant": "3路",
+      "seats": 2,
+      "moves": [
+        {
+          "seat": 0,
+          "code": "c:0"
+        },
+        {
+          "seat": 1,
+          "code": "c:3"
+        },
+        {
+          "seat": 0,
+          "code": "c:1"
+        },
+        {
+          "seat": 1,
+          "code": "c:4"
+        },
+        {
+          "seat": 0,
+          "code": "c:2"
+        }
+      ],
+      "expectEnded": true,
+      "expectWinner": "0"
+    },
+    {
+      "name": "五子棋横连五判胜",
+      "game": "gomoku",
+      "variant": "15路",
+      "seats": 2,
+      "moves": [
+        {
+          "seat": 0,
+          "code": "c:0"
+        },
+        {
+          "seat": 1,
+          "code": "c:15"
+        },
+        {
+          "seat": 0,
+          "code": "c:1"
+        },
+        {
+          "seat": 1,
+          "code": "c:16"
+        },
+        {
+          "seat": 0,
+          "code": "c:2"
+        },
+        {
+          "seat": 1,
+          "code": "c:17"
+        },
+        {
+          "seat": 0,
+          "code": "c:3"
+        },
+        {
+          "seat": 1,
+          "code": "c:18"
+        },
+        {
+          "seat": 0,
+          "code": "c:4"
+        }
+      ],
+      "expectEnded": true,
+      "expectWinner": "0"
+    },
+    {
+      "name": "四子棋重力竖连四判胜",
+      "game": "connect4",
+      "variant": "7×6",
+      "seats": 2,
+      "moves": [
+        {
+          "seat": 0,
+          "code": "c:35"
+        },
+        {
+          "seat": 1,
+          "code": "c:41"
+        },
+        {
+          "seat": 0,
+          "code": "c:28"
+        },
+        {
+          "seat": 1,
+          "code": "c:34"
+        },
+        {
+          "seat": 0,
+          "code": "c:21"
+        },
+        {
+          "seat": 1,
+          "code": "c:27"
+        },
+        {
+          "seat": 0,
+          "code": "c:14"
+        }
+      ],
+      "expectEnded": true,
+      "expectWinner": "0"
+    },
+    {
+      "name": "围棋角上提子",
+      "game": "go",
+      "variant": "9路",
+      "seats": 2,
+      "moves": [
+        {
+          "seat": 0,
+          "code": "c:1"
+        },
+        {
+          "seat": 1,
+          "code": "c:0"
+        },
+        {
+          "seat": 0,
+          "code": "c:9"
+        }
+      ],
+      "expectVar": {
+        "cap0": 1
+      },
+      "expectEnded": false
+    },
+    {
+      "name": "中国象棋初始局面含炮二平五",
+      "game": "xiangqi",
+      "variant": "标准",
+      "seats": 2,
+      "moves": [],
+      "expectLegalContains": [
+        "m:64>67"
+      ]
+    },
+    {
+      "name": "国际象棋初始局面兵可前进两格",
+      "game": "chess",
+      "variant": "标准",
+      "seats": 2,
+      "moves": [],
+      "expectLegalContains": [
+        "m:48>40"
+      ]
+    },
+    {
+      "name": "黑白棋初始有合法翻子点",
+      "game": "othello",
+      "variant": "8路",
+      "seats": 2,
+      "moves": [],
+      "expectLegalContains": [
+        "c:26"
+      ]
+    },
+    {
+      "name": "中国跳棋双人开局有可跳步",
+      "game": "tiaogi",
+      "variant": "2人",
+      "seats": 2,
+      "moves": [],
+      "expectLegalAny": true
+    },
+    {
+      "name": "夺帅局叫分后进入出牌阶段",
+      "game": "doudizhu",
+      "variant": "经典",
+      "seats": 3,
+      "moves": [
+        {
+          "seat": 0,
+          "code": "bid:0"
+        },
+        {
+          "seat": 1,
+          "code": "bid:0"
+        },
+        {
+          "seat": 2,
+          "code": "bid:1"
+        }
+      ],
+      "expectVar": {
+        "landlord": 2
+      },
+      "expectLegalAny": true
+    },
+    {
+      "name": "24点合法解胜出",
+      "game": "point24",
+      "variant": "抢答",
+      "seats": 1,
+      "overrideNums": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "moves": [
+        {
+          "seat": 0,
+          "code": "solve:(1+2+3)*4"
+        }
+      ],
+      "expectEnded": true,
+      "expectWinner": "0"
+    }
+  ],
+  "cards": [
+    {
+      "cards": [
+        "S3",
+        "H3",
+        "D3"
+      ],
+      "expectType": 2
+    },
+    {
+      "cards": [
+        "S3",
+        "H4",
+        "D5",
+        "C6",
+        "H7"
+      ],
+      "expectType": 5
+    },
+    {
+      "cards": [
+        "S5",
+        "H5",
+        "C5",
+        "D5"
+      ],
+      "expectType": 10
+    },
+    {
+      "cards": [
+        "J1",
+        "J2"
+      ],
+      "expectType": 11
+    },
+    {
+      "cards": [
+        "S3",
+        "H3",
+        "D4",
+        "C4",
+        "S5",
+        "H5"
+      ],
+      "expectType": 6
+    },
+    {
+      "cards": [
+        "S3",
+        "H4"
+      ],
+      "expectType": -1
+    }
+  ],
+  "expressions": [
+    {
+      "expr": "(1+2)*3*4",
+      "nums": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "expect": true
+    },
+    {
+      "expr": "8/(3-8/3)",
+      "nums": [
+        3,
+        3,
+        8,
+        8
+      ],
+      "expect": true
+    },
+    {
+      "expr": "1+2+3",
+      "nums": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "expect": false
+    },
+    {
+      "expr": "1+2+3+4+5",
+      "nums": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "expect": false
+    }
+  ],
+  "rules": [
+    "xiangqi",
+    "jieqi",
+    "xiangqidark",
+    "chess",
+    "chess960",
+    "go",
+    "gomoku",
+    "renju",
+    "connect6",
+    "connect4",
+    "othello",
+    "checkers",
+    "junqi",
+    "doushou",
+    "tiaogi",
+    "mills",
+    "shogi",
+    "tictactoe",
+    "doudizhu",
+    "doudizhu2",
+    "laizi",
+    "guandan",
+    "shengji",
+    "paodekuai",
+    "gongzhu",
+    "hongshi",
+    "texas",
+    "zhajinhua",
+    "niuniu",
+    "sangong",
+    "shisanszhang",
+    "uno",
+    "bridge",
+    "mahjong",
+    "feixingqi",
+    "monopoly",
+    "werewolf",
+    "undercover",
+    "point24",
+    "solitaire",
+    "dots",
+    "hex",
+    "nim",
+    "endgame",
+    "junqi4",
+    "gouji",
+    "baohuang",
+    "chudadi",
+    "shuangkou",
+    "showhand",
+    "blackjack",
+    "liarsdice",
+    "avalon",
+    "turtlesoup",
+    "mastermind",
+    "drawguess",
+    "juben",
+    "tournament",
+    "diefeng"
+  ]
+}

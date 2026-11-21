@@ -1,0 +1,2 @@
+rootProject.name = 'yiju'
+include ':app'

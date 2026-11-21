@@ -1,0 +1,13 @@
+{
+  "appName": "奕局",
+  "shortName": "奕局",
+  "package": "yiju",
+  "icon": {
+    "preset": "yiju",
+    "bg": "#EBECDE",
+    "ink": "#0A0A0A",
+    "accent": "#9B092D",
+    "note": "preset: yiju(附件像素棋盘) / board / ink / circle / custom"
+  },
+  "paths": []
+}
