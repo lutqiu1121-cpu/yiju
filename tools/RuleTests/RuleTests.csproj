@@ -10,5 +10,7 @@
   <!-- 直接复用服务端规则源码，不引用 ASP.NET / WebSocket，可单独编译运行 -->
   <ItemGroup>
     <Compile Include="../../server/Rules/**/*.cs" />
+    <!-- 规则源码依赖的纯工具类（JSON 帧解析），仅 System.Text.Json，不引入 ASP.NET / WebSocket -->
+    <Compile Include="../../server/Core/Json.cs" />
   </ItemGroup>
 </Project>
