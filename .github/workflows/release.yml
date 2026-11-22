@@ -109,10 +109,24 @@ jobs:
           PY
 
       - name: Build server package
-        run: bash "$GITHUB_WORKSPACE/build.sh"
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/build-server.log"
+          if ! bash "$GITHUB_WORKSPACE/build.sh" 2>&1 | tee "$log"; then
+            echo "::error title=build.sh 失败::$(grep -aE 'FAIL|error CS|错误|Exception' "$log" | tail -12 | tr '\n' '|' | tr '%' ' ')"
+            tail -20 "$log" | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
 
       - name: Build signed APK
-        run: bash "$GITHUB_WORKSPACE/build-apk.sh"
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/build-apk.log"
+          if ! bash "$GITHUB_WORKSPACE/build-apk.sh" 2>&1 | tee "$log"; then
+            echo "::error title=build-apk.sh 失败::$(grep -aE 'FAILURE|error|错误|Exception|Could not' "$log" | tail -12 | tr '\n' '|' | tr '%' ' ')"
+            tail -20 "$log" | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
 
       - name: Verify APK signature matches repository keystore
         run: |
