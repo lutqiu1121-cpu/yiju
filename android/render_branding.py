@@ -198,4 +198,154 @@ if (ASSETS / "manifest.webmanifest").exists():
     except Exception as e:
         print("警告：manifest 同步失败 " + str(e), file=sys.stderr)
 
-print(f"品牌已应用：{name} / preset={preset} / {len(shapes)} 条矢量路径 / 视口 {viewport}")
+# ---------------------------------------------------------------------------
+# v5 图标：印章版（细墨框 + 像素「弈」字 + 右下朱砂方印）
+# 与早期 preset=board 的十字棋盘明显不同；同时产出自适应图标、512 位图与哈希清单，
+# 让「图标是否真的进了 APK」可以用 sha256 验证，不再靠肉眼猜。
+# ---------------------------------------------------------------------------
+import hashlib
+import struct
+import zlib
+
+ROOT = HERE.parent
+GRID = ICON_GRID
+
+def hexrgb(s):
+    s = s.lstrip('#')
+    return tuple(int(s[i:i + 2], 16) for i in (0, 2, 4))
+
+BG_C, INK_C, ACC_C = hexrgb(bg), hexrgb(ink), hexrgb(accent)
+TILE_C = (0xFB, 0xF8, 0xEF)
+
+def glyph_rects():
+    """32×32 网格里的墨线 / 朱砂，返回 (x,y,w,h,color)。"""
+    out = []
+    for y, row in enumerate(GRID):
+        x = 0
+        while x < len(row):
+            ch = row[x]
+            if ch not in '#R':
+                x += 1
+                continue
+            start = x
+            while x < len(row) and row[x] == ch:
+                x += 1
+            out.append((start, y, x - start, 1, INK_C if ch == '#' else ACC_C))
+    return out
+
+def seal_rects():
+    """右下朱砂方印 + 米白十字（32 视口坐标，浮点）。"""
+    return [
+        (25.5, 25.5, 5.0, 5.0, ACC_C),
+        (27.4, 26.3, 1.2, 3.4, TILE_C),
+        (26.3, 27.4, 3.4, 1.2, TILE_C),
+    ]
+
+ALL_RECTS = glyph_rects() + seal_rects()
+
+def rect_path_scaled(r, scale, off):
+    x, y, w, h = r[:4]
+    return f"M{off + x * scale:g},{off + y * scale:g} h{w * scale:g} v{h * scale:g} h-{w * scale:g} Z"
+
+def vector_xml(viewport, paths, dp=None):
+    dp = dp or (108 if viewport == 108 else 48)
+    body = "\n".join(path(s) for s in paths)
+    return ('<?xml version="1.0" encoding="utf-8"?>\n'
+            '<!-- 由 render_branding.py 生成，不要手改 -->\n'
+            '<vector xmlns:android="http://schemas.android.com/apk/res/android"\n'
+            f'    android:width="{dp}dp" android:height="{dp}dp"\n'
+            f'    android:viewportWidth="{viewport}" android:viewportHeight="{viewport}">\n'
+            + body + "\n</vector>\n")
+
+# 1) 旧 API 兜底：drawable/ic_launcher.xml（32 视口，整图）
+p32 = [shape("M0,0 h32 v32 h-32 Z", bg)]
+p32.append(shape("M1,1 h30 v30 h-30 Z", "#00000000", ink, 0.7))
+p32 += [shape(rect_path_scaled(r, 1, 0), '#%02X%02X%02X' % r[4]) for r in ALL_RECTS]
+(RES / "drawable/ic_launcher.xml").write_text(vector_xml(32, p32), encoding="utf-8")
+
+# 2) 自适应图标：背景 + 前景（108 视口，内容收在中心 72×72 安全区）
+(RES / "drawable/ic_launcher_background.xml").write_text(
+    vector_xml(108, [shape("M0,0 h108 v108 h-108 Z", bg)]), encoding="utf-8")
+p108 = [shape(rect_path_scaled(r, 2.25, 18), '#%02X%02X%02X' % r[4]) for r in ALL_RECTS]
+(RES / "drawable/ic_launcher_foreground.xml").write_text(vector_xml(108, p108), encoding="utf-8")
+
+mip = RES / "mipmap-anydpi-v26"
+mip.mkdir(parents=True, exist_ok=True)
+adaptive = ('<?xml version="1.0" encoding="utf-8"?>\n'
+            '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
+            '    <background android:drawable="@drawable/ic_launcher_background" />\n'
+            '    <foreground android:drawable="@drawable/ic_launcher_foreground" />\n'
+            '</adaptive-icon>\n')
+for fn in ("ic_launcher.xml", "ic_launcher_round.xml"):
+    (mip / fn).write_text(adaptive, encoding="utf-8")
+
+# 3) 512 位图（mipmap-xxxhdpi）：纯 Python 写 PNG，零第三方依赖
+def write_png(path, size, draw):
+    buf = bytearray()
+    blank = bytes(BG_C)
+    for _ in range(size * size):
+        buf += blank
+    def fill(x, y, w, h, c):
+        x0, y0 = max(0, int(x)), max(0, int(y))
+        x1, y1 = min(size, int(x + w)), min(size, int(y + h))
+        for yy in range(y0, y1):
+            off = yy * size * 3
+            for xx in range(x0, x1):
+                buf[off + xx * 3:off + xx * 3 + 3] = bytes(c)
+    draw(fill, size)
+    raw = b"".join(b"\x00" + bytes(buf[y * size * 3:(y + 1) * size * 3]) for y in range(size))
+    def chunk(t, d):
+        return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+    data = (b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+
+def draw_icon(fill, size):
+    # 细墨外框
+    m = 24
+    fill(m, m, size - 2 * m, 2, INK_C)
+    fill(m, size - m - 2, size - 2 * m, 2, INK_C)
+    fill(m, m, 2, size - 2 * m, INK_C)
+    fill(size - m - 2, m, 2, size - 2 * m, INK_C)
+    # 弈字 + 朱砂印：32 网格 → 中心 384×384
+    scale, off = 12.0, 64.0
+    for x, y, w, h, c in ALL_RECTS:
+        fill(off + x * scale, off + y * scale, w * scale, h * scale, c)
+
+xxhdpi = RES / "mipmap-xxxhdpi"
+for fn in ("ic_launcher.png", "ic_launcher_round.png"):
+    write_png(xxhdpi / fn, 512, draw_icon)
+
+# 4) 同步网页 / PWA 图标（仓库根 + assets 副本）
+def svg_text():
+    parts = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges" role="img" aria-label="弈局">',
+             f'  <rect width="32" height="32" fill="{bg}"/>',
+             f'  <rect x="1" y="1" width="30" height="30" fill="none" stroke="{ink}" stroke-width="0.7"/>']
+    for x, y, w, h, c in ALL_RECTS:
+        parts.append(f'  <rect x="{x:g}" y="{y:g}" width="{w:g}" height="{h:g}" fill="#{c[0]:02X}{c[1]:02X}{c[2]:02X}"/>')
+    parts.append('</svg>')
+    return "\n".join(parts) + "\n"
+
+svg = svg_text()
+(ROOT / "client/icon.svg").write_text(svg, encoding="utf-8")
+if (ASSETS / "icon.svg").parent.exists():
+    (ASSETS / "icon.svg").write_text(svg, encoding="utf-8")
+
+# 5) 生成物哈希清单：CI / build-apk.sh 用它确认「图标真的换进包了」
+tracked = [
+    RES / "drawable/ic_launcher.xml",
+    RES / "drawable/ic_launcher_background.xml",
+    RES / "drawable/ic_launcher_foreground.xml",
+    mip / "ic_launcher.xml", mip / "ic_launcher_round.xml",
+    xxhdpi / "ic_launcher.png", xxhdpi / "ic_launcher_round.png",
+    ROOT / "client/icon.svg",
+]
+lines = []
+for f in tracked:
+    h = hashlib.sha256(f.read_bytes()).hexdigest()
+    lines.append(f"{h}  {f.relative_to(ROOT).as_posix()}")
+(HERE / "branding.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+print(f"品牌已应用：{name} / preset={preset} / 印章图标 + adaptive + 512 PNG / {len(tracked)} 个生成物已记入 branding.sha256")

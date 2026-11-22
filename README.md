@@ -269,7 +269,7 @@ dotnet run --project server
 
 ## 发布形态与覆盖升级
 
-**Release 只上传 `yiju.apk` 一个文件。** APK 必须能**直接覆盖升级**，不允许要求玩家卸载重装：
+**Release 上传 `yiju.apk` + `yiju-release.zip` 两个资产**（服务端包供 .NET 8 机器跑 `./start.sh` 实测）。APK 必须能**直接覆盖升级**，不允许要求玩家卸载重装：
 
 1. 签名固定 `android/keystore/yiju.jks`（alias `yiju`），`debug`/`release` 都指向它，任何版本不换不删
 2. `applicationId` 固定 `app.yiju.archive`，Manifest 不写死版本号
@@ -278,9 +278,9 @@ dotnet run --project server
 验证：`adb install -r yiju.apk`（或手机直接点 APK 覆盖）。构建脚本会打印 `覆盖升级配置` 与 APK 签名 `SHA256:` 指纹，逐版比对必须一致。覆盖安装不清客户端偏好与匿名 token；账号与存档在棋馆 `data/`，更不受影响。
 密钥随仓库公开分发，只保证「签名一致」，**不上商店、不证明身份**；要上架请用环境变量指定私有 keystore。详见 `android/keystore/README.md` 与 `RELEASE_LIST.md`。
 
- `yiju-source.zip` 与 `yiju-release.zip` 仅本地留档 / 随仓库分发：房主从源码包取棋馆、`scripts/` 示例剧本、`leaderboard/` 目录适配器与非商用协议，自己 `dotnet run` 起馆。剧本更新不发版，往 `scripts/` 丢 JSON 即可。
+ `yiju-source.zip` 仅本地留档 / 随仓库分发；`yiju-release.zip` 随 Release 一起发，供房主起馆：里面带棋馆、`scripts/` 示例剧本、`leaderboard/` 目录适配器与非商用协议，自己 `dotnet run` 起馆。剧本更新不发版，往 `scripts/` 丢 JSON 即可。
 
-发布提示词见 `PUBLISH_AGENT.md`（`【提示词开始】` ~ `【提示词结束】`）：本地 git + 凭证已在机器里，agent 只做构建、提交、推送、建 Release，零接触凭证，报错即停；品牌已定「弈局 / yiju / 附件像素棋盘矢量图标」，默认一个字不改。
+发布提示词见 `PUBLISH_AGENT.md` 与 `AGENT_PROMPT.md` v5：本地 git + 凭证已在机器里，agent 只做构建、提交、推送、建 Release，零接触凭证，报错即停；品牌已定「弈局 / yiju / 印章版像素图标」，生成物哈希记在 `android/branding.sha256`，默认一个字不改。
 
 ---
 
@@ -294,7 +294,7 @@ python3 tools/verify.py       # 不需要 SDK 的静态自检
 
 前置：`build.sh` 需 .NET 8 SDK；`build-apk.sh` 需 JDK 11+、Android SDK(android-33)、Gradle 与 python3，首次构建联网取 AGP。缺项脚本会明确报错退出。
 
-产物（仓库根目录 4 个）：`yiju.apk`（唯一上传）、`yiju-release.zip`、`yiju-source.zip`、`SIZES.txt`。详见 `RELEASE_LIST.md`。
+产物（仓库根目录 4 个）：`yiju.apk` + `yiju-release.zip`（两个都上传 Release）、`yiju-source.zip`、`SIZES.txt`（仅本地留档）。详见 `RELEASE_LIST.md`。
 
 ---
 

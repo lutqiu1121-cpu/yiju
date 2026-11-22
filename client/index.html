@@ -4,10 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#f4f0e6">
+<meta name="screen-orientation" content="landscape">
 <title>弈局 · 棋牌雅集</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./app.css">
+<link rel="stylesheet" href="./shell.css">
 <script src="./offline-assets.js"></script>
 </head>
 <body>
@@ -24,6 +26,7 @@
   <div class="brand">弈局 <span>◇</span> 雅集</div>
   <div class="sub">棋 · 牌 · 雅 集</div>
   <div id="conn" class="conn"><i></i><span>候馆中</span></div>
+  <button id="backHall">← 大厅</button>
 </header>
 <div id="offlineBar" class="offline-bar" hidden></div>
 <div id="matchBar" class="match-bar" hidden><span class="mb-mark">寻</span><span id="matchText">匹配中…</span><button class="btn ghost small" id="matchCancel">止寻</button></div>
@@ -56,10 +59,10 @@
       <button class="btn" id="openCreate">设席 <small>＋</small></button>
     </div>
     <div class="join-line">
-      <input id="roomCode" maxlength="5" placeholder="填五字雅号" autocomplete="off">
+      <input id="roomCode" maxlength="5" placeholder="房间号（五字）" autocomplete="off">
       <button class="btn" id="joinRoom">赴局</button>
     </div>
-    <div class="hint" id="lastRoomLine"></div>
+    <div class="hint" id="lastRoomLine">房间号是别人设的席号；不与任何人相连时，请点「寻局」与隐士开枰。</div>
     <div class="today-grid">
       <div class="mini"><b id="gameCount">40</b><span>对弈 · 在册</span></div>
       <div class="mini"><b id="themeCount">10</b><span>纸色 · 十品</span></div>
@@ -218,12 +221,7 @@
     </div>
     <div class="hint">题名只存本馆，口令不落明文；谱以匣钥加密，携谱另加一层口令。换馆用「还谱」＋口令迁移。</div>
     <div id="godPanel"></div>
-    <div class="side-h" style="margin-top:22px">弈株 · 装扮</div>
-    <div class="setting-row"><span>匣中弈株</span><span id="shopBalance" class="season-state">—</span></div>
-    <div id="shopToolbar" class="shop-toolbar"></div>
-    <div id="shopPreview" class="shop-preview"></div>
-    <div id="shopGrid" class="shop-grid"></div>
-    <div class="hint">弈株只由对局终了按胜负相赠，每日至多六十枚；不入局内、不改胜负、不兑换、无充值。四十九件装扮分十一类、四品阶、四套系，只换外观。</div>
+    <div class="empty-guide"><b>装扮已独立成页</b>点底部「装扮」或大厅右侧「装」即可试穿、定妆；这里只放设置与账号。</div>
     <div class="side-h" style="margin-top:22px">卷帙 · 内容</div>
     <div class="btn-row">
       <button class="btn ghost" id="openScriptImport">呈本</button>
@@ -240,13 +238,25 @@
     <div id="appFooter" class="app-footer"></div>
     <div class="foot-note">六十局，纸色十品 · 横竖皆宜，随手开枰<br>断线自续，终局可覆 · 谱可携可还<br>源码公开 · 禁商用 · 与君同弈</div>
   </section>
+
+  <section class="screen" id="screen-shop">
+    <div class="chapter"><span class="chapter-no">伍</span><span class="chapter-txt">装扮 · 匣中</span></div>
+    <div class="setting-row"><span>匣中弈株</span><span id="shopBalance" class="season-state">—</span></div>
+    <div id="shopToolbar" class="shop-toolbar"></div>
+    <div id="shopPreview" class="shop-preview"></div>
+    <div id="shopGrid" class="shop-grid"></div>
+    <div class="hint">弈株只由对局终了按胜负相赠，每日至多六十枚；不入局内、不改胜负、不兑换、无充值。四十九件装扮分十一类、四品阶、四套系，只换外观。</div>
+    <div class="empty-guide"><b>还没挑装扮？</b>点上面任意一件可先预览，再点「定妆」写入本机存档；「素妆 · 卸下全部」随时还原。离线也能试穿。</div>
+  </section>
 </main>
 
 <nav id="nav">
+  <button class="nav-item" data-screen="hall"><b>◎</b><span>大厅</span></button>
   <button class="nav-item active" data-screen="today"><b>〇</b><span>今日</span></button>
   <button class="nav-item" data-screen="play"><b>壹</b><span>对局</span></button>
   <button class="nav-item" data-screen="rooms"><b>贰</b><span>雅集</span></button>
   <button class="nav-item" data-screen="stats"><b>叁</b><span>战绩</span></button>
+  <button class="nav-item" data-screen="shop"><b>伍</b><span>装扮</span></button>
   <button class="nav-item" data-screen="settings"><b>肆</b><span>案牍</span></button>
 </nav>
 
@@ -259,7 +269,89 @@
 <div id="toast"></div>
 
 <div id="privacyLock" class="privacy-lock" hidden><div class="pl-card"><div class="pl-seal">缄</div><b>卷已暂缄</b><p>回到页面即续前局</p></div></div>
+
+<!-- 登录 / 身份凭证：服务器为可选项，默认本地模式 -->
+<div id="login" hidden>
+  <div class="lg-card">
+    <div class="lg-title">弈 局</div>
+    <div class="lg-sub">一室棋牌 · 一页档案 · 横屏开枰</div>
+    <div class="lg-row"><label>你的凭证（只存本机，发给好友即可互相添加）</label>
+      <div class="lg-code"><b id="lgCode">—</b><button class="lg-mini" id="lgCopy">复制</button></div></div>
+    <div class="lg-row"><label>称呼</label><input id="lgName" maxlength="12" placeholder="本机棋客"></div>
+    <div class="lg-modes">
+      <button class="lg-mode on" data-mode="local"><b>本地模式 · 可局域网联机</b><small>不连任何服务器也能与隐士下完 60 局；连上同一局域网棋馆后可见好友在线</small></button>
+      <button class="lg-mode" data-mode="hall"><b>连接棋馆（可选）</b><small>填局域网地址后，可与同馆玩家设席、赴局、看好友在线</small></button>
+    </div>
+    <div class="lg-row" id="lgServerRow" hidden><label>棋馆地址（可留空）</label>
+      <input id="lgServer" placeholder="例：http://192.168.1.8:5080"></div>
+    <div class="lg-notice" id="lgNotice">
+      <span>服务器是<b>可选项</b>：不填就是纯本机自弈，60 局都能下。填了也只连你自己的局域网棋馆，不连公网、不设官方服务器、不需要注册账号。</span>
+      <label><input type="checkbox" id="lgNoticeChk"> 不再提示</label>
+    </div>
+    <button class="lg-go" id="lgGo">入 局</button>
+    <div class="lg-foot" id="lgModeTag">本地模式 · 可局域网联机</div>
+    <div class="lg-foot">开源技术分享 · 禁止商用 · 不提供官方服务器 · 可完全离线</div>
+  </div>
+</div>
+
+<!-- 横屏大厅 -->
+<div id="hall" hidden>
+  <div class="hall-top">
+    <span class="hall-brand">弈局<i>◇</i>雅集</span>
+    <span class="hall-badge" id="hallMode">本地模式 · 可局域网联机</span>
+    <div class="hall-top-mid">
+      <span>凭证 <b id="hallCode">—</b></span>
+      <span>境界 <b id="hallRealm">炼气 · 第 1 境</b></span>
+      <span>弈株 <b id="hallCoin">0</b></span>
+    </div>
+    <button class="hall-gear" id="hallGear" title="设置">⚙</button>
+  </div>
+  <aside class="hall-friends">
+    <div class="fr-head"><span>好友 · 名录</span><button id="frToggle">收起</button></div>
+    <div class="fr-list" id="frList"></div>
+    <button class="fr-add" id="frAdd">＋ 凭凭证加好友</button>
+    <div class="fr-tip" id="frTip"></div>
+  </aside>
+  <div class="hall-main">
+    <div class="hall-hero"><h1>落子<em>有痕</em>。</h1>
+      <p>六十局对弈，主推八局，其余收入「更多对弈」。不连服务器也能与隐士下到终局。</p></div>
+    <button class="hall-play" id="hallPlay">对 弈</button>
+    <div class="hall-sub">
+      <button id="hallSetSeat">设席 · 开房</button>
+      <button id="hallJoin">赴局 · 输房号</button>
+    </div>
+    <div class="hall-note" id="hallNote"></div>
+  </div>
+  <nav class="hall-entries" id="hallEntries"></nav>
+  <div class="hall-tabs" id="hallTabs"></div>
+</div>
+
+<!-- 「对弈」层级弹层：主推 8 局 → 更多对弈 52 局，不跳整页 -->
+<div id="playPicker" hidden>
+  <div class="pp-card">
+    <div class="pp-head"><b>对 弈</b><small>先挑一局，再开枰 · 断网也能下</small><button id="ppClose">合</button></div>
+    <div class="pp-tools"><input id="ppSearch" placeholder="搜局 / 棋 / 牌 / 趣" autocomplete="off"><button id="ppMore">更多对弈 · 52 局 ▾</button></div>
+    <div class="pp-grid" id="ppGrid"></div>
+    <div class="pp-foot">主推：弈卷（四十八家历史人物）＋ 七局原创；其余 52 局在「更多对弈」里。全部 60 局均走服务端原规则。</div>
+  </div>
+</div>
+
+<div id="friendAdd" hidden>
+  <div class="fa-card">
+    <h3>加好友 · 凭证</h3>
+    <p>让对方把登录页上的凭证发给你，填在下面。凭证只存本机，不上传、不联网核对；同一棋馆 / 局域网内才能看到在线状态。</p>
+    <input id="faCode" placeholder="YJ-XXXX-XXXX-XXXX" autocomplete="off">
+    <input class="fa-name" id="faName" maxlength="12" placeholder="备注称呼（可留空）">
+    <div class="fa-btns"><button class="fa-ok" id="faOk">加入名录</button><button class="fa-no" id="faCancel">取消</button></div>
+  </div>
+</div>
+
+<div id="rotateHint"><div class="rh-card"><div class="rh-ico">▭</div>
+  <b>请横屏使用</b><p>弈局按横屏布局设计：左侧好友、中央开枰、右侧入口、底部常驻导航。竖屏下棋盘与信息会挤在一起。</p>
+  <button id="rhGo">仍要继续</button></div></div>
+
 <script type="module" src="./app.js"></script>
+<script type="module" src="./shell.js"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol !== 'file:' && location.hostname !== 'yiju.local') {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));

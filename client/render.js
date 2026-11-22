@@ -134,8 +134,10 @@ export function drawBoard(canvas, view, onPick) {
   const R = Math.min(step * .40, 26);
 
   ctx.save();
-  ctx.strokeStyle = p.line; ctx.lineWidth = 1;
-  if (g === 'xiangqi' || g === 'jieqi') {
+  const xq = (g === 'xiangqi' || g === 'jieqi');
+  ctx.strokeStyle = xq ? mix(p.ink, p.tile, .55) : p.line;
+  ctx.lineWidth = xq ? 1.3 : 1;
+  if (xq) {
     for (let y = 0; y < h; y++) { ctx.beginPath(); ctx.moveTo(ox, oy + y * step); ctx.lineTo(ox + (w - 1) * step, oy + y * step); ctx.stroke(); }
     for (let x = 0; x < w; x++) { ctx.beginPath(); ctx.moveTo(ox + x * step, oy); ctx.lineTo(ox + x * step, oy + 4 * step); ctx.moveTo(ox + x * step, oy + 5 * step); ctx.lineTo(ox + x * step, oy + (h - 1) * step); ctx.stroke(); }
 
@@ -232,7 +234,13 @@ export function drawBoard(canvas, view, onPick) {
     if (isPointBoard && points && !points.includes(i)) continue;
     const side = c[0] === 'w' ? 0 : c[0] === 'b' ? 1 : c[0] === 'r' ? 0 : c[0] >= 'c' ? 2 + c.charCodeAt(0) - 99 : -1;
     let text = '', fill = p.tile, edge = p.ink, heavy = false;
-    if (g === 'xiangqi' || g === 'jieqi' || g === 'xiangqidark') {
+    if (g === 'xiangqi' || g === 'jieqi') {
+      text = XQ[c] || (c[1] ? c[1] : c);
+      // 红黑双色实心阵营：不再靠淡描边区分，弱光下也一眼可辨
+      fill = side === 0 ? '#a3392b' : '#2b2a26';
+      edge = side === 0 ? '#7d2a20' : '#141310';
+      heavy = true;
+    } else if (g === 'xiangqidark') {
       text = XQ[c] || (c[1] ? c[1] : c);
       fill = side === 0 ? p.tile : mix(p.ink2, p.tile, .78);
       edge = side === 0 ? p.accent : p.ink;
@@ -276,7 +284,9 @@ export function drawBoard(canvas, view, onPick) {
       edge = side === 0 ? p.accent : p.ink;
     }
     disc(ctx, px(i), py(i), R * .96, p, i, { fill, edge, heavy });
-    if (text) label(ctx, text, px(i), py(i), R * (text.length > 1 ? .78 : 1.05), side === 1 && (g === 'xiangqi' || g === 'jieqi') ? p.tile : (side === 1 && fill === p.ink ? p.tile : p.ink));
+    if (text) label(ctx, text, px(i), py(i), R * (text.length > 1 ? .78 : 1.05),
+      (g === 'xiangqi' || g === 'jieqi') ? p.tile :
+      (side === 1 && fill === p.ink ? p.tile : p.ink));
   }
 
   if (view.last) {

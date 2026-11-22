@@ -7,8 +7,10 @@
     "bg": "#F4F0E6",
     "ink": "#2B2A26",
     "accent": "#9B092D",
-    "note": "浅色统一版：米白纸底 #F4F0E6 + 墨线 #2B2A26 + 朱砂 #9B092D，与 App 内页同色，不割裂",
-    "line": "#D5CEBC"
+    "note": "v5 印章版：米白纸底 + 细墨外框 + 像素「弈」字 + 右下朱砂方印。与早期十字棋盘图标明显不同；生成 adaptive icon / 512 PNG / branding.sha256 供 CI 校验",
+    "line": "#D5CEBC",
+    "sealMark": true,
+    "adaptive": true
   },
   "paths": []
 }
