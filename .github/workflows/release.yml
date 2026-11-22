@@ -110,8 +110,13 @@ jobs:
                 '历史 tag 数=' + str(len(prev)), '(首发不比对)')
           PY
           KS_SHA=$(keytool -list -v -keystore android/keystore/yiju.jks \
-            -storepass yijuarchive -alias yiju 2>/dev/null | grep -m1 'SHA256:' | tr -d ' :' | tr 'A-Z' 'a-z')
-          APK_SHA=$(keytool -printcert -jarfile yiju.apk 2>/dev/null | grep -m1 'SHA256:' | tr -d ' :' | tr 'A-Z' 'a-z')
+            -storepass yijuarchive -alias yiju 2>/dev/null \
+            | sed -n 's/.*SHA256: //p' | head -1 | tr -d ' :\t' | tr 'A-Z' 'a-z')
+          # APK 仅带 v2/v3 签名，keytool -printcert -jarfile 只认 JAR 式 v1，改用 apksigner
+          APKSIGNER="$ANDROID_HOME/build-tools/33.0.2/apksigner"
+          [ -x "$APKSIGNER" ] || APKSIGNER="$(command -v apksigner)"
+          APK_SHA=$("$APKSIGNER" verify --print-certs yiju.apk 2>/dev/null \
+            | sed -n 's/.*SHA-256 digest: //p' | head -1 | tr -d ' :\t' | tr 'A-Z' 'a-z')
           echo "keystore SHA256 = $KS_SHA"
           echo "APK      SHA256 = $APK_SHA"
           test -n "$KS_SHA" && test "$KS_SHA" = "$APK_SHA" || { echo "签名证书与固定 keystore 不一致"; exit 1; }
