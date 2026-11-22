@@ -28,7 +28,7 @@ function norm(s) {
   s.titles = Array.isArray(s.titles) ? s.titles : [];
   s.lastDay = s.lastDay || '';
   s.streak = Math.max(0, s.streak || 0);
-  s.coins = Math.max(0, s.coins || 0);
+  s.coins = Math.max(0, s.coins || 0);   // 兼容旧档，界面不再展示
   return s;
 }
 function need(rank) { return 40 + rank * 30; }
@@ -45,7 +45,6 @@ export const Cultivation = {
   onEnd(win) {
     const s = norm(load());
     s.lingli += win ? 12 : 5;
-    s.coins += win ? 3 : 1;
     save(s); this.mount();
   },
   checkin() {
@@ -53,9 +52,9 @@ export const Cultivation = {
     if (s.lastDay === t) { toast('今日已签到 · 明日再来'); return; }
     const y = dayKey(new Date(Date.now() - 86400000));
     s.streak = s.lastDay === y ? s.streak + 1 : 1;
-    s.lastDay = t; s.lingli += 15; s.coins += 5;
+    s.lastDay = t; s.lingli += 15;
     save(s); this.mount();
-    toast('签到 · 连日 ' + s.streak + ' 天 · 灵力 +15 · 棋币 +5');
+    toast('签到 · 连日 ' + s.streak + ' 天 · 灵力 +15');
   },
   breakthrough() {
     const s = norm(load()), r = this.rank(), n = need(r);
@@ -76,7 +75,7 @@ export const Cultivation = {
     el.innerHTML =
       '<div class="ink-head"><span>境界 · 修行</span><span>' + esc(this.name()) + ' · 第 ' + (r + 1) + ' 境</span></div>' +
       '<div class="cult-bar"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="ink-foot"><span>灵力 ' + s.lingli + ' / ' + n + '</span><span>连日 ' + s.streak + ' 天 · 棋币 ' + s.coins + '</span></div>' +
+      '<div class="ink-foot"><span>灵力 ' + s.lingli + ' / ' + n + '</span><span>连日 ' + s.streak + ' 天</span></div>' +
       '<div class="btn-row">' +
       '<button class="btn ghost small" id="cultCheckin"' + (signed ? ' disabled' : '') + '>' + (signed ? '今日已签' : '签到') + '</button>' +
       '<button class="btn ghost small" id="cultBreak">突破</button></div>' +

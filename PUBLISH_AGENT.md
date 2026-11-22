@@ -1,4 +1,4 @@
-> **v3 同步**：本版源码已完成改版并自带 `.github/workflows/release.yml`、APK 虚拟域壳、离线本机棋馆、浅色图标、修仙境界与纯本地签到。下发 agent 时以 `AGENT_PROMPT.md` 顶部的「v3 修订」为准；本文件下文仅保留构建与合规口径作参考，其中「没有 origin 就停下问」「不要改 README」等旧限制已由 v3 解禁。合规声明逐字保留。
+> **v3 同步**：本版源码已完成改版并自带 `.github/workflows/release.yml`、APK 虚拟域壳、60 局离线本机棋馆、浅色图标、修仙境界与纯本地签到、寻局过渡光效修复。仓库已存在且已有内容；未登录看到的空页是权限表现，不是真没代码，勿再追问。下发 agent 时以 `AGENT_PROMPT.md` 顶部的「v3 修订」为准；本文件下文仅保留构建与合规口径作参考，其中「没有 origin 就停下问」「不要改 README」等旧限制已由 v3 解禁。合规声明逐字保留。
 
 ---
 
@@ -74,7 +74,7 @@
    gh release create v1.0.0 \
      yiju.apk \
      --title "弈局 yiju v1.0.0" \
-     --notes "同源联机的简约手绘棋牌馆 · 60 个玩法（含七局纯原创小戏）+ 剧本工具 + 棋币装扮 + 界面特效 + 隐士十阶 + 神的领域三尊。房主运行源码包里的 server：dotnet publish/server/qipai-server.dll → http://localhost:5080（需 .NET 8 Runtime）；APK 首启选一个棋馆或填主机局域网地址即可联机。源码公开 · 禁止商用，源码包与 LICENSE 随仓库提供。"
+     --notes "同源联机的简约手绘棋牌馆 · 60 个玩法（含七局纯原创小戏）+ 剧本工具 + 弈株装扮 + 界面特效 + 隐士十阶 + 神的领域三尊。房主运行源码包里的 server：dotnet publish/server/qipai-server.dll → http://localhost:5080（需 .NET 8 Runtime）；APK 首启选一个棋馆或填主机局域网地址即可联机。源码公开 · 禁止商用，源码包与 LICENSE 随仓库提供。"
    ```
    只传 `yiju.apk` 一个文件，**不要**把 `yiju-release.zip` / `yiju-source.zip` / `SIZES.txt` 传上去。源码、剧本库、目录适配器都由仓库本身分发。
    `--title` 和 `--notes` 逐字照抄，不要改写、不要翻译、不要自己总结项目内容。

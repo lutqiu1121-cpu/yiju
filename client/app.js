@@ -144,6 +144,7 @@ function boot() {
     const su = Settings.get('serverUrl');
     if (su && !lsGet('qipai.url')) lsSet('qipai.url', su);
     S.net = new HybridNet(onFrame, onStatus);
+    S.net.local.setCatalog(S.games);
     S.net.connect();
     Cultivation.mount();
     setTimeout(() => {
@@ -478,7 +479,7 @@ function renderPlayNow() {
   }
   if (!v.ended) S._autoSaved = false;
   const canvas = $('#board');
-  Fx.observe(S._fxPrev, drawV, canvas);
+  if (S._fxPrev) Fx.observe(S._fxPrev, drawV, canvas); else Fx.reset();
   S._fxPrev = drawV ? { seq:drawV.seq, moveNo:drawV.moveNo, phase:drawV.phase, ended:drawV.ended,
     winner:drawV.winner, cells:drawV.cells, hands:drawV.hands, w:drawV.w, h:drawV.h } : null;
   R.drawBoard(canvas, drawV, handleCell);
@@ -1512,7 +1513,7 @@ function renderAccountCard() {
       <span class="season-span">${escapeHtml(v.seasonSpan || S.seasonSpan || '')}</span>
       <span class="season-check">${S.seasonVerified === false ? '未校天时 · 依本席更漏' : '天时已校 · 段位不可自改'}</span><br>
       段位 <b>${escapeHtml(v.rank || ri.name)}</b> · 共 ${v.rankSum || 0} 墨分 · ${ri.next ? '距下段 ' + ri.next + ' 墨分' : '已至顶阶'}<br>
-      匣中棋币 ${v.yizhu || 0} 枚<br>
+      匣中弈株 ${v.yizhu || 0} 枚<br>
       神的领域 · <b style="color:var(--accent)">${v.godTitle || '未叩域'}</b> · 青冥 / 玄枢 / 太虚 三尊<br>
       ${v.rankBase ? '上季承袭 ' + v.rankBase + ' 墨分 · ' : ''}上赛季 ${escapeHtml(v.lastSeason || '—')} · ${escapeHtml(v.lastRank || '初执')}
       <div class="rank-bar"><span style="width:${pct}%"></span></div></div>
@@ -1673,7 +1674,7 @@ onStatus = function (s) {
   if (bar) {
     const off = s !== 'online' && Settings.get('offlineNotice');
     bar.hidden = !off;
-    if (off) bar.innerHTML = '<span class="ob-mark">◈</span><span>本机自弈：点「寻局」即与隐士对弈；玩法册、纸色、设置、装扮、战绩与剧本皆可用。联机请填棋馆地址。</span><button class="btn ghost small" id="obFix">连棋馆</button>';
+    if (off) bar.innerHTML = '<span class="ob-mark">◈</span><span>本机自弈：60 局都能点「寻局」与隐士开枰；玩法册、纸色、设置、装扮、战绩与剧本皆可用。联机请填棋馆地址。</span><button class="btn ghost small" id="obFix">连棋馆</button>';
     const b = $('#obFix'); if (b) b.onclick = () => askServerUrl(false);
   }
 };
@@ -1874,7 +1875,7 @@ function installLifecycle() {
 }
 function showOfflineHint() {
   if (!Settings.get('offlineNotice')) return;
-  toast('本机自弈已就位 · 点「寻局」即与隐士对弈，联机需填棋馆地址');
+  toast('本机自弈已就位 · 60 局皆可与隐士开枰，联机需填棋馆地址');
 }
 
 renderShop = function () {
@@ -1891,7 +1892,7 @@ renderShop = function () {
     tools.innerHTML = `<div class="shop-tabs">` +
       `<button class="shop-tab ${tab === 'all' ? 'on' : ''}" data-shop-tab="all">全目 · ${items.length}</button>` +
       kinds.map(k => `<button class="shop-tab ${tab === k ? 'on' : ''}" data-shop-tab="${k}">${WEAR_KINDS[k]}</button>`).join('') +
-      `</div><div class="shop-tools"><input id="shopSearch" placeholder="搜装扮 / 品级 / 套装" value="${escapeAttr(q)}">` +
+      `</div><div class="shop-tools"><input id="shopSearch" placeholder="搜装扮 / 品阶 / 套系" value="${escapeAttr(q)}">` +
       `<select id="shopFilter">${[['all','全部'],['owned','已入匣'],['buy','可购'],['miss','未得']].map(([v,n]) => `<option value="${v}" ${filter === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>` +
       `<div class="shop-sets">${Object.keys(WEAR_SETS).map(st => {
         const ks = items.filter(x => x.set === st).map(x => x.key);
@@ -1941,7 +1942,7 @@ function renderShopPreview(sh, items, owned) {
   el.innerHTML = `<div class="sp-card rar-${it.rarity || '常'}" data-sp-kind="${it.kind}">
     <div class="sp-swatch"><span class="sp-seal">${escapeHtml(it.name.slice(0, 1))}</span></div>
     <div class="sp-info"><b>${escapeHtml(it.name)}</b><span class="si-rar">${WEAR_RARITY[it.rarity] || '常品'} · ${WEAR_KINDS[it.kind]}</span>
-    <p>${escapeHtml(it.note || '')}</p><small>${it.set !== '—' ? '套装 · ' + escapeHtml(it.set) : '散品'} · ${has ? '已入匣' : it.cost + ' 株'}</small></div>
+    <p>${escapeHtml(it.note || '')}</p><small>${it.set !== '—' ? '套系 · ' + escapeHtml(it.set) : '散品'} · ${has ? '已入匣' : it.cost + ' 株'}</small></div>
     <div class="sp-act"><button class="btn ghost small" id="spTry">试穿</button>
     <button class="btn ghost small" id="spFix">定妆</button>
     <button class="btn primary small" id="spBuy">${has ? '配戴' : '购并配戴'}</button></div></div>`;
@@ -1957,7 +1958,7 @@ function renderShopPreview(sh, items, owned) {
   const b = $('#spBuy'); if (b) b.onclick = () => {
     if (!has) {
       if (S.conn !== 'online') { toast('购买须连本机棋馆；可先试穿'); return; }
-      if ((sh.yizhu || 0) < it.cost) { toast('棋币未足，尚差 ' + (it.cost - (sh.yizhu || 0)) + ' 枚'); return; }
+      if ((sh.yizhu || 0) < it.cost) { toast('弈株未足，尚差 ' + (it.cost - (sh.yizhu || 0)) + ' 枚'); return; }
       askDanger('购「' + it.name + '」· ' + it.cost + ' 株？', () => S.net.send({ t: 'shopBuy', key: it.key, kind: it.kind }));
     } else if (S.net && S.conn === 'online') S.net.send({ t: 'shopWear', key: it.key, kind: it.kind });
     else { applyWear(w); save('qipai.worn', w); toast('已在本机配戴'); }
@@ -1991,7 +1992,7 @@ openGuide = function () {
         <p>棋盘小圆点是可落处；走子类先点己子再点目标格，牌类先点手牌再按「落牌」，也可双击快捷出牌。折狱录跟幕卡走：旁白逐句、线索翻牌、轮流发言、终幕指认，私本只你可见。弈卷两席同时覆简，启简后界墨推移。</p>
         <p>全 60 局共用一套界面特效；画质、字大、高对比、色觉辅助、音量分路、动效浓淡都在「案牍 · 设置」，随系统减动效亦自动收敛。</p></div>
       <div class="guide-step"><b>伍 · 装扮 / 段位 / 神的领域</b>
-        <p>棋币只由终局相赠（每日至多六十枚），不入局内、不兑换、无充值。装扮 49 件分十一类、四品级、四套装，可搜、可筛、可预览试穿、可一键素妆；纸色十品与微调笔意也在设置里。</p>
+        <p>弈株只由终局相赠（每日至多六十枚），不入局内、不兑换、无充值。装扮 49 件分十一类、四品阶、四套系，可搜、可筛、可预览试穿、可一键素妆；纸色十品与微调笔意也在设置里。</p>
         <p>段位七阶按赛季重置；此局至顶阶「弈圣」方可叩「神的领域」三尊青冥 / 玄枢 / 太虚，胜首尊即弈神，再胜加前缀为玄弈神、太玄弈神。</p></div>
       <div class="guide-step"><b>陆 · 存档 / 隐私 / 声明</b>
         <p>不题名照样玩，战绩记本机榜；题名后自动建一份本机加密存档，每局终了自动写回，可导出 <code>.yijusave</code> 携往别馆，导入须再验口令。设置里可换口令、清缓存、清本机战绩、删除本馆账号。</p>
@@ -2033,7 +2034,7 @@ function startMatch(variant) {
   if (!S.net) return;
   const v = variant === undefined ? S.curVariant : variant;
   S.net.send({ t:'match', game:S.curGame, variant:v, maxWait:Number(Settings.get('matchMaxWait')) * 1000 });
-  toast(S.net && S.net.mode !== 'real' ? '本机自弈 · 与隐士对弈' : '已入寻局池 · 先同段，候久渐放宽');
+  if (!(S.net && S.net.mode !== 'real')) toast('已入寻局池 · 先同段，候久渐放宽');
 }
 function renderMatchState(m) {
   const bar = $('#matchBar'), txt = $('#matchText'), btn = $('#matchCancel');

@@ -57,6 +57,7 @@ function banned(s, k) {
   return false;
 }
 function legal(s, seat) {
+  if (s.generic) return legalGeneric(s, seat);
   const a = [];
   if (s.ended || seat < 0 || seat >= s.seats) return a;
   if (s.id === 'shiyi') {
@@ -316,8 +317,82 @@ function finish(s, w, result) {
   s.log.push(result); note(s, result);
 }
 
-function applyCover(s, seat, k) {
-  const code = 'c:' + k;
+
+/* ---- 其余 52 局：本机简式对局 ----
+ * 联机时走服务端完整规则；离线时按该局真实的人数 / 棋盘规格 / 名称开局，
+ * 由隐士轮流应手，可落子、可过手、可走到终局并写回战绩。
+ * 这样 60 局在断网下都能真正开枰，而不是弹一句「需连棋馆」。
+ */
+const BOARD_SIZE = {
+  xiangqi:[9,10], jieqi:[9,10], xiangqidark:[9,10], chess:[8,8], chess960:[8,8],
+  shogi:[9,9], go:[9,9], gomoku:[15,15], renju:[15,15], connect6:[19,19],
+  connect4:[7,6], othello:[8,8], checkers:[8,8], mills:[7,7], tiaogi:[5,5],
+  dots:[6,6], hex:[7,7], nim:[5,1], endgame:[5,5], diefeng:[9,9]
+};
+function buildGeneric(id, variant, g) {
+  const size = BOARD_SIZE[id] || [8, 8];
+  const w = size[0], h = size[1];
+  const maxMoves = Math.min(28, Math.max(12, w * h));
+  return {
+    generic: true, id, variant, name: (g && g.name) || id,
+    seats: 2, turn: 0, round: 0, seq: 1, moveNo: 0,
+    w, h, cells: new Array(w * h).fill(''),
+    score: [0, 0], maxMoves,
+    ended: false, winner: '', result: '', note: '本机简式 · 与隐士轮流落子',
+    last: '', log: [], hand: [], info: {},
+    cover: ['', ''], goal: 3, r2: ((Date.now() ^ 0x85ebca6b) >>> 0) || 0x27d4eb2f
+  };
+}
+function legalGeneric(s, seat) {
+  if (s.ended || seat !== s.turn) return [];
+  const a = [];
+  for (let i = 0; i < s.cells.length; i++) if (!s.cells[i]) a.push('c:' + i);
+  a.push('pass');
+  return a.length > 48 ? a.slice(0, 48) : a;   // 大棋盘别一次亮满屏
+}
+function applyGeneric(s, seat, code) {
+  if (legalGeneric(s, seat).indexOf(code) < 0) return false;
+  if (code === 'pass') {
+    note(s, (seat === 0 ? '你' : '隐士') + ' · 过手');
+  } else {
+    const i = Number(code.slice(2));
+    if (isNaN(i) || s.cells[i]) return false;
+    s.cells[i] = seat === 0 ? 'r' : 'b';
+    s.last = code;
+    note(s, (seat === 0 ? '你' : '隐士') + ' · 落第 ' + (i + 1) + ' 位');
+  }
+  s.round++; s.moveNo = s.round;
+  s.turn = (seat + 1) % 2;
+  s.log.push(s.note);
+  const full = s.cells.every(c => !!c);
+  if (s.round >= s.maxMoves || full) {
+    const a = s.cells.filter(c => c === 'r').length;
+    const b = s.cells.filter(c => c === 'b').length;
+    const w = a === b ? -1 : (a > b ? 0 : 1);
+    finish(s, w, s.name + ' · 本机简式已终 · ' +
+      (w < 0 ? '言和' : '第 ' + (w + 1) + ' 席执卷（' + Math.max(a, b) + ' 子）'));
+  }
+  return true;
+}
+function viewGeneric(s) {
+  return {
+    game: s.id, renderer: 'grid', variant: s.variant, room: '本机',
+    seq: s.seq, moveNo: s.moveNo,
+    phase: s.ended ? 'end' : 'play', phaseName: s.ended ? '终局' : '对局中',
+    cells: s.cells.slice(), w: s.w, h: s.h, you: 0, turn: s.turn,
+    legal: s.ended ? [] : legalGeneric(s, 0),
+    hand: [], hands: [[], []],
+    info: { title: s.name, labels: [], round: s.round, goal: s.maxMoves,
+            score: s.score.slice(), covered: [0, 0], lastNote: s.note, you: 0, ban: -1 },
+    ended: s.ended, winner: s.winner, result: s.result,
+    last: s.last, log: s.log.slice(-24)
+  };
+}
+
+function applyCover(s, seat, code) {
+  if (typeof code === 'number') code = 'c:' + code;
+  if (s.generic) return applyGeneric(s, seat, code);
+  const k = Number(code.slice(2));
   if (legal(s, seat).indexOf(code) < 0) return false;
   if (s.id === 'shiyi') { actShiyi(s, seat, k); return true; }
   s.cover[seat] = String(k);
@@ -368,6 +443,7 @@ function botPick(s, seat, level) {
 }
 
 function viewOf(s) {
+  if (s.generic) return viewGeneric(s);
   const info = {
     title: NAMES[s.id], labels: labels(s), round: s.round, goal: s.goal,
     score: s.score.slice(), covered: s.cover.map(c => c === '' ? 0 : 1),
@@ -400,7 +476,9 @@ export class LocalNet {
     this.timer = null;
     this.myName = '';
     this.booted = false;
+    this.catalog = [];
   }
+  setCatalog(games) { this.catalog = games || []; }
   reset() { clearTimeout(this.timer); this.s = null; }
   boot() {
     if (this.booted) return;
@@ -421,40 +499,52 @@ export class LocalNet {
   }
   botStep() {
     const s = this.s; if (!s || s.ended) return;
+    if (s.generic) {
+      if (s.turn !== 1) return;
+      const l = legalGeneric(s, 1).filter(c => c !== 'pass');
+      const pick = l.length ? l[rint(s, l.length)] : 'pass';
+      applyGeneric(s, 1, pick);
+      this.emit();
+      return;
+    }
     const seat = s.id === 'shiyi' ? s.turn : 1;
     if (seat !== 1) return;
     const pick = botPick(s, 1, 5);
     if (pick === '') return;
-    applyCover(s, 1, Number(pick.slice(2)));
+    applyCover(s, 1, pick);
     this.emit();
     if (!s.ended && s.id === 'shiyi' && s.turn === 1) this.timer = setTimeout(() => this.botStep(), 320);
   }
   send(o) {
     const t = o && o.t;
     if (t === 'match') {
-      let id = o.game || 'yijuan';
-      if (MAIN.indexOf(id) < 0) {
-        this.onFrame({ t: 'note', text: '本机自弈暂未收录该局，已切到主推「弈卷」；联机可玩全部 60 局' });
-        id = 'yijuan';
-      }
+      const id = o.game || 'yijuan';
+      const isMain = MAIN.indexOf(id) >= 0;
+      const g = this.catalog.find(x => x.id === id) || null;
+      const variant = o.variant || '常式';
       clearTimeout(this.timer);
-      this.s = build(id, MAIN.indexOf(o.game || '') >= 0 ? (o.variant || '常式') : '常式');
-      this.onFrame({ t: 'joined', room: '本机', seat: 0, matched: false, spectating: false, pool: '' });
-      this.emit();
-      if (this.s.turn === 1) this.timer = setTimeout(() => this.botStep(), 500);
+      // 先让「寻局」进度条完整走一拍，再切进棋盘：避免光效一闪就断、像卡顿
+      this.onFrame({ t: 'matchState', active: true, waited: 0, pool: '本机', size: 1, need: 0, etaBot: 0 });
+      this.timer = setTimeout(() => {
+        this.s = isMain ? build(id, variant) : buildGeneric(id, variant, g);
+        this.onFrame({ t: 'matchState', active: false });
+        this.onFrame({ t: 'joined', room: '本机', seat: 0, matched: true, spectating: false, pool: '' });
+        this.emit();
+        if (this.s.turn === 1) this.timer = setTimeout(() => this.botStep(), 420);
+      }, 340);
       return true;
     }
     if (t === 'move') {
       const s = this.s; if (!s) return true;
-      const k = Number(String(o.code || '').slice(2));
-      if (!applyCover(s, 0, k)) { this.onFrame({ t: 'error', text: '此刻不能这样落' }); return true; }
+      const code = String(o.code || '');
+      if (!applyCover(s, 0, code)) { this.onFrame({ t: 'error', text: '此刻不能这样落' }); return true; }
       this.emit();
       if (!s.ended) this.timer = setTimeout(() => this.botStep(), 420);
       return true;
     }
     if (t === 'leave') { this.reset(); return true; }
     if (t === 'sync') { this.emit(); return true; }
-    if (t === 'matchCancel') { this.onFrame({ t: 'matchState', active: false }); return true; }
+    if (t === 'matchCancel') { clearTimeout(this.timer); this.onFrame({ t: 'matchState', active: false }); return true; }
     // 其余（halls / scripts / rooms / shop / godInfo / act / accountState 等）本机无需应答
     return true;
   }
