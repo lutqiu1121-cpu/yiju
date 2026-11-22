@@ -1,4 +1,18 @@
-# 给 agent 的最终提示词（可直接复制 · v2）
+# 给 agent 的最终提示词（可直接复制 · v3 · 现行口径）
+
+> **v3 修订（权威性高于下文所有旧段落，冲突处以本段为准）**
+> 本源码包**已完成全部改版**，不需要 agent 再设计、再改代码、再补 workflow：
+> 1. 仓库 `https://github.com/lutqiu1121-cpu/yiju`（分支 `master`）当前为空；包内已自带 `.git` 与配好的 `origin`，**解压后直接 `git push -u origin master`**，不要 `init`、不要 `remote add`、不要 force。
+> 2. `.github/workflows/release.yml` **已随包提供**（零 Secret、用默认 `GITHUB_TOKEN`、首发 versionCode 放行、指纹实测、真实报错即停）。**不要再新建或覆盖它**。请在仓库 Settings → Actions → General 把 Workflow permissions 勾为 **Read and write**。
+> 3. 固定 keystore `android/keystore/yiju.jks` 及公开构建口令已在仓库里（`yiju` / `yijuarchive`），**不需要任何签名 Secrets、PAT、或向用户索取口令**；已清空的 Secrets 不必补回。
+> 4. 本版已落地：APK 壳改用虚拟安全源 `https://yiju.local/` 修复 ES module 被 CORS 拒载导致的「全页点不动」；断线时「寻局」直接由本机棋馆 + 隐士陪玩真实走完一局（主推 8 局）；浅色统一 App 图标；修仙境界 + 纯本地签到；主推 8 局 / 更多对弈 52 局分层；「玩法」显示文案改「对弈」；装扮 / 棋币等字词去繁就简；`RuleTests.csproj` 补 `Json.cs`；CI 工作流补齐。
+> 5. **合规声明、LICENSE、60 局注册、固定签名根、applicationId 一律不得改动**。README / PUBLISH_AGENT.md 里那段技术与合规声明逐字保留。
+> 6. 因此 agent 的任务只有两件：**推代码**、**跑 CI 并如实回报 Actions 链接 / Release 链接 / `yiju.apk` + `yiju-release.zip` 直链 / 签名 SHA256**。不要重新设计、不要伪造产物、不要模拟成功。
+> 7. 服务端能否实起仍需把 `yiju-release.zip` 放上 .NET 8 机器跑 `./start.sh` 验证，CI 不替代这一步。
+
+---
+
+# 给 agent 的最终提示词（历史正文 · v2，仅作参考）
 
 > 复制「提示词正文」整段发给 agent。本文件已放进仓库，推上去后新对话也可直接让 agent 读它。
 
@@ -29,7 +43,7 @@
 **三、发布**
 9. 首发 tag `v1.0.0-test.1`，以 **Pre-release（测试版）** 发布，标题「弈局 yiju v1.0.0 测试版 · 服务端联机实测」。
 10. **测试版**允许上传两个资产：`yiju.apk` + `yiju-release.zip`（服务端包，供 .NET 8 服务器 `./start.sh` 实测）。正式版恢复「只上传 `yiju.apk` 一个文件」。`SIZES.txt`、源码包、bundle 仅本地留档，不进 Release。
-11. Release 正文写清：60 个玩法（含七局原创）、折狱录制本、弈株妆奁 49 件、隐士十阶、神的领域三尊、按最高段位定隐士的房规、分池寻局与进度条；房主一键启动 `./start.sh`（Windows `start.bat`），改 `yiju.conf` 即改端口 / 匾额 / 名录 / 校时 / 榜单，可 `--port 9000 --no-directory` 临时覆盖；棋馆地址**任意可达地址**都认（局域网 IP / 域名 / IPv6 / 带路径 / 本机回环），端口写不写都行，不写补可配置的缺省端口；服务器只是可选项——本机自弈完全不联网可用全部除多人联机外的功能，局域网联机不需外部服务，名录 / 校时 / 榜单默认开但可全关、挂了自动降级；源码公开 · 禁止商用，以及上面那段技术与合规声明全文。
+11. Release 正文写清：60 个玩法（含七局原创）、折狱录制本、棋币装扮 49 件、隐士十阶、神的领域三尊、按最高段位定隐士的房规、分池寻局与进度条；房主一键启动 `./start.sh`（Windows `start.bat`），改 `yiju.conf` 即改端口 / 匾额 / 名录 / 校时 / 榜单，可 `--port 9000 --no-directory` 临时覆盖；棋馆地址**任意可达地址**都认（局域网 IP / 域名 / IPv6 / 带路径 / 本机回环），端口写不写都行，不写补可配置的缺省端口；服务器只是可选项——本机自弈完全不联网可用全部除多人联机外的功能，局域网联机不需外部服务，名录 / 校时 / 榜单默认开但可全关、挂了自动降级；源码公开 · 禁止商用，以及上面那段技术与合规声明全文。
 12. 如实说明：本版服务端宿主未经实起验证，APK 由 GitHub CI 真实产出；不得声称「服务器已验证可用」。任一步失败即停并原样贴报错，不要绕过、不要伪造构建或发布结果。
 
 **四、交付回报**

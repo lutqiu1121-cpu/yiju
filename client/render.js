@@ -114,7 +114,8 @@ export function drawBoard(canvas, view, onPick) {
   if (view.renderer === 'path') { drawPath(ctx, W, H, p, view); canvas.onclick = null; return; }
   if (view.renderer === 'scroll') { drawScroll(ctx, W, H, p, view); canvas.onclick = null; return; }
   if (view.renderer !== 'grid') { drawTable(ctx, W, H, p, view); canvas.onclick = null; return; }
-  if (g === 'dots' || g === 'hex' || g === 'nim' || g === 'endgame') {
+  if (g === 'dots' || g === 'hex' || g === 'nim' || g === 'endgame' ||
+      ['houlou','duzhou','dengying','huiwen','cuojin','shiyi','tingyu','yijuan'].includes(g)) {
     drawGridExtra(ctx, W, H, p, view, onPick); return;
   }
 
@@ -730,7 +731,7 @@ function drawOrig7(ctx, W, H, p, view, onPick) {
 
 function drawGridExtra(ctx, W, H, p, view, onPick) {
   const g = view.game || '';
-  if (['houlou','duzhou','dengying','huiwen','cuojin','shiyi','tingyu'].includes(g)) {
+  if (['houlou','duzhou','dengying','huiwen','cuojin','shiyi','tingyu','yijuan'].includes(g)) {
     drawOrig7(ctx, W, H, p, view, onPick); return;
   }
   const cells = view.cells || [], w = view.w || 1, h = view.h || 1;

@@ -1,4 +1,5 @@
-import { Net } from './net.js';
+import { HybridNet, LOCAL_MAIN } from './local-net.js';
+import { Cultivation } from './cultivation.js';
 import { Sound } from './audio.js';
 import * as R from './render.js';
 import { Fx } from './fx.js';
@@ -75,6 +76,10 @@ async function probeUtc(src) {
   } catch (e) { return null; } finally { clearTimeout(timer); }
 }
 async function seasonSelfCheck(quiet) {
+  if (S.net && S.net.mode !== 'real') {
+    const el0 = $('#seasonState'); if (el0) el0.textContent = '未校天时 · 依本席更漏';
+    return;   // 纯本地自弈不联网，段位照常记，仅标未校
+  }
   const custom = (store('qipai.timeUrl', '') || '').trim();
   const list = custom ? [{ url:custom, pick:j => j.utc_datetime || j.dateTime || j.time }, ...TIME_SOURCES] : TIME_SOURCES;
   const got = (await Promise.all(list.map(probeUtc))).filter(Boolean);
@@ -138,8 +143,9 @@ function boot() {
     bindUI(); bindExtraUI();
     const su = Settings.get('serverUrl');
     if (su && !lsGet('qipai.url')) lsSet('qipai.url', su);
-    S.net = new Net(onFrame, onStatus);
+    S.net = new HybridNet(onFrame, onStatus);
     S.net.connect();
+    Cultivation.mount();
     setTimeout(() => {
       if (!S.guideShown) openGuide();
       else if (S.conn !== 'online' && Settings.get('offlineNotice')) showOfflineHint();
@@ -206,12 +212,26 @@ function renderCats() {
 function renderGames() {
   const el = $('#gameList'); if (!el) return;
   const q = S.search.trim().toLowerCase();
-  const list = S.games.filter(g => (S.cat === 'all' || g.cat === S.cat) &&
-    (!q || (g.name + g.tag + g.desc + g.id).toLowerCase().includes(q)));
-  el.innerHTML = list.map((g, i) =>
+  const match = g => (S.cat === 'all' || g.cat === S.cat) &&
+    (!q || (g.name + g.tag + g.desc + g.id).toLowerCase().includes(q));
+  const main = S.games.filter(g => LOCAL_MAIN.indexOf(g.id) >= 0 && match(g));
+  const rest = S.games.filter(g => LOCAL_MAIN.indexOf(g.id) < 0 && match(g));
+  const expanded = !!S.showAll || !!q || S.cat !== 'all';
+  const cards = (arr, off) => arr.map((g, i) =>
     `<div class="game-card ${g.id === S.curGame ? 'sel' : ''}" data-game="${g.id}">
-      <span class="no">${String(i + 1).padStart(2,'0')}</span><span class="seats">${g.min}–${g.max}人</span>
-      ${rankBadgeHtml(g.id)}<h3>${g.name}</h3><p>${g.desc}</p><div class="tag">${g.tag}</div></div>`).join('') || '<div class="hint">没有匹配的玩法</div>';
+      <span class="no">${String(off + i + 1).padStart(2,'0')}</span><span class="seats">${g.min}–${g.max}人</span>
+      ${rankBadgeHtml(g.id)}<h3>${g.name}</h3><p>${g.desc}</p><div class="tag">${g.tag}</div></div>`).join('');
+  let html = '<div class="side-h">主推 · 8 局对弈</div>' + (cards(main, 0) || '<div class="hint">没有匹配的对弈</div>');
+  if (expanded) {
+    html += '<div class="side-h" style="margin-top:18px">更多对弈 · ' + rest.length + ' 局</div>' + cards(rest, main.length);
+    if (!q && S.cat === 'all') html += '<button class="btn ghost" id="lessGames">收起更多对弈</button>';
+  } else if (rest.length) {
+    html += '<button class="btn ghost" id="moreGames">更多对弈 · ' + rest.length + ' 局 ▾</button>';
+  }
+  el.innerHTML = html;
+  const more = $('#moreGames'), less = $('#lessGames');
+  if (more) more.onclick = () => { S.showAll = true; renderGames(); tap(); };
+  if (less) less.onclick = () => { S.showAll = false; renderGames(); tap(); };
   el.querySelectorAll('.game-card').forEach(c => c.onclick = () => {
     S.curGame = c.dataset.game;
     const g = S.games.find(x => x.id === S.curGame);
@@ -386,6 +406,7 @@ function onEnd() {
     S.stats.lastDay = today;
   }
   save('qipai.stats', S.stats);
+  Cultivation.onEnd(win);
   S.history.unshift({ t: Date.now(), game: v.game, result: v.result, win });
   S.history = S.history.slice(0, 40); save('qipai.history', S.history);
   win ? Sound.win() : Sound.lose();
@@ -782,7 +803,7 @@ function openCreate() {
        `<option value="现场导入">现场导入（先粘贴剧本）</option>`)
     : (g.variants || []).map(v => `<option value="${escapeHtml(v)}" ${v === S.curVariant ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
   modal('设席 · ' + g.name, `
-    <div class="field"><label>玩法变体</label><select id="mkVariant">${variants}</select></div>
+    <div class="field"><label>对弈变体</label><select id="mkVariant">${variants}</select></div>
     <div class="field"><label>雅号（可留空）</label><input id="mkTitle" maxlength="24" placeholder="例：周末手谈 · 来者不拒"></div>
     <div class="field"><label>开局人数 ${g.min}–${g.max} 人 · 开局后空席封存</label>
       <input id="mkSeats" type="number" min="${g.min}" max="${g.max}" value="${g.min}"></div>
@@ -798,6 +819,7 @@ function openCreate() {
     <button class="btn" id="mkMatch">寻局（八息未齐自邀隐士）</button>
     <button class="btn" id="mkWatch">旁观雅集</button>`, null);
   $('#mkCreate').onclick = () => {
+    if (S.net && S.net.mode !== 'real') { toast('未连接棋馆 · 本机自弈请点「寻局」'); return; }
     const variant = $('#mkVariant').value;
     S.curVariant = variant; renderVariants();
     const opts = collectOpts();
@@ -819,8 +841,9 @@ function openCreate() {
   if ($('#mkImport')) $('#mkImport').onclick = () => openScriptImport();
 }
 function joinRoom(password) {
+  if (S.net && S.net.mode !== 'real') { toast('局域网内未找到其他玩家，请确认棋馆已启动'); return; }
   const code = ($('#roomCode').value || '').trim().toUpperCase();
-  if (!code) { toast('请填雅号'); return; }
+  if (!code) { toast('请填房间号'); return; }
   S.net.send(password ? { t:'join', room:code, password } : { t:'join', room:code });
 }
 
@@ -1489,7 +1512,7 @@ function renderAccountCard() {
       <span class="season-span">${escapeHtml(v.seasonSpan || S.seasonSpan || '')}</span>
       <span class="season-check">${S.seasonVerified === false ? '未校天时 · 依本席更漏' : '天时已校 · 段位不可自改'}</span><br>
       段位 <b>${escapeHtml(v.rank || ri.name)}</b> · 共 ${v.rankSum || 0} 墨分 · ${ri.next ? '距下段 ' + ri.next + ' 墨分' : '已至顶阶'}<br>
-      匣中弈株 ${v.yizhu || 0} 枚<br>
+      匣中棋币 ${v.yizhu || 0} 枚<br>
       神的领域 · <b style="color:var(--accent)">${v.godTitle || '未叩域'}</b> · 青冥 / 玄枢 / 太虚 三尊<br>
       ${v.rankBase ? '上季承袭 ' + v.rankBase + ' 墨分 · ' : ''}上赛季 ${escapeHtml(v.lastSeason || '—')} · ${escapeHtml(v.lastRank || '初执')}
       <div class="rank-bar"><span style="width:${pct}%"></span></div></div>
@@ -1532,7 +1555,7 @@ function renderGodPanel() {
 function renderShop() {
   const el = $('#shopGrid'); if (!el) return;
   const sh = S.shop;
-  if (!sh) { el.innerHTML = '<div class="hint">候妆奁目录…</div>'; return; }
+  if (!sh) { el.innerHTML = '<div class="hint">候装扮目录…</div>'; return; }
   const bal = $('#shopBalance'); if (bal) bal.textContent = sh.yizhu + ' 枚';
   const kinds = { desk:'牌桌', face:'牌面', seal:'朱印', ink:'墨色', fx:'华彩' };
   const owned = (sh.owned || []).map(String);
@@ -1650,7 +1673,7 @@ onStatus = function (s) {
   if (bar) {
     const off = s !== 'online' && Settings.get('offlineNotice');
     bar.hidden = !off;
-    if (off) bar.innerHTML = '<span class="ob-mark">◈</span><span>本机自弈：玩法册、纸色、设置、妆奁、战绩与制本皆可用；开枰填任意可达的棋馆地址即可，不需外网、不限固定地址。</span><button class="btn ghost small" id="obFix">连棋馆</button>';
+    if (off) bar.innerHTML = '<span class="ob-mark">◈</span><span>本机自弈：点「寻局」即与隐士对弈；玩法册、纸色、设置、装扮、战绩与剧本皆可用。联机请填棋馆地址。</span><button class="btn ghost small" id="obFix">连棋馆</button>';
     const b = $('#obFix'); if (b) b.onclick = () => askServerUrl(false);
   }
 };
@@ -1765,7 +1788,7 @@ function settingsAction(k) {
     modal('本机诊断', `<div class="notice-full"><p>连接：${S.conn} · ${S.net && S.net.custom ? escapeHtml(S.net.custom) : '本机回环 / 同源'}</p>
       <p>玩法册：${S.games.length} 局 ${S.offlineAssets ? '（离线内嵌册）' : '（棋馆下发）'}</p>
       <p>画质：${Settings.get('quality')} · 清晰倍率 ${Settings.get('dpr')} · 华彩 ${Settings.get('fxLevel')}</p>
-      <p>妆奁：${WEAR_LIST.length} 件可购 · 题名 ${S.account && S.account.ok ? '已入席' : '未题名'}</p>
+      <p>装扮：${WEAR_LIST.length} 件可购 · 题名 ${S.account && S.account.ok ? '已入席' : '未题名'}</p>
       <p>外部服务：名录 ${Settings.get('externalDir') ? '开' : '关'} · 校时 ${Settings.get('externalTime') ? '开' : '关'} · 榜单 ${Settings.get('externalBoards') ? '开' : '关'}</p>
       <p>本机数据：账号与加密存档仅存于房主棋馆的 data/；页面不上传个人信息。</p></div>
       <button class="btn primary" id="diagOk">领了</button>`, null);
@@ -1785,7 +1808,7 @@ function settingsAction(k) {
       S.net.send({ t: 'accountPassword', old: $('#pwOld').value, password: $('#pwNew').value });
       closeModal();
     }; return; }
-  if (k === 'deleteAccount') { modal('删除本馆账号', `<p>连加密存档、段位、妆奁一并删去，不可复原。请先「携谱」备份。</p>
+  if (k === 'deleteAccount') { modal('删除本馆账号', `<p>连加密存档、段位、装扮一并删去，不可复原。请先「携谱」备份。</p>
     <div class="field"><label>口令核验</label><input id="delPass" type="password" class="url-input"></div>
     <button class="btn danger" id="delOk">确认删除</button>`, null);
     const b = $('#delOk'); if (b) b.onclick = () => {
@@ -1851,7 +1874,7 @@ function installLifecycle() {
 }
 function showOfflineHint() {
   if (!Settings.get('offlineNotice')) return;
-  toast('未连棋馆：本机自弈可用，开枰请起本机棋馆（不需要外网）');
+  toast('本机自弈已就位 · 点「寻局」即与隐士对弈，联机需填棋馆地址');
 }
 
 renderShop = function () {
@@ -1868,7 +1891,7 @@ renderShop = function () {
     tools.innerHTML = `<div class="shop-tabs">` +
       `<button class="shop-tab ${tab === 'all' ? 'on' : ''}" data-shop-tab="all">全目 · ${items.length}</button>` +
       kinds.map(k => `<button class="shop-tab ${tab === k ? 'on' : ''}" data-shop-tab="${k}">${WEAR_KINDS[k]}</button>`).join('') +
-      `</div><div class="shop-tools"><input id="shopSearch" placeholder="搜妆奁 / 品阶 / 套系" value="${escapeAttr(q)}">` +
+      `</div><div class="shop-tools"><input id="shopSearch" placeholder="搜装扮 / 品级 / 套装" value="${escapeAttr(q)}">` +
       `<select id="shopFilter">${[['all','全部'],['owned','已入匣'],['buy','可购'],['miss','未得']].map(([v,n]) => `<option value="${v}" ${filter === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>` +
       `<div class="shop-sets">${Object.keys(WEAR_SETS).map(st => {
         const ks = items.filter(x => x.set === st).map(x => x.key);
@@ -1896,10 +1919,10 @@ renderShop = function () {
         <span class="si-rar">${WEAR_RARITY[x.rarity] || '常品'}</span><b>${escapeHtml(x.name)}</b>
         <small>${escapeHtml(x.set && x.set !== '—' ? x.set : WEAR_KINDS[x.kind] || '')}</small>
         <em>${has ? (on ? '配戴中' : '已入匣') : (x.cost + ' 株')}</em></button>`;
-    }).join('') + (list.length ? '' : '<div class="hint">此处暂无合条件的妆奁</div>');
+    }).join('') + (list.length ? '' : '<div class="hint">此处暂无合条件的装扮</div>');
   grid.querySelectorAll('[data-shop-key]').forEach(b => b.onclick = () => shopPreview(b.dataset.shopKey, sh, items, owned));
   const pw = grid.querySelector('[data-shop-wear]');
-  if (pw) pw.onclick = () => { S.shopTry = { w: {}, t: Date.now() }; applyWear({}); save('qipai.worn', {}); if (S.net) S.net.send({ t: 'shopWear', key: '', kind: 'all' }); renderShop(); toast('已卸下全部妆奁'); };
+  if (pw) pw.onclick = () => { S.shopTry = { w: {}, t: Date.now() }; applyWear({}); save('qipai.worn', {}); if (S.net) S.net.send({ t: 'shopWear', key: '', kind: 'all' }); renderShop(); toast('已卸下全部装扮'); };
   renderShopPreview(sh, items, owned);
 };
 
@@ -1911,14 +1934,14 @@ function renderShopPreview(sh, items, owned) {
   const el = $('#shopPreview'); if (!el) return;
   const key = S.shopPreview;
   const it = items.find(x => x.key === key);
-  if (!it) { el.innerHTML = `<div class="sp-empty">点一件妆奁，可先看样式、再试穿。素妆亦在此处卸下。</div>`; return; }
+  if (!it) { el.innerHTML = `<div class="sp-empty">点一件装扮，可先看样式、再试穿。素妆亦在此处卸下。</div>`; return; }
   const has = owned.indexOf(String(it.key)) >= 0;
   const w = Object.assign({}, sh.worn || {}); w[it.kind] = it.key;
   const trial = S.shopTry && S.shopTry.w && S.shopTry.w[it.kind] === it.key;
   el.innerHTML = `<div class="sp-card rar-${it.rarity || '常'}" data-sp-kind="${it.kind}">
     <div class="sp-swatch"><span class="sp-seal">${escapeHtml(it.name.slice(0, 1))}</span></div>
     <div class="sp-info"><b>${escapeHtml(it.name)}</b><span class="si-rar">${WEAR_RARITY[it.rarity] || '常品'} · ${WEAR_KINDS[it.kind]}</span>
-    <p>${escapeHtml(it.note || '')}</p><small>${it.set !== '—' ? '套系 · ' + escapeHtml(it.set) : '散品'} · ${has ? '已入匣' : it.cost + ' 株'}</small></div>
+    <p>${escapeHtml(it.note || '')}</p><small>${it.set !== '—' ? '套装 · ' + escapeHtml(it.set) : '散品'} · ${has ? '已入匣' : it.cost + ' 株'}</small></div>
     <div class="sp-act"><button class="btn ghost small" id="spTry">试穿</button>
     <button class="btn ghost small" id="spFix">定妆</button>
     <button class="btn primary small" id="spBuy">${has ? '配戴' : '购并配戴'}</button></div></div>`;
@@ -1934,7 +1957,7 @@ function renderShopPreview(sh, items, owned) {
   const b = $('#spBuy'); if (b) b.onclick = () => {
     if (!has) {
       if (S.conn !== 'online') { toast('购买须连本机棋馆；可先试穿'); return; }
-      if ((sh.yizhu || 0) < it.cost) { toast('弈株未足，尚差 ' + (it.cost - (sh.yizhu || 0)) + ' 枚'); return; }
+      if ((sh.yizhu || 0) < it.cost) { toast('棋币未足，尚差 ' + (it.cost - (sh.yizhu || 0)) + ' 枚'); return; }
       askDanger('购「' + it.name + '」· ' + it.cost + ' 株？', () => S.net.send({ t: 'shopBuy', key: it.key, kind: it.kind }));
     } else if (S.net && S.conn === 'online') S.net.send({ t: 'shopWear', key: it.key, kind: it.kind });
     else { applyWear(w); save('qipai.worn', w); toast('已在本机配戴'); }
@@ -1956,7 +1979,7 @@ openGuide = function () {
   modal('入门小引 · 与君同弈', `
     <div class="guide">
       <div class="guide-step"><b>壹 · 三种用法，服务器只是可选项</b>
-        <p><b>本机自弈（完全不联网）</b>：在本机跑棋馆程序，本页连本机回环即可。60 局、隐士陪玩、加密存档、段位、妆奁、制本、神的领域全部可用；仅「多人联机」需另有人入席。</p>
+        <p><b>本机自弈（完全不联网）</b>：在本机跑棋馆程序，本页连本机回环即可。60 局、隐士陪玩、加密存档、段位、装扮、制本、神的领域全部可用；仅「多人联机」需另有人入席。</p>
         <p><b>局域网联机</b>：同一 WiFi 填房主棋馆地址，多人对局与房内闲谈照常，依然不需要任何外部服务器。</p>
         <p><b>外部服务（默认开、可全关）</b>：棋馆名录、赛季校时、公共榜单。设置里逐项可关；关掉或挂了，前两种用法一点不缺。纯本机时哪怕没网，段位照常记，只标「未校天时」。</p></div>
       <div class="guide-step"><b>贰 · 连上本机棋馆</b>
@@ -1966,9 +1989,9 @@ openGuide = function () {
         <p>挑一局，可题雅号、设暗语、许旁观、定每步思考 / 出牌之刻、选超时之法与隐士棋力；每局另有本局专属规制，皆在「房规」里。记五字房号邀人，未齐可请隐士补满。</p></div>
       <div class="guide-step"><b>肆 · 落子出牌与卷面</b>
         <p>棋盘小圆点是可落处；走子类先点己子再点目标格，牌类先点手牌再按「落牌」，也可双击快捷出牌。折狱录跟幕卡走：旁白逐句、线索翻牌、轮流发言、终幕指认，私本只你可见。弈卷两席同时覆简，启简后界墨推移。</p>
-        <p>全 60 局共用一套卷面华彩；画质、字大、高对比、色觉辅助、音量分路、动效浓淡都在「案牍 · 设置」，随系统减动效亦自动收敛。</p></div>
-      <div class="guide-step"><b>伍 · 妆奁 / 段位 / 神的领域</b>
-        <p>弈株只由终局相赠（每日至多六十枚），不入局内、不兑换、无充值。妆奁 49 件分十一类、四品阶、四套系，可搜、可筛、可预览试穿、可一键素妆；纸色十品与微调笔意也在设置里。</p>
+        <p>全 60 局共用一套界面特效；画质、字大、高对比、色觉辅助、音量分路、动效浓淡都在「案牍 · 设置」，随系统减动效亦自动收敛。</p></div>
+      <div class="guide-step"><b>伍 · 装扮 / 段位 / 神的领域</b>
+        <p>棋币只由终局相赠（每日至多六十枚），不入局内、不兑换、无充值。装扮 49 件分十一类、四品级、四套装，可搜、可筛、可预览试穿、可一键素妆；纸色十品与微调笔意也在设置里。</p>
         <p>段位七阶按赛季重置；此局至顶阶「弈圣」方可叩「神的领域」三尊青冥 / 玄枢 / 太虚，胜首尊即弈神，再胜加前缀为玄弈神、太玄弈神。</p></div>
       <div class="guide-step"><b>陆 · 存档 / 隐私 / 声明</b>
         <p>不题名照样玩，战绩记本机榜；题名后自动建一份本机加密存档，每局终了自动写回，可导出 <code>.yijusave</code> 携往别馆，导入须再验口令。设置里可换口令、清缓存、清本机战绩、删除本馆账号。</p>
@@ -2010,7 +2033,7 @@ function startMatch(variant) {
   if (!S.net) return;
   const v = variant === undefined ? S.curVariant : variant;
   S.net.send({ t:'match', game:S.curGame, variant:v, maxWait:Number(Settings.get('matchMaxWait')) * 1000 });
-  toast('已入寻局池 · 先同段，候久渐放宽');
+  toast(S.net && S.net.mode !== 'real' ? '本机自弈 · 与隐士对弈' : '已入寻局池 · 先同段，候久渐放宽');
 }
 function renderMatchState(m) {
   const bar = $('#matchBar'), txt = $('#matchText'), btn = $('#matchCancel');

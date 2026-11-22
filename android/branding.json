@@ -4,10 +4,11 @@
   "package": "yiju",
   "icon": {
     "preset": "yiju",
-    "bg": "#EBECDE",
-    "ink": "#0A0A0A",
+    "bg": "#F4F0E6",
+    "ink": "#2B2A26",
     "accent": "#9B092D",
-    "note": "preset: yiju(附件像素棋盘) / board / ink / circle / custom"
+    "note": "浅色统一版：米白纸底 #F4F0E6 + 墨线 #2B2A26 + 朱砂 #9B092D，与 App 内页同色，不割裂",
+    "line": "#D5CEBC"
   },
   "paths": []
 }

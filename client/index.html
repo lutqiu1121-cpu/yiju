@@ -36,6 +36,8 @@
     <h1 class="display">落子<br>有痕<span class="period">。</span></h1>
     <p class="lede" id="todayLine">一室棋牌，一页档案。横竖皆宜，随时开局。</p>
 
+    <div class="ink-card" id="cultivationCard"></div>
+
     <div class="ink-card streak">
       <div class="ink-head"><span>连日 · 不辍</span><span id="streakNum">0 天</span></div>
       <svg id="streakChart" viewBox="0 0 300 88" preserveAspectRatio="none" aria-label="近期战绩曲线"></svg>
@@ -59,7 +61,7 @@
     </div>
     <div class="hint" id="lastRoomLine"></div>
     <div class="today-grid">
-      <div class="mini"><b id="gameCount">40</b><span>玩法 · 在册</span></div>
+      <div class="mini"><b id="gameCount">40</b><span>对弈 · 在册</span></div>
       <div class="mini"><b id="themeCount">10</b><span>纸色 · 十品</span></div>
       <div class="mini"><b id="rendererCount">4</b><span>画式</span></div>
     </div>
@@ -216,12 +218,12 @@
     </div>
     <div class="hint">题名只存本馆，口令不落明文；谱以匣钥加密，携谱另加一层口令。换馆用「还谱」＋口令迁移。</div>
     <div id="godPanel"></div>
-    <div class="side-h" style="margin-top:22px">弈株 · 妆奁</div>
-    <div class="setting-row"><span>匣中弈株</span><span id="shopBalance" class="season-state">—</span></div>
+    <div class="side-h" style="margin-top:22px">棋币 · 装扮</div>
+    <div class="setting-row"><span>匣中棋币</span><span id="shopBalance" class="season-state">—</span></div>
     <div id="shopToolbar" class="shop-toolbar"></div>
     <div id="shopPreview" class="shop-preview"></div>
     <div id="shopGrid" class="shop-grid"></div>
-    <div class="hint">弈株只由对局终了按胜负相赠，每日至多六十枚；不入局内、不改胜负、不兑换、无充值。四十九件妆奁分十一类、四品阶、四套系，只换外观。</div>
+    <div class="hint">棋币只由对局终了按胜负相赠，每日至多六十枚；不入局内、不改胜负、不兑换、无充值。四十九件装扮分十一类、四品级、四套装，只换外观。</div>
     <div class="side-h" style="margin-top:22px">卷帙 · 内容</div>
     <div class="btn-row">
       <button class="btn ghost" id="openScriptImport">呈本</button>
@@ -259,7 +261,7 @@
 <div id="privacyLock" class="privacy-lock" hidden><div class="pl-card"><div class="pl-seal">缄</div><b>卷已暂缄</b><p>回到页面即续前局</p></div></div>
 <script type="module" src="./app.js"></script>
 <script>
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+if ('serviceWorker' in navigator && location.protocol !== 'file:' && location.hostname !== 'yiju.local') {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }
 </script>

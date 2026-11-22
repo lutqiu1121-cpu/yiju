@@ -1,14 +1,15 @@
 
-const CACHE = 'yiju-v3';
+const CACHE = 'yiju-v4';
+const LEGACY = ['yiju-v3'];
 const FILES = [
   '/', '/index.html', '/app.css', '/app.js', '/net.js', '/render.js', '/audio.js', '/fx.js',
-  '/icon.svg', '/offline-assets.js', '/settings.js', '/wear.js', '/manifest.webmanifest', '/rules/manifest.json', '/rules/vectors.json', '/themes/themes.json'
+  '/icon.svg', '/offline-assets.js', '/local-net.js', '/cultivation.js', '/settings.js', '/wear.js', '/manifest.webmanifest', '/rules/manifest.json', '/rules/vectors.json', '/themes/themes.json'
 ];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE || LEGACY.indexOf(k) >= 0).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', (e) => {
   const r = e.request;
