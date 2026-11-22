@@ -1,0 +1,106 @@
+name: Build and release yiju
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform and build tools
+        run: sdkmanager 'platform-tools' 'platforms;android-33' 'build-tools;33.0.2'
+
+      - name: Install Gradle command
+        run: |
+          if ! command -v gradle >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y gradle
+          fi
+          gradle --version
+
+      - name: Run repository verification
+        run: |
+          python3 tools/verify.py
+          node tools/net-url.test.mjs
+          bash -n build.sh
+          bash -n build-apk.sh
+          bash -n start.sh
+
+      - name: Build server package
+        run: bash build.sh
+
+      - name: Build signed APK
+        run: bash build-apk.sh
+
+      - name: Verify APK identity and signature
+        shell: bash
+        run: |
+          test -f yiju.apk
+          test -f yiju-release.zip
+          test -f android/keystore/yiju.jks
+          python3 - <<'PY'
+          import json
+          v = json.load(open('android/version.json', encoding='utf-8'))
+          assert v['applicationId'] == 'app.yiju.archive'
+          assert v['versionCode'] == 1
+          assert v['versionName'] == '1.0.0'
+          print(f"applicationId={v['applicationId']} versionCode={v['versionCode']} versionName={v['versionName']}")
+          PY
+          apksigner verify --verbose yiju.apk
+          apksigner verify --print-certs yiju.apk
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: yiju-build-${{ github.sha }}
+          path: |
+            yiju.apk
+            yiju-release.zip
+            SIZES.txt
+
+      - name: Create GitHub pre-release
+        if: startsWith(github.ref, 'refs/tags/v1.0.0-test.1')
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          name: 弈局 yiju v1.0.0 测试版 · 服务端联机实测
+          files: |
+            yiju.apk
+            yiju-release.zip
+          body: |
+            60 个玩法（含七局原创）、折狱录制本、弈株妆奁 49 件、隐士十阶、神的领域三尊、按最高段位定隐士的房规、分池寻局与进度条。
+
+            房主一键启动 `./start.sh`（Windows `start.bat`），改 `yiju.conf` 即改端口 / 匾额 / 名录 / 校时 / 榜单，可用 `--port 9000 --no-directory` 临时覆盖。棋馆地址支持任意可达地址（局域网 IP / 域名 / IPv6 / 带路径 / 本机回环），端口可省略并使用可配置缺省端口。
+
+            服务器是可选项：本机自弈完全不联网可用全部除多人联机外的功能，局域网联机不需外部服务；名录 / 校时 / 榜单默认开启但可关闭，故障会自动降级。
+
+            源码公开 · 禁止商用。
+
+            本项目为开源技术分享，不提供官方游戏服务，不构成面向公众的网络游戏运营。游戏核心体验可完全离线进行。任何使用者自行部署、分发或商业化所产生的合规责任（包括但不限于版号、实名制、个人信息保护），由使用者自行承担。
+
+            服务端宿主未经实起验证；APK 由 GitHub CI 真实产出。
