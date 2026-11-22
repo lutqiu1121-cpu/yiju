@@ -138,6 +138,14 @@ export class RuleBase {
   Mine(s, i, seat) { return this.SideOf(this.Cell(s, i)) === seat; }
   Put(s, from, to, note) { s.Cells[to] = s.Cells[from]; s.Cells[from] = ''; s.Last = note; }
   SetGrid(s, w, h) { s.Width = w; s.Height = h; s.Cells = new Array(w * h).fill(''); }
+  ParseList(code) {
+    const r = [];
+    for (const q of String(code == null ? '' : code).split(',')) {
+      const n = parseInt(q.trim(), 10);
+      if (!Number.isNaN(n)) r.push(n);
+    }
+    return r;
+  }
   ParsePair(code, sep) {
     const a = String(code).split(sep);
     return [parseInt(a[0], 10) || 0, parseInt(a[1], 10) || 0];
@@ -181,6 +189,37 @@ export class RuleBase {
     };
   }
 
+  // —— 以下为 server/Rules/IGameRule.cs 中 RuleBase 的其余成员，供转译产物调用 ——
+  OL(k, def) { return this.BuildOptions[k] === undefined ? def : Number(this.BuildOptions[k]); }
+  OptL(s, k, def) { return s.V._opt && s.V._opt[k] !== undefined ? Number(s.V._opt[k]) : def; }
+  Opt(s) { return s.V._opt || {}; }
+  BoolV(s, k, def) { return s.V[k] === undefined ? def : !!s.V[k]; }
+  MarkFeat(s, f) {
+    const a = s.V._feats || [];
+    a.push(f); s.V._feats = a.slice();
+  }
+  FinishTeam(s, seats, result) {
+    s.Ended = true; s.Phase = 'end'; s.PhaseName = '终局';
+    s.Winner = Array.from(seats).join(',');
+    s.Result = result; this.Say(s, result);
+  }
+  In(a, x) { return Array.isArray(a) ? a.includes(x) : false; }
+  BotLine(s, seat) { return ''; }
+  Tick(s, dtMs) {}
+  BotScore(s, seat, code) { return 0; }
+  GodPick(s, seat, tier, legal) { return this.BotThink(s, seat, tier, legal); }
+  Score(s, seat) { return 0; }
+  Clone(a) {
+    const b = new GameState();
+    for (const k of Object.keys(a)) {
+      const v = a[k];
+      if (Array.isArray(v)) b[k] = v.slice();
+      else if (v && typeof v === 'object') b[k] = JSON.parse(JSON.stringify(v));
+      else b[k] = v;
+    }
+    return b;
+  }
+
   /** 通用 bot：随机选；具体规则可覆写 BotPick */
   BotThink(s, seat, level, legal) {
     if (!legal || !legal.length) return '';
@@ -189,5 +228,20 @@ export class RuleBase {
       if (p) return p;
     }
     return legal[this.NextRng(s, legal.length)];
+  }
+}
+
+
+// C# 中这些是 protected static，转译产物在静态方法里会以 this.X() 调用；
+// JS 静态方法内 this 是类，故在 RuleBase 上注册同名静态转发，保证两种上下文都能用。
+const STATIC_HELPERS = [
+  'Say','MarkFeat','Next','Finish','FinishTeam','Cell','At','X','Y','Inside',
+  'CountLine','Line','BelongsTo','SideOf','SideChar','Mine','Put','SetGrid',
+  'ParsePair','ParseList','HandSizes','InfoBase','Clone','In',
+  'StrV','IntV','BoolV','Opt','OptB','OptI','OptL','OptS'
+];
+for (const n of STATIC_HELPERS) {
+  if (typeof RuleBase.prototype[n] === 'function') {
+    RuleBase[n] = function (...args) { return RuleBase.prototype[n].apply(this, args); };
   }
 }

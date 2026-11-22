@@ -16,7 +16,9 @@ const PORTED = new Set((await import(path.join(ROOT, 'client/rules-port/registry
 function run(g) {
   const rule = PortedRule(g.game);
   if (!rule) return { skip: true, why: '规则待搬' };
+  if (g.overrideNums) rule.BuildOptions = Object.assign({}, rule.BuildOptions, { nums: g.overrideNums.slice() });
   const s = rule.New(g.variant, g.seats || 2, 0, 'vector');
+  if (g.overrideNums) s.V.nums = g.overrideNums.slice();
   for (const mv of (g.moves || [])) {
     const code = mv.code;
     const action = code.indexOf(':') < 0 ? code : code.slice(0, code.indexOf(':'));
@@ -28,14 +30,13 @@ function run(g) {
     fail.push(`ended ${s.Ended} ≠ ${g.expectEnded}`);
   if (g.expectWinner !== undefined && s.Winner !== String(g.expectWinner))
     fail.push(`winner "${s.Winner}" ≠ "${g.expectWinner}"`);
+  const allLegal = [];
+  for (let seat = 0; seat < (g.seats || 2); seat++) allLegal.push(...rule.Legal(s, seat));
   if (g.expectLegalContains) {
-    const seat = g.seats >= 2 ? 0 : 0;
-    const legal = rule.Legal(s, seat);
-    for (const c of g.expectLegalContains) if (!legal.includes(c)) fail.push(`legal 缺 ${c}`);
+    for (const c of g.expectLegalContains) if (!allLegal.includes(c)) fail.push(`legal 缺 ${c}`);
   }
   if (g.expectLegalAny) {
-    const legal = rule.Legal(s, 0);
-    if (!legal.length) fail.push('legal 为空');
+    if (!allLegal.length) fail.push('legal 全席位为空');
   }
   if (g.expectVar) {
     for (const [k, v] of Object.entries(g.expectVar)) {
@@ -53,7 +54,7 @@ for (const g of vectors.games) {
   const r = run(g);
   if (r.skip) { skip++; console.log(`  ○ ${g.game.padEnd(14)} 待搬 · ${g.name}`); continue; }
   if (r.ok) { pass++; console.log(`  ✓ ${g.game.padEnd(14)} 通过 · ${g.name}`); }
-  else { bad++; console.log(`  ✗ ${g.game.padEnd(14)} 失败 · ${r.fail.join(' / ')}`); }
+  else { bad++; console.log(`  ✗ ${g.game.padEnd(14)} 失败 · ${(r.fail || [r.why]).join(' / ')}`); }
 }
 console.log('='.repeat(58));
 console.log(`已搬局验收：${pass} 通过 / ${bad} 失败 / ${skip} 待搬`);

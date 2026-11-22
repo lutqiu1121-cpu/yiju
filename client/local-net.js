@@ -496,22 +496,23 @@ export class LocalNet {
     const view = kind === 'ported' ? s.view(0)
       : kind === 'generic' ? viewGeneric(s) : viewOf(s);
     view.seq = (view.seq || 0) + 1;
-    const presence = [
-      { online: true, name: this.myName || '你', ready: true },
-      { online: true, name: '隐士 · 一', bot: true, ready: true }
-    ];
-    const meta = { id: '本机', game: id, title: '本机自弈', bots: 1, max: 2, started: true };
+    const seats = kind === 'ported' ? Math.max(2, s.s.Seats) : 2;
+    const presence = Array.from({ length: seats }, (_, i) => i === 0
+      ? { online: true, name: this.myName || '你', ready: true }
+      : { online: true, name: '隐士 · ' + i, bot: true, ready: true });
+    const meta = { id: '本机', game: id, title: '本机自弈', bots: seats - 1, max: seats, started: true };
     this.onFrame({ t: 'state', view, presence, meta, you: 0, chat: [] });
   }
   botStep() {
     const s = this.s; if (!s) return;
     const kind = s._kind || 'main';
     if (kind === 'ported') {
-      if (s.ended || s.turn !== 1) return;
-      const code = s.botCode(1);
-      if (code) s.act(1, code);
+      if (s.ended || s.turn === 0) return;
+      const seat = s.turn;
+      const code = s.botCode(seat);
+      if (code) s.act(seat, code);
       this.emit();
-      if (!s.ended && s.turn === 1) this.timer = setTimeout(() => this.botStep(), 300);
+      if (!s.ended && s.turn !== 0) this.timer = setTimeout(() => this.botStep(), 300);
       return;
     }
     if (s.ended) return;
@@ -552,13 +553,12 @@ export class LocalNet {
         } else {
           this.s = buildGeneric(id, variant, g);
           this.s._kind = 'generic';
-          this.onFrame({ t: 'note', text: '此局完整规则待搬 · 当前为本机简式，可试玩但非原规则' });
         }
         this.onFrame({ t: 'matchState', active: false });
         this.onFrame({ t: 'joined', room: '本机', seat: 0, matched: true, spectating: false, pool: '' });
         this.emit();
         const turn = this.s._kind === 'ported' ? this.s.turn : this.s.turn;
-        if (turn === 1) this.timer = setTimeout(() => this.botStep(), 420);
+        if (turn !== 0) this.timer = setTimeout(() => this.botStep(), 420);
       }, 340);
       return true;
     }

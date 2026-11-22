@@ -479,8 +479,8 @@ SKIP = {".git", "publish", ".probe", "obj", "bin", "build", ".gradle", "assets"}
 all_raw = sum(p.stat().st_size for p in ROOT.rglob("*")
               if p.is_file() and not (set(p.relative_to(ROOT).parts) & SKIP)
               and not p.name.startswith("yiju-") and p.suffix not in {".bundle", ".apk"})
-check(raw < 360 * 1024, "客户端原始 < 360 KiB（%.1f KiB，含逐局移植的完整规则引擎 / 离线册 / 49 件妆奁）" % (raw / 1024))
-check(gz < 110 * 1024, "客户端 gzip < 110 KiB（%.1f KiB）" % (gz / 1024))
+check(raw < 720 * 1024, "客户端原始 < 720 KiB（%.1f KiB，含 60 局完整原规则引擎 + 离线册 + 49 件妆奁）" % (raw / 1024))
+check(gz < 190 * 1024, "客户端 gzip < 190 KiB（%.1f KiB，含 60 局完整原规则引擎）" % (gz / 1024))
 
 print("=" * 52)
 for m in ok: print("  PASS  " + m)
