@@ -86,7 +86,7 @@ internal static class Program
                             Check(l.Contains(c.GetString()), name + " · 含 " + c.GetString());
                     }
                     if (tc.TryGetProperty("expectLegalAny", out JsonElement ea) && ea.GetBoolean())
-                        Check(r.Legal(s, 0).Count > 0, name + " · 有合法着法");
+                        Check(r.Legal(s, s.Turn).Count > 0, name + " · 有合法着法");
                 }
                 catch (Exception e) { Check(false, name, e.Message); }
             }
