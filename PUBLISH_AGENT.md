@@ -24,8 +24,8 @@
 1. 进入我给的本地仓库目录。里面已有 `.git`，**不要再 git init**，不要改历史。没给路径就停下问，不要自己编路径或仓库名。
 2. 若我另外给了要新增的文件，原样放进仓库：不重命名、不重组、不删、不合并、不格式化、不改 README 一个字。没给就跳过这步。仓库已有内容一个字都不动。
 3. **不要**加 CONTRIBUTING / CHANGELOG / .github 模板，**不要**改 `.gitignore`，**不要**动 `.git/config`，**不要**动 `LICENSE`，**不要**动 `android/keystore/yiju.jks`，**不要**动 `android/app/src/main/AndroidManifest.xml`。允许改的文件只有 `android/branding.json`（仅当我另给方案）与**每次发版必须 +1 的 `android/version.json` 的 `versionCode`**。
-4. APK 的名字与图标**已经定好了**：中文名「奕局」、英文标识 `yiju`，图标是米白纸底 + 墨线棋盘 + 一点朱砂的像素图，已原样转成矢量并写进 `android/branding.json` 与 `client/icon.svg`。
-   - **默认什么都不用改**，直接用仓库默认值（`appName=奕局`、`icon.preset=yiju`）往下走，不要自己起名、不要自己画图标、不要停下来问。
+4. APK 的名字与图标**已经定好了**：中文名「弈局」、英文标识 `yiju`，图标是米白纸底 + 墨线棋盘 + 一点朱砂的像素图，已原样转成矢量并写进 `android/branding.json` 与 `client/icon.svg`。
+   - **默认什么都不用改**，直接用仓库默认值（`appName=弈局`、`icon.preset=yiju`）往下走，不要自己起名、不要自己画图标、不要停下来问。
    - 只有我**另外明确给了新名字或新图标方案**时，才**只改 `android/branding.json` 这一个文件**：`appName` / `shortName` / `icon.preset`（只能是 `yiju` / `board` / `ink` / `circle` / `custom`）/ 配色，或 `custom` 时在 `paths` 里写 vector `pathData`。
    - **不要**手改 `android/app/src/main/res/` 下的任何 XML、不要改 Java、不要改 Gradle；`build-apk.sh` 会自动按 JSON 生成名称与矢量图标。
 5. 依次运行这两条构建命令，不要发明命令、不要加参数、不要换版本、不要调换顺序：
@@ -50,7 +50,7 @@
    ```
    git add -A
    git -c user.name=release-bot -c user.email=release-bot@local commit --allow-empty -m "release: yiju v1.0.0"
-   git -c user.name=release-bot -c user.email=release-bot@local tag -a v1.0.0 -m "奕局 yiju v1.0.0"
+   git -c user.name=release-bot -c user.email=release-bot@local tag -a v1.0.0 -m "弈局 yiju v1.0.0"
    ```
    `--allow-empty` 是故意带的：交付仓库已经是干净提交，只改了品牌 JSON 或完全没改都属正常。tag 名和提交信息就用上面这两个，一个字都不改；若我另外给了 tag 名，只把 `v1.0.0` 替换成我给的值，其余不动。
    **不要**执行 `git config --global`，**不要**改任何已有 git 配置。
@@ -67,8 +67,8 @@
    ```
    gh release create v1.0.0 \
      yiju.apk \
-     --title "奕局 yiju v1.0.0" \
-     --notes "同源联机的简约手绘棋牌馆 · 60 个玩法 + 折狱录 + 隐士陪玩。房主运行源码包里的 server：dotnet publish/server/qipai-server.dll → http://localhost:5080（需 .NET 8 Runtime）；APK 首启选一个棋馆或填主机局域网地址即可联机。源码公开 · 禁止商用，源码包与 LICENSE 随仓库提供。"
+     --title "弈局 yiju v1.0.0" \
+     --notes "同源联机的简约手绘棋牌馆 · 60 个玩法（含七局纯原创小戏）+ 折狱录制本器 + 弈株妆奁 + 隐士十阶。房主运行源码包里的 server：dotnet publish/server/qipai-server.dll → http://localhost:5080（需 .NET 8 Runtime）；APK 首启选一个棋馆或填主机局域网地址即可联机。源码公开 · 禁止商用，源码包与 LICENSE 随仓库提供。"
    ```
    只传 `yiju.apk` 一个文件，**不要**把 `yiju-release.zip` / `yiju-source.zip` / `SIZES.txt` 传上去。源码、剧本库、目录适配器都由仓库本身分发。
    `--title` 和 `--notes` 逐字照抄，不要改写、不要翻译、不要自己总结项目内容。
@@ -88,7 +88,7 @@
 【检查清单】
 - [ ] `server/` `client/` `rules/` `themes/` `scripts/` `leaderboard/` `tools/` `android/` 都在
 - [ ] `README.md`、`LICENSE` 和原文件完全一致，`LICENSE` 为 PolyForm Noncommercial 1.0.0（非商用）
-- [ ] 品牌保持默认「奕局 / yiju / 附件像素图标」，或只改了 `branding.json`；没有手改 `res/` 下的 XML、Java、Gradle
+- [ ] 品牌保持默认「弈局 / yiju / 附件像素图标」，或只改了 `branding.json`；没有手改 `res/` 下的 XML、Java、Gradle
 - [ ] 构建命令是 `bash build.sh` 然后 `bash build-apk.sh`，顺序与参数都没变
 - [ ] 仓库根目录产物 = 4 个文件，文件名逐字一致
 - [ ] `SIZES.txt` 已填客户端 gzip、棋馆与 APK 实测体积
@@ -125,7 +125,7 @@
 - 项目交付时已 `git init` 并有 1 个干净提交，含 `LICENSE`（PolyForm Noncommercial 1.0.0，非商用）与 `.gitignore`；agent 直接进目录即可。
 - 只收单文件时用 `yiju-repo.bundle`：`git clone yiju-repo.bundle yiju`，全离线，不需要任何远程。
 - **凭证路径**：本机 `git credential` / SSH key / `gh auth status` 已就绪即可；提示词里零凭证、零账号、零令牌。若远程名不是 `origin`，先在本机把 remote 配好再交给 agent。
-- **APK 品牌**：已定「奕局 / yiju / 附件像素图标」，`branding.json` 默认 `preset=yiju`，agent 不需要确认、不需要改。真要换名换图，只改这一个 JSON（preset 可选 yiju / board / ink / circle / custom），`build-apk.sh` 会调 `render_branding.py` 重新生成矢量图标。
+- **APK 品牌**：已定「弈局 / yiju / 附件像素图标」，`branding.json` 默认 `preset=yiju`，agent 不需要确认、不需要改。真要换名换图，只改这一个 JSON（preset 可选 yiju / board / ink / circle / custom），`build-apk.sh` 会调 `render_branding.py` 重新生成矢量图标。
 - **APK 前置**：`ANDROID_HOME`（含 `platforms/android-33`、`build-tools`）、JDK 11+、Gradle、python3、首次构建联网。`build-apk.sh` 会自动生成 7.6.4 wrapper，不需要预置 wrapper jar。缺任何一项脚本会以明确错误退出，agent 会停下贴报错。
 - APK 是 debug 签名、纯平台 WebView 壳，静态页装在 `assets/client/`；首启弹「填棋馆地址」，不做 TWA（TWA 要求公网 HTTPS，与局域网填 IP 冲突）。要上架商店需换成自己的 release 签名。
 - 若环境没有 `gh` CLI：agent 会完成到 `git push` 然后停下，网页 Release 由你手动只传 `yiju.apk`，或单独给一条完整命令。

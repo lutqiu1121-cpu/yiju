@@ -26,7 +26,7 @@ const S = {
   hall: null, scripts: [], board: [], halls: [], stageCue: '', baseTheme: null,
   botLevel: 0, hallOn: true, hallUrl: '', drawing: false, stroke: [],
   account: null, saveData: '', titleCatalog: [], wornKey: '', rafPending: false, lastChatLen: 0,
-  rankCatalog: [], season: '', seasonName: '', seasonSpan: '', seasonVerified: false, seasonSource: '', seasonNote: '', rankPending: '', rankBefore: null 
+  rankCatalog: [], season: '', seasonName: '', seasonSpan: '', seasonVerified: false, seasonSource: '', seasonNote: '', rankPending: '', rankBefore: null, shop: null, scriptDraft: null 
 };
 const DEFAULT_HALL_DIR = 'https://gist.githubusercontent.com/yiju-archive/board/raw/halls.json';
 const RANK_FALLBACK = [
@@ -147,6 +147,7 @@ function applyTheme(id, persist = true) {
   const t = (S.themes && S.themes.themes || []).find(x => x.id === id) || (S.themes.themes || [])[0];
   if (!t) return;
   S.themeId = t.id; if (persist) lsSet('qipai.theme', t.id);
+  if (typeof applyWorn === 'function') applyWorn();
   const r = document.documentElement.style;
   const keys = ['bg','bg2','ink','ink2','accent','line','dot','card','cardInk','tile','tileEdge'];
   keys.forEach(k => r.setProperty('--' + k, t[k]));
@@ -276,7 +277,12 @@ function onFrame(m) {
         S.seasonSource = m.seasonSource || ''; }
       renderAccount(); renderAccountCard(); renderGames(); renderSeasonState();
       seasonSelfCheck(true);
-      S.net.send({ t:'halls' }); S.net.send({ t:'scripts' }); S.net.send({ t:'rooms' });
+      S.net.send({ t:'halls' }); S.net.send({ t:'scripts' }); S.net.send({ t:'rooms' }); S.net.send({ t:'shop' });
+      break;
+    case 'shopState':
+      S.shop = { items: m.items || [], yizhu: m.yizhu || 0, owned: m.owned || [], worn: m.worn || {} };
+      renderShop(); applyWorn(); renderAccountCard();
+      if (m.note) toast(m.note);
       break;
     case 'season':
       S.season = m.key || S.season; S.seasonName = m.name || S.seasonName;
@@ -1168,6 +1174,157 @@ function openScriptImport() {
   };
 }
 
+function makerBlank() {
+  return {
+    id: 'my-script-' + Date.now().toString(36), name: '新本', version: 1,
+    min: 4, max: 7, minutes: 45, tags: '还原', theme: 'yemo',
+    synopsis: '一句题眼，写在这里。', culprit: 'r1',
+    roles: [
+      { id:'r1', public:'管家', private:'你知道书房的锁换过。', secret:'那封信是你寄的。', goal:'别让人知道信是你写的。', botLines:'雨大，先别上楼。|书房还是别去了。' },
+      { id:'r2', public:'医生', private:'你来得最早。', secret:'你看见过第七只杯子。', goal:'找出第七个人。', botLines:'' }
+    ],
+    clues: [
+      { id:'c1', title:'门厅的伞', text:'六把伞，其中一把是干的。' },
+      { id:'c2', title:'旧钥匙', text:'齿口和新锁对不上。' }
+    ],
+    acts: [
+      { title:'第一幕 · 门铃', narration:'雨从傍晚就没停过。\n六个人在门厅站定，谁也没先开口。', public:'c1', priv:'r1:c2', discuss:240 },
+      { title:'第二幕 · 书房', narration:'锁是新的。\n桌上摆着七只杯子。', public:'c2', priv:'', discuss:300 }
+    ],
+    endings: [
+      { when:'vote:r1', title:'真相', text:'信是管家寄的。' },
+      { when:'else', title:'雨没停', text:'众人各自散去。' }
+    ]
+  };
+}
+function makerCollect() {
+  const d = S.scriptDraft, q = id => document.getElementById(id);
+  const val = (id, def) => { const e = q(id); return e ? e.value : def; };
+  d.id = val('mkId', d.id); d.name = val('mkName', d.name);
+  d.min = +val('mkMin', d.min); d.max = +val('mkMax', d.max);
+  d.minutes = +val('mkMinutes', d.minutes); d.tags = val('mkTags', d.tags);
+  d.theme = val('mkTheme', d.theme); d.synopsis = val('mkSynopsis', d.synopsis);
+  d.culprit = val('mkCulprit', d.culprit);
+  const rows = sel => Array.from(document.querySelectorAll(sel));
+  d.roles = rows('.mk-role').map(e => ({
+    id: e.querySelector('.f-id').value, public: e.querySelector('.f-pub').value,
+    private: e.querySelector('.f-pri').value, secret: e.querySelector('.f-sec').value,
+    goal: e.querySelector('.f-goal').value, botLines: e.querySelector('.f-bot').value
+  }));
+  d.clues = rows('.mk-clue').map(e => ({
+    id: e.querySelector('.f-id').value, title: e.querySelector('.f-title').value,
+    text: e.querySelector('.f-text').value
+  }));
+  d.acts = rows('.mk-act').map(e => ({
+    title: e.querySelector('.f-title').value, narration: e.querySelector('.f-narr').value,
+    public: e.querySelector('.f-pubc').value, priv: e.querySelector('.f-priv').value,
+    discuss: +e.querySelector('.f-disc').value
+  }));
+  d.endings = rows('.mk-end').map(e => ({
+    when: e.querySelector('.f-when').value, title: e.querySelector('.f-title').value,
+    text: e.querySelector('.f-text').value
+  }));
+}
+function makerJson() {
+  const d = S.scriptDraft;
+  const clues = {}; (d.clues || []).forEach(c => { if (c.id) clues[c.id] = { title:c.title || c.id, text:c.text || '' }; });
+  const roles = (d.roles || []).map(r => ({
+    id:r.id, public:r.public, private:r.private, secret:r.secret, goal:r.goal,
+    botLines:(r.botLines || '').split('|').map(x => x.trim()).filter(Boolean)
+  }));
+  const acts = (d.acts || []).map((a, i) => {
+    const priv = {};
+    (a.priv || '').split(',').forEach(p => {
+      const kv = p.split(':'); if (kv.length === 2 && kv[0] && kv[1]) {
+        if (!priv[kv[0]]) priv[kv[0]] = []; priv[kv[0]].push(kv[1]);
+      }
+    });
+    return { no:i+1, title:a.title || '第 ' + (i+1) + ' 幕',
+      narration:(a.narration || '').split('\n').map(x => x.trim()).filter(Boolean),
+      revealDelay:900, publicClues:(a.public || '').split(',').map(x => x.trim()).filter(Boolean),
+      privateClues:priv, discussMs:(a.discuss || 240) * 1000, cue:'' };
+  });
+  const endings = (d.endings || []).map(e => ({ when:e.when, title:e.title, text:e.text }));
+  return { id:d.id, name:d.name, version:1, min:d.min, max:d.max, minutes:d.minutes,
+    tags:(d.tags || '').split(',').map(x => x.trim()).filter(Boolean), theme:d.theme,
+    synopsis:d.synopsis, culprit:d.culprit, roles, acts, clues, endings,
+    ambience:{ drone:'rain', ink:0.7, paper:0.5, cueVolume:0.6 } };
+}
+function makerCheck(quiet) {
+  makerCollect(); const j = makerJson(), e = [];
+  if (!j.id) e.push('剧本编号未填');
+  if (!j.roles.length) e.push('至少一位人物');
+  if (!j.acts.length) e.push('至少一幕');
+  j.roles.forEach((r, i) => { if (!r.id) e.push('第 ' + (i+1) + ' 位人物缺编号'); });
+  const ids = Object.keys(j.clues);
+  j.acts.forEach((a, i) => a.publicClues.forEach(c => { if (ids.indexOf(c) < 0) e.push('第 ' + (i+1) + ' 幕引用了不存在的线索「' + c + '」'); }));
+  j.acts.forEach((a, i) => Object.keys(a.privateClues).forEach(r => {
+    if (!j.roles.some(x => x.id === r)) e.push('第 ' + (i+1) + ' 幕私秘线索的角色「' + r + '」不存在');
+    a.privateClues[r].forEach(c => { if (ids.indexOf(c) < 0) e.push('第 ' + (i+1) + ' 幕私秘线索「' + c + '」不存在'); });
+  }));
+  if (!j.endings.length) e.push('至少一个结局');
+  if (!quiet) toast(e.length ? '验本未过：' + e[0] : '验本已过 · 可下载或呈本');
+  return e;
+}
+function makerBody() {
+  const d = S.scriptDraft;
+  const esc = escapeHtml;
+  let h = '<div class="guide"><div class="guide-step"><b>制本 · 只在本机编辑</b><p>编好可「下载」放进房主 <code>scripts/</code> 长期用，或「呈本」只作用于本席；草稿存本机，散席不丢。</p></div></div>';
+  h += '<div class="maker-row"><input id="mkId" class="mini" style="flex:2" value="' + esc(d.id) + '" placeholder="编号"><input id="mkName" value="' + esc(d.name) + '" placeholder="剧名"><input id="mkTheme" class="mini" value="' + esc(d.theme) + '" placeholder="纸色"></div>';
+  h += '<div class="maker-row"><input id="mkMin" class="mini" type="number" value="' + d.min + '" placeholder="最少"><input id="mkMax" class="mini" type="number" value="' + d.max + '" placeholder="最多"><input id="mkMinutes" class="mini" type="number" value="' + d.minutes + '" placeholder="分钟"><input id="mkTags" value="' + esc(d.tags) + '" placeholder="标签，逗号隔"><input id="mkCulprit" class="mini" value="' + esc(d.culprit) + '" placeholder="真凶编号"></div>';
+  h += '<div class="maker-row"><textarea id="mkSynopsis" rows="2" placeholder="一句题眼">' + esc(d.synopsis) + '</textarea></div>';
+  const role = r => '<div class="maker-row mk-role"><input class="f-id mini" value="' + esc(r.id) + '" placeholder="编号"><input class="f-pub mini" value="' + esc(r.public) + '" placeholder="公开名"><input class="f-pri" value="' + esc(r.private) + '" placeholder="私设"><input class="f-sec" value="' + esc(r.secret) + '" placeholder="秘密"><input class="f-goal" value="' + esc(r.goal) + '" placeholder="目标"><input class="f-bot" value="' + esc(r.botLines) + '" placeholder="配角台词，| 分隔"><button class="btn ghost mini mk-del">删</button></div>';
+  h += '<div class="maker-sec"><b>人物</b><div id="mkRoles">' + (d.roles || []).map(role).join('') + '</div><button class="btn ghost mini" id="mkAddRole">添人物</button></div>';
+  const clue = c => '<div class="maker-row mk-clue"><input class="f-id mini" value="' + esc(c.id) + '" placeholder="线索编号"><input class="f-title mini" value="' + esc(c.title) + '" placeholder="标题"><input class="f-text" value="' + esc(c.text) + '" placeholder="正文"><button class="btn ghost mini mk-del">删</button></div>';
+  h += '<div class="maker-sec"><b>线索</b><div id="mkClues">' + (d.clues || []).map(clue).join('') + '</div><button class="btn ghost mini" id="mkAddClue">添线索</button></div>';
+  const act = a => '<div class="maker-sec mk-act"><div class="maker-row"><input class="f-title" value="' + esc(a.title) + '" placeholder="幕题"><input class="f-disc mini" type="number" value="' + a.discuss + '" placeholder="议论秒"></div><div class="maker-row"><textarea class="f-narr" rows="2" placeholder="旁白，一行一句">' + esc(a.narration) + '</textarea></div><div class="maker-row"><input class="f-pubc" value="' + esc(a.public) + '" placeholder="公开线索，逗号隔"><input class="f-priv" value="' + esc(a.priv) + '" placeholder="私秘，如 r1:c2"><button class="btn ghost mini mk-del">删</button></div></div>';
+  h += '<div class="maker-sec"><b>幕</b><div id="mkActs">' + (d.acts || []).map(act).join('') + '</div><button class="btn ghost mini" id="mkAddAct">添幕</button></div>';
+  const end = e => '<div class="maker-row mk-end"><input class="f-when mini" value="' + esc(e.when) + '" placeholder="条件 vote:r1 / else"><input class="f-title mini" value="' + esc(e.title) + '" placeholder="结局题"><input class="f-text" value="' + esc(e.text) + '" placeholder="结局文"><button class="btn ghost mini mk-del">删</button></div>';
+  h += '<div class="maker-sec"><b>结局</b><div id="mkEnds">' + (d.endings || []).map(end).join('') + '</div><button class="btn ghost mini" id="mkAddEnd">添结局</button></div>';
+  h += '<div class="btn-row"><button class="btn primary" id="mkCheck">验本</button><button class="btn" id="mkDownload">下载</button><button class="btn" id="mkPresent">呈本到本房</button><button class="btn ghost" id="mkSaveDraft">存草稿</button><button class="btn ghost" id="mkClear">另起新本</button></div>';
+  return h;
+}
+function makerBind() {
+  const q = id => document.getElementById(id);
+  const add = (btn, list, obj) => { const b = q(btn); if (b) b.onclick = () => { makerCollect(); S.scriptDraft[list].push(obj); makerRefresh(); }; };
+  add('mkAddRole', 'roles', { id:'r' + Date.now().toString(36).slice(-3), public:'新人物', private:'', secret:'', goal:'', botLines:'' });
+  add('mkAddClue', 'clues', { id:'c' + Date.now().toString(36).slice(-3), title:'新线索', text:'' });
+  add('mkAddAct', 'acts', { title:'新一幕', narration:'', public:'', priv:'', discuss:240 });
+  add('mkAddEnd', 'endings', { when:'else', title:'新结局', text:'' });
+  document.querySelectorAll('.mk-del').forEach(b => b.onclick = () => {
+    makerCollect(); const row = b.closest('.maker-row');
+    const sec = row.parentElement; const idx = Array.from(sec.children).indexOf(row);
+    const map = { mkRoles:'roles', mkClues:'clues', mkActs:'acts', mkEnds:'endings' };
+    const key = map[sec.id] || (row.classList.contains('mk-act') ? 'acts' : null);
+    if (key && S.scriptDraft[key]) { S.scriptDraft[key].splice(idx, 1); makerRefresh(); }
+  });
+  const on = (id, fn) => { const e = q(id); if (e) e.onclick = fn; };
+  on('mkCheck', () => makerCheck(false));
+  on('mkSaveDraft', () => { makerCollect(); save('qipai.scriptDraft', S.scriptDraft); toast('草稿已存本机'); });
+  on('mkClear', () => { S.scriptDraft = makerBlank(); save('qipai.scriptDraft', S.scriptDraft); makerRefresh(); toast('已另起新本'); });
+  on('mkDownload', () => {
+    if (makerCheck(true).length) { toast('先验本，仍有缺漏'); return; }
+    const j = makerJson(); const blob = new Blob([JSON.stringify(j, null, 2)], { type:'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = j.id + '.json'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000); toast('已下载 · 放进房主 scripts/ 即可长期用');
+  });
+  on('mkPresent', () => {
+    if (makerCheck(true).length) { toast('先验本，仍有缺漏'); return; }
+    S.net.send({ t:'scriptImport', raw:JSON.stringify(makerJson()) });
+    save('qipai.scriptDraft', S.scriptDraft); closeModal(); toast('已呈本到本房 · 散席即失效');
+  });
+}
+function makerRefresh() {
+  const body = $('#makerBody'); if (!body) return;
+  body.innerHTML = makerBody(); makerBind();
+}
+function openScriptMaker() {
+  S.scriptDraft = store('qipai.scriptDraft', null) || makerBlank();
+  modal('制本 · 弈局呈本', '<div id="makerBody"></div>', null);
+  makerRefresh();
+}
+
 function downloadRecord(m) {
   try {
     const data = { v: 1, game: m.game, variant: m.variant, room: m.room, start: m.start, frames: m.frames };
@@ -1191,6 +1348,7 @@ function bindExtraUI() {
   on('#hallDirUrl', 'change', profile);
   on('#hallDirToggle', 'click', () => { S.hallOn = !S.hallOn; renderHallInfo(); profile(); toast(S.hallOn ? '棋馆目录已开启' : '棋馆目录已关闭'); });
   on('#seasonRecheck', 'click', () => seasonSelfCheck(false));
+  on('#openScriptMaker', 'click', () => openScriptMaker());
   on('#timeUrl', 'change', e => { save('qipai.timeUrl', (e.target.value || '').trim()); seasonSelfCheck(false); });
   if ($('#timeUrl')) $('#timeUrl').value = store('qipai.timeUrl', '') || '';
   on('#botLevel', 'change', e => {
@@ -1207,7 +1365,7 @@ function bindExtraUI() {
       try {
         const m = JSON.parse(rd.result);
         if (m.start && m.frames) { m.meta = m.meta || {}; playReplay(m); toast('棋谱已导入，正在回放'); }
-        else toast('不是有效的奕局棋谱');
+        else toast('不是有效的弈局棋谱');
       } catch (x) { toast('棋谱解析失败'); }
     };
     rd.readAsText(f); e.target.value = '';
@@ -1268,6 +1426,7 @@ function renderAccountCard() {
       <span class="season-span">${escapeHtml(v.seasonSpan || S.seasonSpan || '')}</span>
       <span class="season-check">${S.seasonVerified === false ? '未校天时 · 依本席更漏' : '天时已校 · 段位不可自改'}</span><br>
       段位 <b>${escapeHtml(v.rank || ri.name)}</b> · 共 ${v.rankSum || 0} 墨分 · ${ri.next ? '距下段 ' + ri.next + ' 墨分' : '已至顶阶'}<br>
+      匣中弈株 ${v.yizhu || 0} 枚<br>
       ${v.rankBase ? '上季承袭 ' + v.rankBase + ' 墨分 · ' : ''}上赛季 ${escapeHtml(v.lastSeason || '—')} · ${escapeHtml(v.lastRank || '初执')}
       <div class="rank-bar"><span style="width:${pct}%"></span></div></div>
       ${gamesRank ? '<div class="rank-games">各局段位 · ' + gamesRank + '</div>' : ''}`;
@@ -1280,6 +1439,39 @@ function renderAccountCard() {
     <div class="account-games">题名：${escapeHtml(v.name || a.name || '')} · 最近 ${escapeHtml(v.lastDay || '—')}
       ${games.length ? '<br>常玩：' + games.map(escapeHtml).join(' / ') : ''}
       ${scripts.length ? '<br>剧本：' + scripts.map(escapeHtml).join(' / ') : ''}</div>`;
+}
+function applyWorn() {
+  const w = (S.shop && S.shop.worn) || {};
+  document.body.dataset.face = w.face || '';
+  document.body.dataset.seal = w.seal || '';
+  document.body.dataset.ink = w.ink || '';
+  const cv = $('#board'); if (cv) cv.dataset.desk = w.desk || '';
+}
+function renderShop() {
+  const el = $('#shopGrid'); if (!el) return;
+  const sh = S.shop;
+  if (!sh) { el.innerHTML = '<div class="hint">候妆奁目录…</div>'; return; }
+  const bal = $('#shopBalance'); if (bal) bal.textContent = sh.yizhu + ' 枚';
+  const kinds = { desk:'牌桌', face:'牌面', seal:'朱印', ink:'墨色' };
+  const owned = (sh.owned || []).map(String);
+  let h = '';
+  Object.keys(kinds).forEach(k => {
+    h += '<div class="shop-kind">' + kinds[k] + '</div>';
+    h += '<button class="shop-item' + (!sh.worn[k] ? ' on' : '') + '" data-wear="' + k + '">素妆</button>';
+    (sh.items || []).filter(x => x.kind === k).forEach(x => {
+      const has = owned.indexOf(String(x.key)) >= 0, on = sh.worn[k] === x.key;
+      h += '<button class="shop-item' + (on ? ' on' : '') + '" data-key="' + escapeHtml(x.key) +
+        '" title="' + escapeHtml(x.note || '') + '">' + escapeHtml(x.name) +
+        (has ? (on ? ' · 配戴中' : ' · 配戴') : ' · ' + x.cost + ' 株') + '</button>';
+    });
+  });
+  el.innerHTML = h;
+  el.querySelectorAll('.shop-item').forEach(b => b.onclick = () => {
+    const key = b.dataset.key;
+    if (!key) { S.net.send({ t:'shopWear', key:'', kind:b.dataset.wear }); return; }
+    const has = owned.indexOf(String(key)) >= 0;
+    S.net.send({ t: has ? 'shopWear' : 'shopBuy', key:key, kind:(sh.items.find(x => x.key === key) || {}).kind || '' });
+  });
 }
 function renderSeasonState() {
   const el = $('#seasonState'); if (!el) return;

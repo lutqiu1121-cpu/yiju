@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """按 android/branding.json 生成 app 名与矢量图标，并同步 APK 内页面标题。
-名字与图标默认已定为「奕局 / yiju」+ 附件像素棋盘；想换只改 branding.json。"""
+名字与图标默认已定为「弈局 / yiju」+ 附件像素棋盘；想换只改 branding.json。"""
 import html
 import json
 import pathlib
@@ -12,7 +12,7 @@ RES = HERE / "app/src/main/res"
 ASSETS = HERE / "app/src/main/assets/client"
 
 cfg = json.loads((HERE / "branding.json").read_text(encoding="utf-8"))
-name = str(cfg.get("appName") or "奕局").strip() or "奕局"
+name = str(cfg.get("appName") or "弈局").strip() or "弈局"
 short = str(cfg.get("shortName") or name).strip() or name
 ic = cfg.get("icon") or {}
 bg = str(ic.get("bg") or "#EBECDE")

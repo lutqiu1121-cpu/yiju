@@ -1,10 +1,10 @@
-# 产物清单 · 奕局 yiju v1.0.0
+# 产物清单 · 弈局 yiju v1.0.0
 
 ## Release 只上传 1 个文件
 
 | # | 文件 | 说明 | 实测体积 |
 | --- | --- | --- | --- |
-| 1 | `yiju.apk` | 安卓客户端（纯平台 WebView 壳 + 内置静态页，debug 签名；矢量图标「奕局」） | 由 `build-apk.sh` 填 |
+| 1 | `yiju.apk` | 安卓客户端（纯平台 WebView 壳 + 内置静态页，debug 签名；矢量图标「弈局」） | 由 `build-apk.sh` 填 |
 
 > **`yiju-release.zip` / `yiju-source.zip` / `SIZES.txt` 不上传 Release。**
 > 源码、剧本库、目录适配器与非商用协议都随仓库本身分发；房主从 `yiju-source.zip` 或仓库取棋馆 `dotnet run --project server`。
@@ -26,7 +26,7 @@ SIZES.txt           ← 客户端 gzip、棋馆发布、APK 实测体积
 - [ ] `server/` `client/` `rules/` `themes/` `scripts/` `leaderboard/` `tools/` `android/` 都在
 - [ ] `README.md`、`LICENSE` 和原文件完全一致，`LICENSE` 为 PolyForm Noncommercial 1.0.0（非商用）
 - [ ] `scripts/` 里至少 3 个示例剧本，`leaderboard/` 未被改动
-- [ ] 品牌保持默认「奕局 / yiju / 附件像素图标」，或只改了 `branding.json`；没有手改 `res/` 下的 XML / Java / Gradle
+- [ ] 品牌保持默认「弈局 / yiju / 附件像素图标」，或只改了 `branding.json`；没有手改 `res/` 下的 XML / Java / Gradle
 - [ ] 构建命令是 `bash build.sh` 然后 `bash build-apk.sh`，顺序与参数都没变
 - [ ] 仓库根目录产物 = 4 个文件，文件名逐字一致
 - [ ] `SIZES.txt` 已填客户端 gzip、棋馆与 APK 实测体积

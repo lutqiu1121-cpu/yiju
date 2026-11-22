@@ -255,6 +255,8 @@ namespace Qipai
                 "titleKeys", new string[0], "worn", "", "featCount", new Dictionary<string, object>(),
                 "season", SeasonAuthority.Key(),
                  "rankBase", 0,
+                "yizhu", 0, "owned", new object[0], "worn", new Dictionary<string, object>(),
+                "yizhuDay", "", "yizhuToday", 0,
                 "rankPts", new Dictionary<string, object>(), "lastSeason", "", "lastRank", "初执",
                 "created", UnixNow(), "updated", UnixNow());
         }
@@ -385,9 +387,13 @@ namespace Qipai
 
         public static void Record(string accountId, string game, string variant, bool win, string scriptId)
         {
-            Record(accountId, game, variant, win, scriptId, new string[0]);
+            Record(accountId, game, variant, win, scriptId, new string[0], false);
         }
         public static void Record(string accountId, string game, string variant, bool win, string scriptId, string[] feats)
+        {
+            Record(accountId, game, variant, win, scriptId, feats, false);
+        }
+        public static void Record(string accountId, string game, string variant, bool win, string scriptId, string[] feats, bool draw)
         {
             if (string.IsNullOrEmpty(accountId)) return;
             lock (sync)
@@ -398,6 +404,16 @@ namespace Qipai
                 Dictionary<string, object> d = LoadSave(target);
                 if (d == null) d = NewSave(target.Id, target.Name);
                 d["plays"] = J.Int(d, "plays", 0) + 1;
+                string d0 = Day();
+                if (J.Str(d, "yizhuDay", "") != d0) { d["yizhuDay"] = d0; d["yizhuToday"] = 0; }
+                int award = win ? 12 : (draw ? 6 : 3);
+                int got = J.Int(d, "yizhuToday", 0);
+                if (got < 60)
+                {
+                    int give = Math.Min(award, 60 - got);
+                    d["yizhu"] = J.Int(d, "yizhu", 0) + give;
+                    d["yizhuToday"] = got + give;
+                }
                 if (win) { d["wins"] = J.Int(d, "wins", 0) + 1; d["streak"] = J.Int(d, "streak", 0) + 1; }
                 else d["streak"] = 0;
                 string today = Day();
@@ -507,6 +523,9 @@ namespace Qipai
                 "rankNext", TitleBook.RankNext(TopPts(d)),
                 "rankSum", J.Int(d, "rankBase", 0) + TitleBook.SumPts(d["rankPts"] as Dictionary<string, object>),
                 "rankBase", J.Int(d, "rankBase", 0),
+                "yizhu", J.Int(d, "yizhu", 0),
+                "owned", d.ContainsKey("owned") ? d["owned"] : new object[0],
+                "worn", d.ContainsKey("worn") ? d["worn"] : new Dictionary<string, object>(),
                 "season", J.Str(d, "season", ""), "seasonName", TitleBook.SeasonName(J.Str(d, "season", "")),
                 "seasonSpan", SeasonCalendar.Span(J.Str(d, "season", "")),
                 "seasonVerified", SeasonAuthority.Verified,
@@ -580,6 +599,84 @@ namespace Qipai
             return false;
         }
 
+        public static object[] ShopItems() { return ShopBook.Items(); }
+        public static Dictionary<string, object> ShopState(string accountId)
+        {
+            Dictionary<string, object> d = null;
+            if (!string.IsNullOrEmpty(accountId))
+            {
+                lock (sync)
+                {
+                    foreach (KeyValuePair<string, User> kv in users)
+                        if (kv.Value.Id == accountId) { d = LoadSave(kv.Value); break; }
+                }
+            }
+            if (d == null) d = J.Frame("yizhu", 0, "owned", new object[0], "worn", new Dictionary<string, object>());
+            return J.Frame("items", ShopBook.Items(), "yizhu", J.Int(d, "yizhu", 0),
+                "owned", d.ContainsKey("owned") ? d["owned"] : new object[0],
+                "worn", d.ContainsKey("worn") ? d["worn"] : new Dictionary<string, object>());
+        }
+        public static Dictionary<string, object> ShopBuy(string accountId, string key, out string error)
+        {
+            error = "";
+            if (string.IsNullOrEmpty(key)) { error = "未择妆奁"; return null; }
+            Dictionary<string, object> item = ShopBook.Find(key);
+            if (item == null) { error = "无此妆奁"; return null; }
+            if (string.IsNullOrEmpty(accountId)) { error = "先题名，方有弈株"; return null; }
+            lock (sync)
+            {
+                User u = null;
+                foreach (KeyValuePair<string, User> kv in users) if (kv.Value.Id == accountId) { u = kv.Value; break; }
+                if (u == null) { error = "题名不在本馆"; return null; }
+                Dictionary<string, object> d = LoadSave(u);
+                if (d == null) d = NewSave(u.Id, u.Name);
+                string[] owned = d.ContainsKey("owned") ? d["owned"] as string[] : null;
+                List<string> lo = owned == null ? new List<string>() : new List<string>(owned);
+                if (lo.Contains(key)) { error = "此妆奁已在匣中"; return null; }
+                int cost = J.Int(item, "cost", 0), bal = J.Int(d, "yizhu", 0);
+                if (bal < cost) { error = "弈株未足，尚差 " + (cost - bal) + " 枚"; return null; }
+                d["yizhu"] = bal - cost;
+                lo.Add(key); d["owned"] = lo.ToArray();
+                WriteSave(u, d);
+                Dictionary<string, object> st = ShopState(accountId);
+                st["note"] = "已入匣 · " + J.Str(item, "name", "") + "（余 " + J.Int(d, "yizhu", 0) + " 枚）";
+                return st;
+            }
+        }
+        public static Dictionary<string, object> ShopWear(string accountId, string key, string kind, out string error)
+        {
+            error = "";
+            if (string.IsNullOrEmpty(accountId)) { error = "先题名，方有弈株"; return null; }
+            Dictionary<string, object> item = string.IsNullOrEmpty(key) ? null : ShopBook.Find(key);
+            if (item != null) kind = J.Str(item, "kind", "");
+            if (item == null && !string.IsNullOrEmpty(key)) { error = "无此妆奁"; return null; }
+            lock (sync)
+            {
+                User u = null;
+                foreach (KeyValuePair<string, User> kv in users) if (kv.Value.Id == accountId) { u = kv.Value; break; }
+                if (u == null) { error = "题名不在本馆"; return null; }
+                Dictionary<string, object> d = LoadSave(u);
+                if (d == null) d = NewSave(u.Id, u.Name);
+                Dictionary<string, object> worn = d.ContainsKey("worn") ? d["worn"] as Dictionary<string, object> : null;
+                if (worn == null) worn = new Dictionary<string, object>();
+                if (item != null)
+                {
+                    string[] owned = d.ContainsKey("owned") ? d["owned"] as string[] : null;
+                    if (owned == null || Array.IndexOf(owned, key) < 0) { error = "尚未入匣，不可配戴"; return null; }
+                    worn[kind] = key;
+                }
+                else
+                {
+                    if (kind.Length > 0) worn.Remove(kind);
+                }
+                d["worn"] = worn;
+                WriteSave(u, d);
+                Dictionary<string, object> st = ShopState(accountId);
+                st["note"] = item == null ? "已复素妆" : "已配戴 · " + J.Str(item, "name", "");
+                return st;
+            }
+        }
+
         public static string Import(string name, string password, string data, out string error,
             out Dictionary<string, object> save)
         {
@@ -593,7 +690,7 @@ namespace Qipai
             try { blob = Convert.FromBase64String(data.Trim()); }
             catch (Exception) { error = "存档格式不对（应选 .yijusave 文本）"; return ""; }
             if (blob.Length < 4 + 16 + 16 + 16 + 32 || Encoding.ASCII.GetString(blob, 0, 4) != MAGIC_EXPORT)
-            { error = "这不是奕局存档，或已损坏"; return ""; }
+            { error = "这不是弈局存档，或已损坏"; return ""; }
             byte[] salt = new byte[16];
             Buffer.BlockCopy(blob, 4, salt, 0, 16);
             byte[] key = Derive(password ?? "", salt, 64);
@@ -680,20 +777,24 @@ namespace Qipai
             {"laizi","借符生","借符夺帅首胜"},{"guandan","进贡使","贡级帖首胜"},
             {"shengji","升阶客","升阶帖首胜"},{"paodekuai","疾出手","疾出令首胜"},
             {"gongzhu","逐豕客","逐豕令首胜"},{"hongshi","赤十友","赤十局首胜"},
-            {"texas","共席客","共牌令首胜"},{"zhajinhua","品笺人","花笺令首胜"},
-            {"niuniu","凑十生","凑十令首胜"},{"sangong","品公客","品公令首胜"},
+            
+            
             {"shisanszhang","分道客","三道笺首胜"},{"uno","呼笺客","云笺令首胜"},
             {"bridge","定约生","定约帖首胜"},{"mahjong","竹间友","竹牌戏首胜"},
             {"gouji","六席客","六席联牌首胜"},{"baohuang","护驾人","护驾局首胜"},
             {"chudadi","压牌客","压牌帖首胜"},{"shuangkou","联扣友","联扣局首胜"},
-            {"showhand","品五客","五品令首胜"},{"blackjack","探梅客","探梅令首胜"},
+            
             {"feixingqi","云程客","云程局首胜"},{"monopoly","坊市行","坊市图首胜"},
             {"werewolf","辨影人","宵影局首胜"},{"undercover","辨词客","辨词令首胜"},
             {"point24","九章生","九章令首胜"},{"solitaire","独理人","独理牌首胜"},
-            {"liarsdice","验点客","隐点令首胜"},{"avalon","遣使臣","遣使局首胜"},
+            {"avalon","遣使臣","遣使局首胜"},
             {"turtlesoup","问底人","问底令首胜"},{"mastermind","隐数客","隐数局首胜"},
             {"drawguess","丹青手","丹青令首胜"},{"juben","折狱生","折狱录首胜"},
-            {"tournament","累墨客","累墨赛首胜"},{"yijuan","执卷人","弈卷首胜"} };
+            {"tournament","累墨客","累墨赛首胜"},            {"houlou","候漏生","候漏首胜"},{"duzhou","先桨客","渡舟首胜"},
+            {"dengying","照影人","灯影首胜"},{"huiwen","回文客","回文笺首胜"},
+            {"cuojin","错金手","错金首胜"},{"shiyi","拾遗生","拾遗首胜"},
+            {"tingyu","听雨客","听雨首胜"},
+{"yijuan","执卷人","弈卷首胜"} };
 
         private static readonly string[,] FEAT = {
             {"seven_pairs","七对","竹牌戏 · 国标七对成和"},
@@ -926,6 +1027,41 @@ namespace Qipai
             Verified = true; UtcMs = mid; Source = "联网校时";
             note = "天时已校 · " + SeasonCalendar.Name(SeasonCalendar.KeyAtUtcMs(mid));
             return true;
+        }
+    }
+
+    public static class ShopBook
+    {
+        private static object[] cache = null;
+        private static Dictionary<string, object> ByKey(string k, string kind, string name, int cost, string note)
+        { return J.Frame("key", k, "kind", kind, "name", name, "cost", cost, "note", note); }
+        public static object[] Items()
+        {
+            if (cache != null) return cache;
+            cache = new object[] {
+                ByKey("desk_bamboo", "desk", "竹簟", 80, "牌桌 · 细竹横纹"),
+                ByKey("desk_cloud", "desk", "云石", 160, "牌桌 · 淡云石纹"),
+                ByKey("desk_gold", "desk", "洒金", 260, "牌桌 · 暗底洒金"),
+                ByKey("face_cheng", "face", "澄心笺", 90, "牌面 · 澄心薄笺"),
+                ByKey("face_zhu", "face", "朱丝栏", 180, "牌面 · 朱丝界栏"),
+                ByKey("face_wu", "face", "乌金栏", 280, "牌面 · 乌金细栏"),
+                ByKey("seal_zhuan", "seal", "小篆印", 70, "朱印 · 小篆方印"),
+                ByKey("seal_hulu", "seal", "葫芦印", 150, "朱印 · 葫芦形"),
+                ByKey("seal_chi", "seal", "螭钮印", 240, "朱印 · 螭钮圆印"),
+                ByKey("ink_song", "ink", "松烟", 60, "墨色 · 松烟青"),
+                ByKey("ink_zhu", "ink", "朱墨", 140, "墨色 · 朱砂沉"),
+                ByKey("ink_ni", "ink", "泥金", 230, "墨色 · 泥金褐")
+            };
+            return cache;
+        }
+        public static Dictionary<string, object> Find(string key)
+        {
+            foreach (object o in Items())
+            {
+                Dictionary<string, object> d = o as Dictionary<string, object>;
+                if (d != null && J.Str(d, "key", "") == key) return d;
+            }
+            return null;
         }
     }
 }

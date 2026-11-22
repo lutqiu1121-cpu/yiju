@@ -239,7 +239,8 @@ check('split(\',\')' in app_src or "split(',')" in app_src, "客户端按阵营�
 mm = {g["id"]: (g["min"], g["max"]) for g in games}
 check(mm.get("werewolf") == (6, 12), "狼人杀 6–12 人")
 check(mm.get("undercover") == (3, 9), "卧底 3–9 人")
-check(mm.get("texas") == (2, 9) and mm.get("uno") == (2, 8), "德扑 2–9 / UNO 2–8")
+check(mm.get("uno") == (2, 8) and mm.get("tingyu") == (3, 6) and mm.get("shiyi") == (2, 4),
+      "云笺令 2–8 / 听雨 3–6 / 拾遗 2–4")
 
 brand = ROOT / "android/branding.json"
 check(brand.exists(), "APK 品牌配置 branding.json 存在")
@@ -253,8 +254,8 @@ if brand.exists():
 rb = ROOT / "android/render_branding.py"
 check(rb.exists() and "PRESETS" in rb.read_text(encoding="utf-8") and "ICON_GRID" in rb.read_text(encoding="utf-8"),
       "品牌渲染脚本内置附件像素图标")
-check(json.loads((ROOT / "android/branding.json").read_text(encoding="utf-8")).get("appName") == "奕局",
-      "APK 默认名为奕局")
+check(json.loads((ROOT / "android/branding.json").read_text(encoding="utf-8")).get("appName") == "弈局",
+      "APK 默认名为弈局")
 icon_svg = (ROOT / "client/icon.svg").read_text(encoding="utf-8")
 check("<svg" in icon_svg and "shape-rendering" in icon_svg and "<rect" in icon_svg,
       "PWA 图标为矢量像素图，无位图")
@@ -279,11 +280,17 @@ css = (ROOT / "client/app.css").read_text(encoding="utf-8")
 html_all = (ROOT / "client/index.html").read_text(encoding="utf-8")
 
 NEW_IDS = ["dots","hex","nim","endgame","junqi4","gouji","baohuang","chudadi","shuangkou",
-           "showhand","blackjack","liarsdice","avalon","turtlesoup","mastermind","drawguess",
+           "avalon","turtlesoup","mastermind","drawguess",
            "juben","tournament"]
-check(all(x in ids for x in NEW_IDS), "18 个新玩法都在 manifest")
+check(all(x in ids for x in NEW_IDS), "15 个新玩法都在 manifest")
 check(all(('"'+x+'"') in registry or "new ExtraGame(\"" + x + "\")" in registry or x == "juben" or x == "tournament"
-          for x in NEW_IDS), "18 个新玩法都已注册")
+          for x in NEW_IDS), "15 个新玩法都已注册")
+check(all(x in ids for x in ["houlou","duzhou","dengying","huiwen","cuojin","shiyi","tingyu"]) and
+      all(('new OrigSevenGame("'+x+'")') in registry for x in ["houlou","duzhou","dengying","huiwen","cuojin","shiyi","tingyu"]),
+      "七局原创小戏入清单并注册")
+check(not any(x in ids for x in ["texas","showhand","blackjack","zhajinhua","niuniu","sangong","liarsdice"]),
+      "七局赌场原型已撤下，竹牌戏保留")
+check("mahjong" in ids and "shisanszhang" in ids, "竹牌戏与三道笺保留")
 check("yijuan" in ids and "new YiJuanGame()" in registry,
       "第 60 局弈卷已入清单并注册")
 check("class DirectorGame" in extra_src and "class TournamentGame" in extra_src,
@@ -462,6 +469,31 @@ check("ROLE_SETS" in yj and "roleNames" in yj and "roleSet" in opts,
       "弈卷两册共四十八家、名册可换")
 check("yjCard(la, info)" in (ROOT / "client/render.js").read_text(encoding="utf-8") and "yjLabel(c, rn)" in app,
       "卷面与手牌都显示人物姓名")
+
+
+acc2 = (ROOT / "server/Core/Accounts.cs").read_text(encoding="utf-8")
+hub2 = (ROOT / "server/Core/Hub.cs").read_text(encoding="utf-8")
+app2 = (ROOT / "client/app.js").read_text(encoding="utf-8")
+html2 = (ROOT / "client/index.html").read_text(encoding="utf-8")
+css2 = (ROOT / "client/app.css").read_text(encoding="utf-8")
+orig = (ROOT / "server/Rules/OrigSeven.cs").read_text(encoding="utf-8")
+readme2 = (ROOT / "README.md").read_text(encoding="utf-8")
+check("弈局" in readme2 and ("奕" + "局") not in readme2 and
+      ("奕" + "局") not in (ROOT / "android/branding.json").read_text(encoding="utf-8"),
+      "App 中文名定为弈局，旧字清零")
+check("class ShopBook" in acc2 and '"yizhu"' in acc2 and 't == "shopBuy"' in hub2,
+      "弈株外观目录与购买配戴由棋馆校验")
+check("renderShop" in app2 and "applyWorn" in app2 and "shopGrid" in html2 and
+      "[data-face" in css2 and "data-desk" in css2,
+      "妆奁界面与四类外观样式落地")
+check("makerJson" in app2 and "openScriptMaker" in app2 and "scriptImport" in app2 and
+      "mkCheck" in app2 and "制本" in html2,
+      "折狱录制本器含验本 / 下载 / 呈本 / 草稿")
+check("SeatOrder" in orig and "TieBreak" in orig and "_r2" in orig and
+      "class OrigSevenGame" in orig,
+      "七局原创小戏含轮换结算、同分决胜与独立随机流")
+check("七局原创小戏" in readme2 and "候漏" in readme2 and "听雨" in readme2,
+      "README 清单与教程已同步七局")
 
 print("静态自检： %d 通过 / %d 失败" % (len(ok), len(err)))
 for m in err: print("  FAIL  " + m)

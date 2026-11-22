@@ -35,9 +35,9 @@ namespace Qipai
             LocalData.Init(contentRoot);
             ScriptLibrary.Init(contentRoot);
             Accounts.Init(contentRoot);
-            Console.WriteLine("[奕局] 棋馆：" + LocalData.HallName + " · 指纹 " + LocalData.HallFingerprint);
-            Console.WriteLine("[奕局] 剧本库：" + ScriptLibrary.Count + " 个本（" + contentRoot + "/scripts）");
-            Console.WriteLine("[奕局] 本机账号：" + Accounts.Count + " 个 · 加密存档在 " + contentRoot + "/data/saves/");
+            Console.WriteLine("[弈局] 棋馆：" + LocalData.HallName + " · 指纹 " + LocalData.HallFingerprint);
+            Console.WriteLine("[弈局] 剧本库：" + ScriptLibrary.Count + " 个本（" + contentRoot + "/scripts）");
+            Console.WriteLine("[弈局] 本机账号：" + Accounts.Count + " 个 · 加密存档在 " + contentRoot + "/data/saves/");
 
             app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
 
@@ -100,9 +100,9 @@ namespace Qipai
                     string ws = la.Count > 0 ? "ws://" + la[0] : "";
                     LocalData.SetSelf(ws, 0, 0, ScriptLibrary.Count);
                     LocalData.PullDirectory("", out note);
-                    Console.WriteLine("[奕局] 棋馆目录：" + note);
+                    Console.WriteLine("[弈局] 棋馆目录：" + note);
                     LocalData.PushHall(out note);
-                    Console.WriteLine("[奕局] 馆帖：" + note);
+                    Console.WriteLine("[弈局] 馆帖：" + note);
                 }
             });
 
@@ -124,12 +124,12 @@ namespace Qipai
                             hub.OnlineCount, hub.RoomCount, ScriptLibrary.Count);
                         LocalData.PullDirectory("", out note);
                         LocalData.PushHall(out note);
-                        Console.WriteLine("[奕局] 目录刷新 / 馆帖：" + note);
+                        Console.WriteLine("[弈局] 目录刷新 / 馆帖：" + note);
                     }
                 }
             });
 
-            Console.WriteLine("奕局棋馆已启动：" + url + "  (谱页所在: " + (clientDir ?? "未找到") + ")");
+            Console.WriteLine("弈局棋馆已启动：" + url + "  (谱页所在: " + (clientDir ?? "未找到") + ")");
             Console.WriteLine("手机 / APK 在「04 设置 → 棋馆地址」填下面任一地址即可：");
             List<string> lan = LanAddresses(url);
             for (int i = 0; i < lan.Count; i++) Console.WriteLine("    " + lan[i]);

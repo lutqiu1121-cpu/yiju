@@ -328,7 +328,7 @@ namespace Qipai
             if (S == null || S.MoveNo == 0) return "first";
             string cat = "";
             if (Game == "juben" || Game == "werewolf" || Game == "avalon" || Game == "turtlesoup") cat = "party";
-            else if (Game == "uno" || Game == "mahjong" || Game == "bridge" || Game == "texas") cat = "card";
+            else if (Game == "uno" || Game == "mahjong" || Game == "bridge") cat = "card";
             return cat == "card" ? "play" : cat == "party" ? "speak" : "move";
         }
         public long PhaseLimit()

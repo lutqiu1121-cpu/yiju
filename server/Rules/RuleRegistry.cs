@@ -45,12 +45,8 @@ namespace Qipai
             Add(new TrickGame("gongzhu"));
             Add(new TrickGame("hongshi"));
 
-            Add(new ShowdownGame("texas"));
-            Add(new ShowdownGame("zhajinhua"));
-            Add(new ShowdownGame("niuniu"));
-            Add(new ShowdownGame("sangong"));
-            Add(new ShowdownGame("shisanszhang"));
 
+            Add(new ShowdownGame("shisanszhang"));
             Add(new UnoGame());
             Add(new BridgeGame());
             Add(new MahjongGame());
@@ -71,9 +67,6 @@ namespace Qipai
             Add(new ExtraGame("baohuang"));
             Add(new ExtraGame("chudadi"));
             Add(new ExtraGame("shuangkou"));
-            Add(new ExtraGame("showhand"));
-            Add(new ExtraGame("blackjack"));
-            Add(new ExtraGame("liarsdice"));
             Add(new ExtraGame("avalon"));
             Add(new ExtraGame("turtlesoup"));
             Add(new ExtraGame("mastermind"));
@@ -82,6 +75,13 @@ namespace Qipai
             Add(new PeakGame());
             Add(new TournamentGame());
             Add(new YiJuanGame());
+            Add(new OrigSevenGame("houlou"));
+            Add(new OrigSevenGame("duzhou"));
+            Add(new OrigSevenGame("dengying"));
+            Add(new OrigSevenGame("huiwen"));
+            Add(new OrigSevenGame("cuojin"));
+            Add(new OrigSevenGame("shiyi"));
+            Add(new OrigSevenGame("tingyu"));
         }
 
         private static void Add(IGameRule r)

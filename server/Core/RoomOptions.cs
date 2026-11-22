@@ -167,10 +167,6 @@ namespace Qipai
                     a.Add(T("holdTwoDouble", "留二翻倍", false, "规制"));
                     a.Add(T("unplayedDouble", "全关翻倍", false, "规制"));
                     a.Add(T("freePass", "随时可过手", false, "局仪")); break;
-                case "texas": case "zhajinhua": case "niuniu": case "sangong": case "showhand":
-                    a.Add(N("startChips", "起手分", 1000L, 100, 100000, 100, "规制"));
-                    a.Add(N("smallBlind", "先分 / 垫分", 10L, 1, 1000, 1, "规制"));
-                    a.Add(T("sidePot", "分层记分", true, "规制")); break;
                 case "shisanszhang":
                     a.Add(T("daoCheck", "倒道判罚", true, "规制")); break;
                 case "uno":
@@ -185,14 +181,10 @@ namespace Qipai
                     a.Add(N("minFan", "起和番数（国标 8）", 8L, 1, 32, 1, "规制"));
                     a.Add(T("queMen", "川麻缺一门", true, "规制"));
                     a.Add(T("allowChi", "允许吃牌", true, "规制")); break;
-                case "blackjack":
-                    a.Add(S("dealer17", "主家柔十七", "S17", "规制", new string[] { "S17|柔十七停牌（利客席）", "H17|柔十七补牌" }));
-                    a.Add(S("payout", "天然廿一折算", "3:2", "规制", new string[] { "3:2|常法", "6:5|薄分" }));
-                    a.Add(N("decks", "牌副数", 2L, 1, 8, 1, "规制")); break;
                 case "werewolf": case "avalon":
                     a.Add(N("missionRounds", "行事 / 宵行轮数", 3L, 2, 6, 1, "规制")); break;
 
-                case "liarsdice": case "turtlesoup": case "mastermind":
+                case "turtlesoup": case "mastermind":
                     a.Add(N("rounds", "轮数 / 题数", 5L, 1, 20, 1, "规制")); break;
                 case "diefeng":
                     a.Add(N("boardN", "石盘路数", 5L, 4, 9, 1, "规制"));
@@ -202,6 +194,10 @@ namespace Qipai
                     a.Add(N("moveQuota", "各方挪石次数", 4L, 0, 12, 1, "规制"));
                     a.Add(T("allowMove", "允许挪石易势", true, "规制"));
                     a.Add(T("loneDouble", "独峰（四邻同根）加二", true, "规制")); break;
+                case "houlou": case "duzhou": case "dengying": case "huiwen":
+                case "cuojin": case "shiyi": case "tingyu":
+                    a.Add(N("goal", "执卷所需（0=依本局）", 0L, 0, 12, 1, "规制", "先得此数者执卷"));
+                    break;
                 case "juben":
                     a.Add(T("dmMode", "主家位（不领私本）", true, "规制"));
                     a.Add(T("clueReveal", "线索可示全席", true, "规制")); break;

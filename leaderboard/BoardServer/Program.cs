@@ -67,7 +67,7 @@ public static class BoardProgram
             catch (Exception) { c.Response.StatusCode = 400; await c.Response.WriteAsync("bad json"); }
         });
 
-        Console.WriteLine("[奕局目录] " + url + " · 现有 " + Halls.Count + " 馆");
+        Console.WriteLine("[弈局目录] " + url + " · 现有 " + Halls.Count + " 馆");
         app.Run();
     }
 

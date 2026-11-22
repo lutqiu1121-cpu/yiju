@@ -15,7 +15,7 @@ namespace Qipai
         private static readonly object sync = new object();
         private static string dir = "data";
         private static string hallFp = "";
-        private static string hallName = "奕局棋馆";
+        private static string hallName = "弈局棋馆";
         private static long hallVersion = 1;
         private static long hallStarted = 0;
         private static string directoryUrl = "";
@@ -397,7 +397,7 @@ namespace Qipai
                             object acts; if (!d.TryGetValue("acts", out acts) || !(acts is object[])) continue;
                             string ve;
                             if (Normalize(d, out ve)) next[id] = d;
-                            else Console.WriteLine("[奕局] 剧本 " + id + " 未加载：" + ve);
+                            else Console.WriteLine("[弈局] 剧本 " + id + " 未加载：" + ve);
                         }
                         catch (Exception) { }
                     }

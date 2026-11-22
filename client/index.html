@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#f4f0e6">
-<title>奕局 · 棋牌雅集</title>
+<title>弈局 · 棋牌雅集</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./app.css">
@@ -20,7 +20,7 @@
 <div id="dots" aria-hidden="true"></div>
 
 <header id="topbar">
-  <div class="brand">奕局 <span>◇</span> 雅集</div>
+  <div class="brand">弈局 <span>◇</span> 雅集</div>
   <div class="sub">棋 · 牌 · 雅 集</div>
   <div id="conn" class="conn"><i></i><span>候馆中</span></div>
 </header>
@@ -184,7 +184,7 @@
     <div class="setting-row"><span>谱源</span><input id="sourceUrl" class="url-input" placeholder="填仓库地址后可一键打开"></div>
     <div class="setting-row"><span>雅号</span><input id="playerName" class="url-input" maxlength="12" placeholder="过客"></div>
     <div class="side-h" style="margin-top:22px">本馆 · 匾额</div>
-    <div class="setting-row"><span>匾额（主家）</span><input id="hallName" class="url-input" maxlength="24" placeholder="奕局棋馆"></div>
+    <div class="setting-row"><span>匾额（主家）</span><input id="hallName" class="url-input" maxlength="24" placeholder="弈局棋馆"></div>
     <div class="setting-row"><span>馆名录</span><button class="toggle on" id="hallDirToggle">启</button></div>
     <div class="setting-row"><span>名录所在</span><input id="hallDirUrl" class="url-input" placeholder="留空用默认公共公告板"></div>
     <div class="side-h" style="margin-top:22px">天时 · 赛季</div>
@@ -208,9 +208,14 @@
       <input type="file" id="saveFile" accept=".yijusave,.txt,.json" hidden>
     </div>
     <div class="hint">题名只存本馆，口令不落明文；谱以匣钥加密，携谱另加一层口令。换馆用「还谱」＋口令迁移。</div>
+    <div class="side-h" style="margin-top:22px">弈株 · 妆奁</div>
+    <div class="setting-row"><span>匣中弈株</span><span id="shopBalance" class="season-state">—</span></div>
+    <div id="shopGrid" class="shop-grid"></div>
+    <div class="hint">弈株只由对局终了按胜负相赠，每日至多六十枚；不入局内、不改胜负、不兑换、无充值，只换牌桌 / 牌面 / 朱印 / 墨色等外观。</div>
     <div class="side-h" style="margin-top:22px">卷帙 · 内容</div>
     <div class="btn-row">
       <button class="btn ghost" id="openScriptImport">呈本</button>
+      <button class="btn ghost" id="openScriptMaker">制本</button>
       <button class="btn ghost" id="exportRecord">录谱</button>
       <button class="btn ghost" id="importRecord">读谱</button>
       <input type="file" id="recordFile" accept=".json,.txt" hidden>

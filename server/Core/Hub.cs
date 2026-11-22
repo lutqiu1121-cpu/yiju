@@ -204,6 +204,21 @@ namespace Qipai
                     outFrames.Add(new KeyValuePair<Player, object>(kv.Value, sf));
                 return;
             }
+            if (t == "shop" || t == "shopBuy" || t == "shopWear")
+            {
+                Dictionary<string, object> st;
+                string e = "";
+                if (t == "shop") st = Accounts.ShopState(p.AccountId);
+                else if (t == "shopBuy") st = Accounts.ShopBuy(p.AccountId, J.Str(m, "key", ""), out e);
+                else
+                {
+                    st = Accounts.ShopWear(p.AccountId, J.Str(m, "key", ""), J.Str(m, "kind", ""), out e);
+                }
+                if (st == null) { outFrames.Add(Err(p, e.Length > 0 ? e : "妆奁未成")); return; }
+                st["t"] = "shopState";
+                outFrames.Add(new KeyValuePair<Player, object>(p, st));
+                return;
+            }
             if (t == "ping")
             {
                 outFrames.Add(new KeyValuePair<Player, object>(p, J.Frame("t", "pong", "ts", J.Str(m, "ts", ""), "serverTime", Now)));
@@ -533,13 +548,16 @@ namespace Qipai
             if (_cats != null) return _cats;
             _cats = new Dictionary<string, object>();
             string[] chess = { "xiangqi","jieqi","xiangqidark","chess","chess960","go","gomoku","renju","connect6","connect4","othello","checkers","junqi","doushou","tiaogi","mills","shogi","tictactoe","dots","hex","nim","endgame","junqi4","diefeng" };
-            string[] card = { "doudizhu","doudizhu2","laizi","guandan","shengji","paodekuai","gongzhu","hongshi","texas","zhajinhua","niuniu","sangong","shisanszhang","uno","bridge","mahjong","gouji","baohuang","chudadi","shuangkou","showhand","blackjack","yijuan" };
+            string[] card = { "doudizhu","doudizhu2","laizi","guandan","shengji","paodekuai","gongzhu","hongshi","shisanszhang","uno","bridge","mahjong","gouji","baohuang","chudadi","shuangkou","yijuan" };
             for (int i = 0; i < chess.Length; i++) _cats[chess[i]] = "chess";
             for (int i = 0; i < card.Length; i++) _cats[card[i]] = "card";
             _cats["feixingqi"] = "party"; _cats["monopoly"] = "party"; _cats["werewolf"] = "party";
             _cats["undercover"] = "party"; _cats["point24"] = "party"; _cats["solitaire"] = "party";
-            _cats["liarsdice"] = "party"; _cats["avalon"] = "party"; _cats["turtlesoup"] = "party";
+            _cats["avalon"] = "party"; _cats["turtlesoup"] = "party";
             _cats["mastermind"] = "party"; _cats["drawguess"] = "party"; _cats["juben"] = "party";
+            string[] orig7 = { "houlou","duzhou","dengying","huiwen","cuojin","shiyi","tingyu" };
+            for (int q = 0; q < orig7.Length; q++)
+                _cats[orig7[q]] = orig7[q] == "tingyu" ? "party" : (orig7[q] == "shiyi" ? "card" : "chess");
             _cats["tournament"] = "party";
             return _cats;
         }
@@ -547,8 +565,11 @@ namespace Qipai
         {
             string[] chess = { "xiangqi","jieqi","xiangqidark","chess","chess960","go","gomoku","renju","connect6","connect4","othello","checkers","junqi","doushou","tiaogi","mills","shogi","tictactoe","dots","hex","nim","endgame","junqi4","diefeng" };
             if (Array.IndexOf(chess, game) >= 0) return "chess";
-            string[] card = { "doudizhu","doudizhu2","laizi","guandan","shengji","paodekuai","gongzhu","hongshi","texas","zhajinhua","niuniu","sangong","shisanszhang","uno","bridge","mahjong","gouji","baohuang","chudadi","shuangkou","showhand","blackjack","yijuan" };
+            string[] card = { "doudizhu","doudizhu2","laizi","guandan","shengji","paodekuai","gongzhu","hongshi","shisanszhang","uno","bridge","mahjong","gouji","baohuang","chudadi","shuangkou","yijuan" };
             if (Array.IndexOf(card, game) >= 0) return "card";
+            if (game == "shiyi") return "card";
+            if (game == "tingyu") return "party";
+            if (game == "houlou" || game == "duzhou" || game == "dengying" || game == "huiwen" || game == "cuojin") return "chess";
             return "party";
         }
 

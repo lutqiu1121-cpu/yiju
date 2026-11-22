@@ -620,8 +620,108 @@ function escapeText(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function drawOrig7(ctx, W, H, p, view, onPick) {
+  const info = view.info || {}, legal = view.legal || [];
+  const labels = info.labels || [], scores = info.score || [0, 0];
+  const covered = info.covered || [], goal = info.goal || 3, round = info.round || 0;
+  const horiz = W >= H * 1.1, pad = Math.max(18, Math.min(W, H) * .07);
+  ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  ctx.fillStyle = mix(p.ink2, p.tile, .40);
+  ctx.font = `${Math.round(Math.min(W, H) * .046)}px "Songti SC",serif`;
+  ctx.fillText((info.title || '小戏') + ' · 第 ' + (round + 1) + ' 巡', W / 2, pad * .55);
+  ctx.font = `${Math.round(Math.min(W, H) * .026)}px "Songti SC",serif`;
+  ctx.fillStyle = mix(p.ink2, p.tile, .55);
+  ctx.fillText('两席各覆一手，同时启看', W / 2, pad * 1.05);
+
+  const n = labels.length, cols = Math.min(n, n > 12 ? 6 : (n > 6 ? 5 : 4));
+  const rows = Math.ceil(n / cols);
+  const bw = (W - pad * 2) / cols, bh = Math.min(52, (H - pad * 3.4) / Math.max(1, rows + 2.2));
+  const top = pad * 1.55;
+  const cells = [];
+  for (let i = 0; i < n; i++) {
+    const cx = pad + (i % cols + .5) * bw, cy = top + (Math.floor(i / cols) + .5) * bh;
+    const on = legal.includes('c:' + i), ban = info.ban === i + 1;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(cx - bw * .43, cy - bh * .40, bw * .86, bh * .80, 4);
+    else ctx.rect(cx - bw * .43, cy - bh * .40, bw * .86, bh * .80);
+    ctx.fillStyle = on ? mix(p.accent, p.tile, .16) : mix(p.ink, p.tile, .94);
+    ctx.fill(); ctx.lineWidth = on ? 1.6 : 1;
+    ctx.strokeStyle = on ? p.accent : mix(p.line, p.tile, .6); ctx.stroke();
+    ctx.fillStyle = on ? p.ink : mix(p.ink2, p.tile, .7);
+    ctx.font = `${Math.round(Math.min(bh * .36, 15))}px "Songti SC",serif`;
+    ctx.fillText(ban ? '禁 · ' + labels[i] : labels[i], cx, cy);
+    cells.push([cx, cy, i, on]);
+  }
+
+  const barY = top + rows * bh + pad * .55;
+  const seats = scores.length;
+  for (let k = 0; k < seats; k++) {
+    const y = barY + k * Math.min(24, bh * .5);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = mix(p.ink2, p.tile, .45);
+    ctx.font = `${Math.round(Math.min(W, H) * .024)}px "Songti SC",serif`;
+    ctx.fillText('第 ' + (k + 1) + ' 席 ' + (covered[k] ? '已覆' : '候覆'), pad * .55, y);
+    const x0 = pad * 3.2, x1 = W - pad * .55;
+    ctx.strokeStyle = mix(p.line, p.tile, .5); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+    const w = (x1 - x0) * Math.max(0, Math.min(1, (scores[k] || 0) / goal));
+    ctx.strokeStyle = p.accent; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + w, y); ctx.stroke();
+    ctx.fillStyle = mix(p.ink2, p.tile, .5);
+    ctx.fillText(String(scores[k] || 0) + '/' + goal, x1 - pad * .9, y);
+  }
+
+  const footY = H - pad * .42;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = mix(p.ink2, p.tile, .38);
+  ctx.font = `${Math.round(Math.min(W, H) * .025)}px "Songti SC",serif`;
+  ctx.fillText(info.lastNote || '', W / 2, footY);
+  if (info.myLamps) {
+    ctx.fillStyle = mix(p.accent, p.tile, .3);
+    ctx.fillText('己灯：' + info.myLamps.join(' / '), W / 2, footY - Math.min(W, H) * .034);
+  }
+  if (info.boats) {
+    const b = info.boats, g = info.boatGoal || 3;
+    ctx.fillStyle = mix(p.ink2, p.tile, .45);
+    ctx.fillText('甲舟 ' + b.slice(0, 3).join('/') + '　乙舟 ' + b.slice(3).join('/') + '　· 满 ' + g, W / 2, footY - Math.min(W, H) * .034);
+  }
+  if (info.tmp) {
+    ctx.fillStyle = mix(p.ink2, p.tile, .45);
+    ctx.fillText('暂记：' + info.tmp.map((x, i) => '第' + (i + 1) + '席 ' + (x || '—')).join('　'), W / 2, footY - Math.min(W, H) * .034);
+  }
+  if (view.cells && (view.game === 'huiwen' || view.game === 'cuojin')) {
+    const cs = view.cells, cw = view.w || 1, ch = view.h || 1;
+    const gs = Math.min(16, (W - pad * 2) / cw, (H - pad * 2) / (ch + 3));
+    const ox = (W - gs * cw) / 2, oy = top + rows * bh + pad * 1.1;
+    for (let i = 0; i < cs.length; i++) {
+      const x = ox + (i % cw) * gs, y = oy + Math.floor(i / cw) * gs;
+      ctx.strokeStyle = mix(p.line, p.tile, .6); ctx.lineWidth = 1;
+      ctx.strokeRect(x, y, gs, gs);
+      const c = cs[i] || '';
+      if (c) {
+        ctx.fillStyle = c[0] === 'r' ? p.accent : c[0] === 'b' ? p.ink : mix(p.ink2, p.tile, .6);
+        ctx.font = `${Math.round(gs * .55)}px "Songti SC",serif`;
+        ctx.fillText(c[0] === 'x' ? '封' : (c.slice(1) || ''), x + gs / 2, y + gs / 2);
+      }
+    }
+  }
+  const cv = document.getElementById('board');
+  if (cv && onPick) cv.onclick = (e) => {
+    const rect = cv.getBoundingClientRect(); let best = -1, bd = 1e9;
+    for (const c of cells) {
+      const d = (e.clientX - rect.left - c[0]) ** 2 + (e.clientY - rect.top - c[1]) ** 2;
+      if (d < bd) { bd = d; best = c[2]; }
+    }
+    if (best >= 0 && bd < (bw * .5) ** 2 && cells[best][3]) onPick(best);
+  };
+  ctx.restore();
+}
+
 function drawGridExtra(ctx, W, H, p, view, onPick) {
   const g = view.game || '';
+  if (['houlou','duzhou','dengying','huiwen','cuojin','shiyi','tingyu'].includes(g)) {
+    drawOrig7(ctx, W, H, p, view, onPick); return;
+  }
   const cells = view.cells || [], w = view.w || 1, h = view.h || 1;
   const legal = view.legal || [];
   const pad = Math.max(18, Math.min(W, H) * .08);

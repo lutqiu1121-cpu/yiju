@@ -18,7 +18,7 @@ internal static class Program
 
     private static int Main()
     {
-        Console.WriteLine("奕局 · 规则引擎回归");
+        Console.WriteLine("弈局 · 规则引擎回归");
         Console.WriteLine("注册玩法数：" + RuleRegistry.Count);
 
         using (JsonDocument doc = JsonDocument.Parse(File.ReadAllText(FindVectors())))
