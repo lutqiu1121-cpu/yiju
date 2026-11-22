@@ -3,7 +3,7 @@
 > 复制「提示词正文」整段发给 agent。本文件已放进仓库，推上去后新对话也可直接让 agent 读它。
 
 ## 基线事实（写死，不要重新讨论）
-- GitHub 仓库**已建好且当前为空**：`https://github.com/lutqiu1121-cpu/yiju`，分支 `master`（bundle 的 HEAD 是 `ef5fe4d`）。
+- GitHub 仓库**已建好且当前为空**：`https://github.com/lutqiu1121-cpu/yiju`，分支 `master`。随附的 `弈局_yiju_源码仓库.zip` **解压后已自带 `.git` 与配好的 `origin`**（指向该仓库、公开 https、无任何账号或令牌），`git status` 干净、含完整提交历史，**直接 `git push -u origin master` 即可，不需要 `git init`、不需要 `remote add`**。
 - yiju **从未发布、从未安装过任何 APK**，不存在旧签名，也不存在「换密钥就覆盖不了」的问题。
 - 固定签名**已经随仓库分发**：`android/keystore/yiju.jks`，别名 `yiju`、storepass/keypass `yijuarchive`（见 `android/keystore/README.md` 与 `android/app/build.gradle` 默认值）。这是公开仓库里的公开密钥，只用于保证「各版本签名一致、可覆盖升级」，不是账号凭证。
 - 因此：**不需要新建/替换 keystore，不需要任何签名 Secrets，不需要向用户索取或写入任何口令**。`bash build-apk.sh` 直接就能出同签名包。已清空仓库 Actions Secrets 属正常，不必补回。
@@ -13,8 +13,9 @@
 请阅读并执行本仓库根目录下的 `AGENT_PROMPT.md`（即本文件）与 `PUBLISH_AGENT.md`，一次性完成上传、构建与发布，不要询问、不要擅自改设计、不要加玩法。
 
 **一、上传代码（仓库已存在，不要新建仓库）**
-1. 优先用随附的 `弈局_yiju_源码仓库.zip` 解压取得源码（目录结构齐全，含 `AGENT_PROMPT.md`、`android/keystore/yiju.jks`）。若要保留完整提交历史，改用 `qipai-repo.bundle`：先 `git init yiju && cd yiju`，再依次 `git fetch <bundle路径> HEAD:refs/heads/imported`、`git checkout imported`、`git branch -m master`（`git clone <bundle> yiju` 可用时亦可；若报 `pread` / `index-pack` 错误，一律改用这条 fetch 写法，不要自行修脚本）。
-2. 目标远程固定为 `https://github.com/lutqiu1121-cpu/yiju`（若未配 remote 则 `git remote add origin <地址>`），推送分支 `master`：`git push -u origin master`。**不要** force、不要改历史、不要另建仓库。
+1. 解压随附的 `弈局_yiju_源码仓库.zip`，进入解压出的目录（内含 `.git/`、`AGENT_PROMPT.md`、`PUBLISH_AGENT.md`、`android/keystore/yiju.jks` 与全部源码）。先 `git status` 确认干净，**不要 `git init`、不要改 `.git/config`**（`origin` 已配好）。`PUBLISH_AGENT.md` 旧文里「没有 origin 就停下问」「不要再 git init」以本条为准。
+2. 直接推送：`git push -u origin master`。**不要** force、不要改历史、不要另建仓库、不要换分支名。
+   - 兜底：仅当解压确实丢了 `.git/`（少见）时，才用随附 `qipai-repo.bundle` 重建：`git init yiju && cd yiju` → `git fetch <bundle路径> HEAD:refs/heads/imported` → `git checkout imported` → `git branch -m master` → `git remote add origin https://github.com/lutqiu1121-cpu/yiju.git` → `git push -u origin master`。（`git clone <bundle> yiju` 若报 `pread` / `index-pack` 错，一律用这条 fetch 写法。）
 3. 保持目录结构、文件名、`LICENSE`、合规声明不变。`LICENSE` 是 **PolyForm Noncommercial 1.0.0**（源码公开 · 禁止商用）。README 抬头、App 设置页、入门小引、页脚、`PUBLISH_AGENT.md` 里那段技术与合规声明必须逐字保留，不得删改：
    > 本项目为开源技术分享，不提供官方游戏服务，不构成面向公众的网络游戏运营。游戏核心体验可完全离线进行。任何使用者自行部署、分发或商业化所产生的合规责任（包括但不限于版号、实名制、个人信息保护），由使用者自行承担。
 4. `AGENT_PROMPT.md` 与 `PUBLISH_AGENT.md` 一并随仓库上传。`scripts/` 与 `leaderboard/` 不碰不传；不新增、删除、改名任何玩法（当前 60 局）。

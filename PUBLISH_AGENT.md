@@ -161,5 +161,6 @@
 - 「凭证零接触」仅指**账号口令 / 令牌 / 登录态**：不读取、不打印、不写入、不索取。仓库里公开的 jks 默认口令属于构建配置，不属此列，按默认值沿用即可，不构成违规。
 - **覆盖升级三件套**：固定 `android/keystore/yiju.jks` + 固定 `app.yiju.archive` + `versionCode` 严格递增，三者缺一不可；装新版用 `adb install -r yiju.apk` 或手机直接点 APK 覆盖，禁止卸载重装。
 - **测试版例外**：tag `v1.0.0-test.1` 的 Pre-release 允许附 `yiju.apk` + `yiju-release.zip`（服务端包，供 .NET 8 服务器实测）；正式版仍只上传 `yiju.apk` 一个文件。
+- **源码包内已自带 `.git/` 与配好的 `origin`**（指向 `https://github.com/lutqiu1121-cpu/yiju`，公开地址、无凭证），解压后 `git status` 干净，直接 `git push -u origin master` 即可。上文第 26 条「里面已有 .git，不要再 git init」与本条一致；上文第 61 条「没有 origin 就停下问」不再适用（origin 已存在）。随附 `qipai-repo.bundle` 仅作 `.git` 丢失时的兜底。
 - `AGENT_PROMPT.md` v2 为最终执行口径，与上文冲突处以 `AGENT_PROMPT.md` 为准。
 
