@@ -3,7 +3,8 @@ const CACHE = 'yiju-v4';
 const LEGACY = ['yiju-v3'];
 const FILES = [
   '/', '/index.html', '/app.css', '/app.js', '/net.js', '/render.js', '/audio.js', '/fx.js',
-  '/icon.svg', '/offline-assets.js', '/local-net.js', '/cultivation.js', '/settings.js', '/wear.js', '/manifest.webmanifest', '/rules/manifest.json', '/rules/vectors.json', '/themes/themes.json'
+  '/icon.svg', '/offline-assets.js', '/local-net.js', '/cultivation.js',
+  '/rules-port/base.js', '/rules-port/board-games.js', '/rules-port/registry.js', '/settings.js', '/wear.js', '/manifest.webmanifest', '/rules/manifest.json', '/rules/vectors.json', '/themes/themes.json'
 ];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

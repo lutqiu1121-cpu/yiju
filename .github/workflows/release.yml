@@ -36,6 +36,8 @@ jobs:
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
           python3 tools/verify.py
+          node tools/rules-vector.test.mjs
+          node tools/rules-all.test.mjs
           dotnet run --project tools/RuleTests --configuration Release
 
       - name: 服务端发布包 yiju-release.zip

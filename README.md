@@ -441,7 +441,7 @@ build.sh / build-apk.sh / README.md / LICENSE / RELEASE_LIST.md / PUBLISH_AGENT.
 本版为一次整包修订，解决此前「构建出的 APK 全部按钮点不动」以及「离线不能真下棋」两个核心问题。
 
 - **APK 壳**：`MainActivity.java` 不再用 `file:///android_asset/client/index.html` 加载。ES module 在 `file://` 下被判 `origin: null`，WebView 会以 CORS 为由拒载 `app.js`，页面停在静态占位的「40 局 / 候馆中」且所有按钮无绑定。改用虚拟安全源 `https://yiju.local/` + `shouldInterceptRequest` 把请求映射到 `assets/client/`，MIME 按扩展名给全；前端源码一行不改。同步加了米白纸色过渡层，与桌面图标一致。
-- **离线本机棋馆（60 局全可玩）**：新增 `client/local-net.js`，实现与 `Net` 相同的接口。断线或 APK 内自动接管，**60 局全部能点「寻局」、落子、由隐士应手、走到终局并写回本机战绩**。主推 8 局（弈卷 + 候漏 / 渡舟 / 灯影 / 回文笺 / 错金 / 拾遗 / 听雨）按服务端 `OrigSeven.cs` 忠实移植，弈卷本地版用 48 家人物名册覆简比年序；其余 52 局走「本机简式」——沿用该局真实名称、人数与棋盘规格，轮流落子到终局，**联机时才走服务端完整规则**。匹配分段、存档既有字段、服务端规则一律不动。
+- **离线本机棋馆（60 局全可开枰，逐局搬运中）**：新增 `client/local-net.js`，实现与 `Net` 相同的接口。断线或 APK 内自动接管，60 局都能点「寻局」、落子、由隐士应手、走到终局并写回本机战绩。**其中 14 局已走服务端原规则**：`client/rules-port/` 完整移植 `BoardGames.cs` 前 3 类的 7 局（井字棋 / 五子棋 / 连珠 / 六子棋 / 四子棋 / 黑白棋 / 围棋），用 `rules/vectors.json` 的真实走法序列验收；另 7 局原创按 `OrigSeven.cs` 忠实手工移植。**其余 46 局明确标注「本机简式 · 规则待搬」**，可试玩但不冒充完整规则，联机时仍走服务端原规则。逐局状态、8 个批次与每批验收口径见 [`RULES_PORT_STATUS.md`](RULES_PORT_STATUS.md)，目标是 60 局全部替换为原规则。匹配分段、存档既有字段、服务端规则一律不动。
 - **主推分层**：「对弈」主入口列 8 局，其余 52 局收进二级「更多对弈」；60 局不增不删，注册表与 ID 不变。界面「玩法」显示文案统一改为「对弈」。
 - **修仙境界 + 纯本地签到**：`client/cultivation.js` 用独立本机 key 记录灵力、境界称谓、连日签到。境界是现有段位的展示层，灵力只管称谓与境界铭牌，不参与寻局分池；签到完全本地、断网可用，不联网、不补签、不加速。
 - **字词只简化真正生僻的**：妆奁→装扮、折狱录制本器→剧本工具、制本器→剧本编辑、卷面华彩→界面特效、覆简启简→覆牌比序。**弈株、品阶、套系等通俗词一律保留原文**，不再过度简化。`verify.py` 断言、`rules/`、manifest、wear.json 的 key 与存档字段全部不动。
@@ -450,3 +450,16 @@ build.sh / build-apk.sh / README.md / LICENSE / RELEASE_LIST.md / PUBLISH_AGENT.
 - **构建链**：`tools/RuleTests/RuleTests.csproj` 补上 `server/Core/Json.cs`（`Program.cs` 的 `using Qipai` 依赖它，之前漏编）；`build.sh` 玩法数校正为 60；`.github/workflows/release.yml` 补齐，零 Secret、首发 versionCode 放行、签名指纹与固定 keystore 实测比对。
 
 **仍需人工验证**：服务端在 .NET 8 机器上解压 `yiju-release.zip` 跑 `./start.sh` 是否实起，CI 不替代这一步。
+
+
+---
+
+## 附 · 逐局搬运工程（进行中）
+
+服务端规则共 8468 行 C# / 26 个规则类。离线要用**原规则**而非简式，只能逐局搬运，`RULES_PORT_STATUS.md` 是唯一进度表。
+
+- 公共基座 `client/rules-port/base.js` 是 `server/Rules/IGameRule.cs` 中 `GameState` / `MoveResult` / `RuleBase` 的 JS 等价实现（`New` / `Legal` / `Act` / `View` / `Next` / `Finish` / `SideOf` / `SetGrid` 等逐方法对照）。
+- 已搬规则放在 `client/rules-port/` 下，按 C# 源文件分模块；登记进 `registry.js` 才算「已搬完」。
+- 验收双脚本：`tools/rules-vector.test.mjs` 用真实走法序列比对 `expectEnded` / `expectWinner` / `expectLegalContains` / `expectVar`；`tools/rules-all.test.mjs` 跑 60 局开局→落子→隐士应手→按原规则终局（围棋走虚着+死活确认+数子、六子棋走同线六连，均为原规则自身分支）。CI 两个脚本都全绿才允许发布。
+- 自动转译 8468 行 C# 的方案试过，`node --check` 不通，已撤回，不拿跑不通的产物冒充完成。
+- 客户端体积自检阈值因新增规则引擎由 320 KiB 如实上调至 360 KiB，gzip 阈值 110 KiB 未变。

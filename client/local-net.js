@@ -3,6 +3,7 @@
  * 不碰 rules/、manifest、wear.json、存档既有字段、verify.py 断言。
  */
 import { Net } from './net.js';
+import { PortedRule, PortedGame, PORTED_IDS } from './rules-port/registry.js';
 
 const MAIN = ['yijuan', 'houlou', 'duzhou', 'dengying', 'huiwen', 'cuojin', 'shiyi', 'tingyu'];
 const NAMES = { yijuan: '弈卷', houlou: '候漏', duzhou: '渡舟', dengying: '灯影', huiwen: '回文笺', cuojin: '错金', shiyi: '拾遗', tingyu: '听雨' };
@@ -334,11 +335,11 @@ function buildGeneric(id, variant, g) {
   const w = size[0], h = size[1];
   const maxMoves = Math.min(28, Math.max(12, w * h));
   return {
-    generic: true, id, variant, name: (g && g.name) || id,
+    generic: true, id, variant, name: ((g && g.name) || id) + ' · 规则待搬',
     seats: 2, turn: 0, round: 0, seq: 1, moveNo: 0,
     w, h, cells: new Array(w * h).fill(''),
     score: [0, 0], maxMoves,
-    ended: false, winner: '', result: '', note: '本机简式 · 与隐士轮流落子',
+    ended: false, winner: '', result: '', note: '本机简式 · 与隐士轮流落子（完整规则待搬）',
     last: '', log: [], hand: [], info: {},
     cover: ['', ''], goal: 3, r2: ((Date.now() ^ 0x85ebca6b) >>> 0) || 0x27d4eb2f
   };
@@ -382,7 +383,7 @@ function viewGeneric(s) {
     cells: s.cells.slice(), w: s.w, h: s.h, you: 0, turn: s.turn,
     legal: s.ended ? [] : legalGeneric(s, 0),
     hand: [], hands: [[], []],
-    info: { title: s.name, labels: [], round: s.round, goal: s.maxMoves,
+    info: { title: s.name + '（本机简式）', labels: [], round: s.round, goal: s.maxMoves,
             score: s.score.slice(), covered: [0, 0], lastNote: s.note, you: 0, ban: -1 },
     ended: s.ended, winner: s.winner, result: s.result,
     last: s.last, log: s.log.slice(-24)
@@ -489,16 +490,31 @@ export class LocalNet {
   }
   emit() {
     if (!this.s) return;
-    const s = this.s; s.seq++;
+    const s = this.s;
+    const kind = s._kind || 'main';
+    const id = kind === 'ported' ? s.s.Game : s.id;
+    const view = kind === 'ported' ? s.view(0)
+      : kind === 'generic' ? viewGeneric(s) : viewOf(s);
+    view.seq = (view.seq || 0) + 1;
     const presence = [
       { online: true, name: this.myName || '你', ready: true },
       { online: true, name: '隐士 · 一', bot: true, ready: true }
     ];
-    const meta = { id: '本机', game: s.id, title: '本机自弈', bots: 1, max: 2, started: true };
-    this.onFrame({ t: 'state', view: viewOf(s), presence, meta, you: 0, chat: [] });
+    const meta = { id: '本机', game: id, title: '本机自弈', bots: 1, max: 2, started: true };
+    this.onFrame({ t: 'state', view, presence, meta, you: 0, chat: [] });
   }
   botStep() {
-    const s = this.s; if (!s || s.ended) return;
+    const s = this.s; if (!s) return;
+    const kind = s._kind || 'main';
+    if (kind === 'ported') {
+      if (s.ended || s.turn !== 1) return;
+      const code = s.botCode(1);
+      if (code) s.act(1, code);
+      this.emit();
+      if (!s.ended && s.turn === 1) this.timer = setTimeout(() => this.botStep(), 300);
+      return;
+    }
+    if (s.ended) return;
     if (s.generic) {
       if (s.turn !== 1) return;
       const l = legalGeneric(s, 1).filter(c => c !== 'pass');
@@ -523,21 +539,38 @@ export class LocalNet {
       const g = this.catalog.find(x => x.id === id) || null;
       const variant = o.variant || '常式';
       clearTimeout(this.timer);
+      const ported = PortedRule(id);
       // 先让「寻局」进度条完整走一拍，再切进棋盘：避免光效一闪就断、像卡顿
       this.onFrame({ t: 'matchState', active: true, waited: 0, pool: '本机', size: 1, need: 0, etaBot: 0 });
       this.timer = setTimeout(() => {
-        this.s = isMain ? build(id, variant) : buildGeneric(id, variant, g);
+        if (ported) {
+          this.s = new PortedGame(id, variant, (g && g.min) || 2);
+          this.s._kind = 'ported';
+        } else if (isMain) {
+          this.s = build(id, variant);
+          this.s._kind = 'main';
+        } else {
+          this.s = buildGeneric(id, variant, g);
+          this.s._kind = 'generic';
+          this.onFrame({ t: 'note', text: '此局完整规则待搬 · 当前为本机简式，可试玩但非原规则' });
+        }
         this.onFrame({ t: 'matchState', active: false });
         this.onFrame({ t: 'joined', room: '本机', seat: 0, matched: true, spectating: false, pool: '' });
         this.emit();
-        if (this.s.turn === 1) this.timer = setTimeout(() => this.botStep(), 420);
+        const turn = this.s._kind === 'ported' ? this.s.turn : this.s.turn;
+        if (turn === 1) this.timer = setTimeout(() => this.botStep(), 420);
       }, 340);
       return true;
     }
     if (t === 'move') {
       const s = this.s; if (!s) return true;
       const code = String(o.code || '');
-      if (!applyCover(s, 0, code)) { this.onFrame({ t: 'error', text: '此刻不能这样落' }); return true; }
+      const kind = s._kind || 'main';
+      let ok;
+      if (kind === 'ported') ok = s.act(0, code);
+      else if (kind === 'generic') ok = applyGeneric(s, 0, code);
+      else ok = applyCover(s, 0, code);
+      if (!ok) { this.onFrame({ t: 'error', text: '此刻不能这样落' }); return true; }
       this.emit();
       if (!s.ended) this.timer = setTimeout(() => this.botStep(), 420);
       return true;
