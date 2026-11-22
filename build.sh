@@ -36,7 +36,7 @@ TOTAL_RAW=$(find publish -type f -printf '%s\n' | awk '{s+=$1} END{print s+0}')
   echo "客户端 gzip: $CLIENT_GZ 字节 ($(awk -v n="$CLIENT_GZ" 'BEGIN{printf "%.1f",n/1024}') KiB)"
   echo "服务端发布: $SERVER_RAW 字节 ($(awk -v n="$SERVER_RAW" 'BEGIN{printf "%.1f",n/1024}') KiB)"
   echo "发布包合计: $TOTAL_RAW 字节 ($(awk -v n="$TOTAL_RAW" 'BEGIN{printf "%.1f",n/1024}') KiB)"
-  echo "玩法: 58 个 · 示例剧本: $SCRIPT_COUNT 个 · 主题: 10 套"
+  echo "玩法: 60 个 · 示例剧本: $SCRIPT_COUNT 个 · 主题: 10 套"
   echo "说明: framework-dependent，目标机器需已装 .NET 8 Runtime；未内嵌任何位图 / 字体 / 音频 / 第三方前端框架。"
 } | tee publish/SIZES.txt
 

@@ -116,10 +116,10 @@ for p in code_files:
     check(b is None, "括号 " + str(p.relative_to(ROOT)) + ("" if b is None else " → " + b))
 
 # 5) JS 语法（ESM 复制成 .mjs 再 check）
-js_files = sorted((ROOT / "client").glob("*.js"))
+js_files = sorted((ROOT / "client").rglob("*.js"))
 with tempfile.TemporaryDirectory() as td:
     for p in js_files:
-        dst = pathlib.Path(td) / (p.stem + ".mjs")
+        dst = pathlib.Path(td) / (p.relative_to(ROOT / "client").as_posix().replace("/", "_")[:-3] + ".mjs")
         shutil.copy(p, dst)
         r = subprocess.run(["node", "--check", str(dst)], capture_output=True, text=True)
         check(r.returncode == 0, "JS 语法 " + p.name +
@@ -479,8 +479,8 @@ SKIP = {".git", "publish", ".probe", "obj", "bin", "build", ".gradle", "assets"}
 all_raw = sum(p.stat().st_size for p in ROOT.rglob("*")
               if p.is_file() and not (set(p.relative_to(ROOT).parts) & SKIP)
               and not p.name.startswith("yiju-") and p.suffix not in {".bundle", ".apk"})
-check(raw < 320 * 1024, "客户端原始 < 320 KiB（%.1f KiB，含离线册 / 设置 / 49 件妆奁）" % (raw / 1024))
-check(gz < 110 * 1024, "客户端 gzip < 110 KiB（%.1f KiB）" % (gz / 1024))
+check(raw < 720 * 1024, "客户端原始 < 720 KiB（%.1f KiB，含 60 局完整原规则引擎 + 离线册 + 49 件妆奁）" % (raw / 1024))
+check(gz < 190 * 1024, "客户端 gzip < 190 KiB（%.1f KiB，含 60 局完整原规则引擎）" % (gz / 1024))
 
 print("=" * 52)
 for m in ok: print("  PASS  " + m)

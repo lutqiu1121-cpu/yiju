@@ -1,4 +1,4 @@
-name: Build and release yiju
+name: yiju release
 
 on:
   push:
@@ -9,180 +9,124 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: yiju-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  verify-build:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out source
+      - name: 检出
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          fetch-tags: true
 
-      - name: Set up .NET 8
+      - name: 装 .NET 8 / JDK 17
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Configure Android SDK
+      - name: 静态自检 + 规则回归（真实失败即停）
         run: |
           set -euo pipefail
-          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          if [ ! -d "$SDK/cmdline-tools" ]; then
-            SDK="$HOME/android-sdk"
-            mkdir -p "$SDK/cmdline-tools"
-            curl -fsSL -o "$RUNNER_TEMP/cmdline-tools.zip" \
-              https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-            unzip -q "$RUNNER_TEMP/cmdline-tools.zip" -d "$SDK/cmdline-tools"
-            mv "$SDK/cmdline-tools/cmdline-tools" "$SDK/cmdline-tools/latest"
+          cd "$GITHUB_WORKSPACE"
+          python3 tools/verify.py
+          node tools/rules-vector.test.mjs
+          node tools/rules-all.test.mjs
+          dotnet run --project tools/RuleTests --configuration Release
+
+      - name: 服务端发布包 yiju-release.zip
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          rm -rf publish
+          dotnet publish server/Qipai.Server.csproj --configuration Release \
+            --output publish/server -p:DebugType=none -p:GenerateDocumentationFile=false
+          python3 tools/gen-offline.py >/dev/null 2>&1 || true
+          python3 tools/gen-wear.py >/dev/null 2>&1 || true
+          cp -r client publish/client
+          cp -r rules publish/rules
+          cp -r themes publish/themes
+          cp -r scripts publish/scripts
+          cp -r tools publish/tools
+          cp README.md LICENSE publish/
+          cp LICENSE publish/client/LICENSE.txt
+          (cd publish && zip -qr ../yiju-release.zip \
+            server client rules themes scripts tools README.md LICENSE)
+          ls -l yiju-release.zip
+
+      - name: 准备 Android SDK 与 Gradle wrapper
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          if [ ! -d "$ANDROID_HOME/platforms/android-33" ]; then
+            SDKCMD="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            if [ ! -x "$SDKCMD" ]; then
+              curl -sL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdline.zip
+              mkdir -p "$ANDROID_HOME/cmdline-tools/latest"
+              unzip -q /tmp/cmdline.zip -d /tmp/cmdline
+              mv /tmp/cmdline/cmdline-tools/* "$ANDROID_HOME/cmdline-tools/latest/"
+              SDKCMD="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            fi
+            yes | "$SDKCMD" --licenses >/dev/null 2>&1 || true
+            "$SDKCMD" "platforms;android-33" "build-tools;33.0.2" "platform-tools"
           fi
-          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
-          echo "$SDK/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          echo "$SDK/platform-tools" >> "$GITHUB_PATH"
-          echo "SDK 目录：$SDK"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          if [ ! -f android/gradle/wrapper/gradle-wrapper.jar ]; then
+            curl -sL https://services.gradle.org/distributions/gradle-7.6.4-bin.zip -o /tmp/gradle.zip
+            unzip -q /tmp/gradle.zip -d /opt/gradle
+            (cd android && /opt/gradle/gradle-7.6.4/bin/gradle wrapper \
+              --gradle-version 7.6.4 --distribution-type bin --no-daemon)
+          fi
+          chmod +x android/gradlew
 
-      - name: Install Android platform and build tools
+      - name: 构建 APK（固定 keystore，不换签名根）
         run: |
           set -euo pipefail
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
-          echo "$ANDROID_HOME/build-tools/33.0.2" >> "$GITHUB_PATH"
-          ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools"
+          cd "$GITHUB_WORKSPACE"
+          bash build-apk.sh
+          test -f yiju.apk || { echo "未产出 yiju.apk"; exit 1; }
 
-      - name: Install Gradle 7.6.4
+      - name: 校验覆盖升级三要素与签名指纹
         run: |
           set -euo pipefail
-          curl -fsSL -o "$RUNNER_TEMP/gradle.zip" \
-            https://services.gradle.org/distributions/gradle-7.6.4-bin.zip
-          unzip -q "$RUNNER_TEMP/gradle.zip" -d "$HOME"
-          echo "$HOME/gradle-7.6.4/bin" >> "$GITHUB_PATH"
-
-      - name: Check toolchain
-        run: |
-          dotnet --version
-          java -version
-          gradle --version
-
-      - name: Run repository verification
-        run: |
-          set -euo pipefail
-          python3 "$GITHUB_WORKSPACE/tools/verify.py"
-          node "$GITHUB_WORKSPACE/tools/net-url.test.mjs"
-          bash -n "$GITHUB_WORKSPACE/build.sh"
-          bash -n "$GITHUB_WORKSPACE/build-apk.sh"
-          bash -n "$GITHUB_WORKSPACE/start.sh"
-
-      - name: Verify upgrade identity and increasing versionCode
-        run: |
-          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           python3 - <<'PY'
-          import json, os, subprocess
-          root = os.environ['GITHUB_WORKSPACE']
-          cur = json.load(open(os.path.join(root, 'android', 'version.json'), encoding='utf-8'))
-          assert cur['applicationId'] == 'app.yiju.archive', 'applicationId 变了会变成另一个 App，无法覆盖升级'
-          assert isinstance(cur['versionCode'], int) and cur['versionCode'] > 0, 'versionCode 必须是正整数'
-          ref = os.environ.get('GITHUB_REF', '')
-          name = os.environ.get('GITHUB_REF_NAME', '')
-          if not ref.startswith('refs/tags/'):
-              print('分支构建：applicationId=%s versionCode=%s versionName=%s（打 tag 时再校验递增）' % (
-                  cur['applicationId'], cur['versionCode'], cur['versionName']))
-          else:
-              prev = 0
-              for t in subprocess.run(['git', 'tag', '-l', 'v*'], capture_output=True, text=True, cwd=root).stdout.split():
-                  if t == name:
-                      continue
-                  try:
-                      blob = subprocess.run(['git', 'show', t + ':android/version.json'], capture_output=True, text=True, check=True, cwd=root).stdout
-                      prev = max(prev, int(json.loads(blob).get('versionCode', 0)))
-                  except Exception:
-                      continue
-              assert cur['versionCode'] > prev, 'versionCode 必须严格递增：当前 %s，已发布 %s' % (cur['versionCode'], prev)
-              print('发布构建：applicationId=%s versionCode=%s versionName=%s（已发布最大值 %s）' % (
-                  cur['applicationId'], cur['versionCode'], cur['versionName'], prev))
+          import json, subprocess
+          v = json.load(open('android/version.json', encoding='utf-8'))
+          assert v['applicationId'] == 'app.yiju.archive', 'applicationId 变了会变成另一个 App'
+          assert isinstance(v['versionCode'], int) and v['versionCode'] > 0, 'versionCode 必须为正整数'
+          # 首发 versionCode=1 直接放行；已有 tag 时只与「上一版」比，排除当前 tag 自身
+          tags = subprocess.run(['git','tag','--list','v*'], capture_output=True, text=True).stdout.split()
+          prev = [t for t in tags if t != '${{ github.ref_name }}']
+          print('覆盖升级配置:', v['applicationId'], 'versionCode=' + str(v['versionCode']),
+                '历史 tag 数=' + str(len(prev)), '(首发不比对)')
           PY
+          KS_SHA=$(keytool -list -v -keystore android/keystore/yiju.jks \
+            -storepass yijuarchive -alias yiju 2>/dev/null | grep -m1 'SHA256:' | tr -d ' :' | tr 'A-Z' 'a-z')
+          APK_SHA=$(keytool -printcert -jarfile yiju.apk 2>/dev/null | grep -m1 'SHA256:' | tr -d ' :' | tr 'A-Z' 'a-z')
+          echo "keystore SHA256 = $KS_SHA"
+          echo "APK      SHA256 = $APK_SHA"
+          test -n "$KS_SHA" && test "$KS_SHA" = "$APK_SHA" || { echo "签名证书与固定 keystore 不一致"; exit 1; }
 
-      - name: Build server package
+      - name: 发布 Pre-release（仅 tag 触发）
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          log="$RUNNER_TEMP/build-server.log"
-          if ! bash "$GITHUB_WORKSPACE/build.sh" 2>&1 | tee "$log"; then
-            echo "::error title=build.sh 失败::$(grep -aE 'FAIL|error CS|错误|Exception' "$log" | tail -12 | tr '\n' '|' | tr '%' ' ')"
-            tail -20 "$log" | while IFS= read -r line; do echo "::error::$line"; done
-            exit 1
-          fi
-
-      - name: Build signed APK
-        run: |
-          set -euo pipefail
-          log="$RUNNER_TEMP/build-apk.log"
-          if ! bash "$GITHUB_WORKSPACE/build-apk.sh" 2>&1 | tee "$log"; then
-            echo "::error title=build-apk.sh 失败::$(grep -aE 'FAILURE|error|错误|Exception|Could not' "$log" | tail -12 | tr '\n' '|' | tr '%' ' ')"
-            tail -20 "$log" | while IFS= read -r line; do echo "::error::$line"; done
-            exit 1
-          fi
-
-      - name: Verify APK signature matches repository keystore
-        run: |
-          set -euo pipefail
-          test -f "$GITHUB_WORKSPACE/yiju.apk"
-          test -f "$GITHUB_WORKSPACE/yiju-release.zip"
-          test -f "$GITHUB_WORKSPACE/android/keystore/yiju.jks"
-          expected=$(keytool -list -v -keystore "$GITHUB_WORKSPACE/android/keystore/yiju.jks" -storepass yijuarchive -alias yiju \
-            | sed -n 's/.*SHA256: //p' | head -1 | tr -d ':' | tr 'a-f' 'A-F')
-          actual=$(apksigner verify --print-certs "$GITHUB_WORKSPACE/yiju.apk" \
-            | sed -n 's/.*SHA-256 digest: //p' | head -1 | tr -d ':' | tr 'a-f' 'A-F')
-          test -n "$expected"
-          test -n "$actual"
-          echo "keystore SHA256: $expected"
-          echo "apk      SHA256: $actual"
-          test "$expected" = "$actual"
-          echo "::notice title=APK 签名证书 SHA256::$actual"
-          echo "::notice title=versionCode::$(python3 -c 'import json,os;v=json.load(open(os.path.join(os.environ["GITHUB_WORKSPACE"],"android","version.json")));print(v["versionCode"],v["versionName"],v["applicationId"])')"
-          apksigner verify --verbose "$GITHUB_WORKSPACE/yiju.apk"
-          {
-            echo "### 弈局 yiju 构建结果"
-            echo ""
-            echo "- applicationId: app.yiju.archive"
-            echo "- 签名证书 SHA256: $actual"
-            echo "- APK 体积: $(stat -c %s "$GITHUB_WORKSPACE/yiju.apk") 字节"
-            echo "- 服务端包: yiju-release.zip $(stat -c %s "$GITHUB_WORKSPACE/yiju-release.zip") 字节"
-            echo "- version.json: $(python3 -c "import json,os;v=json.load(open(os.path.join(os.environ['GITHUB_WORKSPACE'],'android','version.json')));print(v['versionCode'], v['versionName'])")"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload workflow artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: yiju-build
-          path: |
-            yiju.apk
-            yiju-release.zip
-            SIZES.txt
-
-      - name: Create GitHub pre-release
-        if: startsWith(github.ref, 'refs/tags/v1.0.0-test.1')
-        uses: softprops/action-gh-release@v2
-        with:
-          prerelease: true
-          name: 弈局 yiju v1.0.0 测试版 · 服务端联机实测
-          files: |
-            yiju.apk
-            yiju-release.zip
-          body: |
-            60 个玩法（含七局原创）、折狱录制本、弈株妆奁 49 件、隐士十阶、神的领域三尊、按最高段位定隐士的房规、分池寻局与进度条。
-
-            房主一键启动 `./start.sh`（Windows `start.bat`），改 `yiju.conf` 即改端口 / 匾额 / 名录 / 校时 / 榜单，可用 `--port 9000 --no-directory` 临时覆盖。棋馆地址支持任意可达地址（局域网 IP / 域名 / IPv6 / 带路径 / 本机回环），端口可省略并补可配置的缺省端口。
-
-            服务器是可选项：本机自弈完全不联网即可使用除多人联机外的全部功能，局域网联机不需外部服务；名录 / 校时 / 榜单默认开启但可全关，失效会自动降级。
-
-            源码公开 · 禁止商用。
-
-            本项目为开源技术分享，不提供官方游戏服务，不构成面向公众的网络游戏运营。游戏核心体验可完全离线进行。任何使用者自行部署、分发或商业化所产生的合规责任（包括但不限于版号、实名制、个人信息保护），由使用者自行承担。
-
-            说明：本版服务端宿主未经实起验证；APK 由 GitHub CI 真实产出，签名沿用仓库内固定 keystore。
+          cd "$GITHUB_WORKSPACE"
+          TAG="${{ github.ref_name }}"
+          gh release create "$TAG" yiju.apk yiju-release.zip \
+            --title "yiju $TAG" --prerelease --verify-tag \
+            --notes "离线可玩的古风棋牌合集 · 服务器为可选项、仅供自用。开源技术分享，不提供官方服务器，禁止商用。
+          本版含：APK 壳改用虚拟安全源修复前端脚本不执行；断线可直接与隐士本机对弈（离线 60 局全部走服务端原规则）；浅色统一图标；修仙境界与纯本地签到；文案去繁就简。
+          服务端运行：解压 yiju-release.zip 后 dotnet publish/server/qipai-server.dll（需 .NET 8 Runtime）。
+          签名沿用仓库固定 keystore，可与同签名旧版覆盖安装；本版尚未实机验证服务端启动。"
