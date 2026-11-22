@@ -89,18 +89,22 @@ jobs:
           assert isinstance(cur['versionCode'], int) and cur['versionCode'] > 0, 'versionCode 必须是正整数'
           ref = os.environ.get('GITHUB_REF', '')
           name = os.environ.get('GITHUB_REF_NAME', '')
-          prev = 0
-          for t in subprocess.run(['git', 'tag', '-l', 'v*'], capture_output=True, text=True).stdout.split():
-              if ref.startswith('refs/tags/') and t == name:
-                  continue
-              try:
-                  blob = subprocess.run(['git', 'show', t + ':android/version.json'], capture_output=True, text=True, check=True).stdout
-                  prev = max(prev, int(json.loads(blob).get('versionCode', 0)))
-              except Exception:
-                  continue
-          assert cur['versionCode'] > prev, 'versionCode 必须严格递增：当前 %s，已发布 %s' % (cur['versionCode'], prev)
-          print('applicationId=%s versionCode=%s versionName=%s（已发布最大值 %s）' % (
-              cur['applicationId'], cur['versionCode'], cur['versionName'], prev))
+          if not ref.startswith('refs/tags/'):
+              print('分支构建：applicationId=%s versionCode=%s versionName=%s（打 tag 时再校验递增）' % (
+                  cur['applicationId'], cur['versionCode'], cur['versionName']))
+          else:
+              prev = 0
+              for t in subprocess.run(['git', 'tag', '-l', 'v*'], capture_output=True, text=True).stdout.split():
+                  if t == name:
+                      continue
+                  try:
+                      blob = subprocess.run(['git', 'show', t + ':android/version.json'], capture_output=True, text=True, check=True).stdout
+                      prev = max(prev, int(json.loads(blob).get('versionCode', 0)))
+                  except Exception:
+                      continue
+              assert cur['versionCode'] > prev, 'versionCode 必须严格递增：当前 %s，已发布 %s' % (cur['versionCode'], prev)
+              print('发布构建：applicationId=%s versionCode=%s versionName=%s（已发布最大值 %s）' % (
+                  cur['applicationId'], cur['versionCode'], cur['versionName'], prev))
           PY
 
       - name: Build server package
