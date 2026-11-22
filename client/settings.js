@@ -6,10 +6,10 @@ export const DEFAULTS = {
   soundMaster:true, volMaster:70, volMove:80, volAmbience:45, volUi:60,
   autoReady:false, quickPlay:true, confirmResign:true, confirmUndo:true,
   showHints:true, showLegal:true, showFoeCount:true, autoReplaySave:true,
-  defaultBot:0, defaultClock:60, defaultTimeout:'auto', spectatorChat:false,
+  defaultBot:0, defaultClock:60, defaultTimeout:'auto', spectatorChat:false, matchMaxWait:30,
   autoReconnect:true, reconnectMs:3000, wifiOnly:true,
   externalDir:true, externalTime:true, externalBoards:true, offlineNotice:true,
-  autoLogout:'30分', lockOnHide:true, clearOnExit:false, serverUrl:'',
+  autoLogout:'30分', lockOnHide:true, clearOnExit:false, serverUrl:'', defaultPort:5080,
   largeTap:false, longPressConfirm:false, oneHand:false, keepAwake:false,
   reduceFlash:true, screenReader:false
 };
@@ -50,7 +50,8 @@ export const GROUPS = [
     { key:'defaultBot', type:'select', name:'隐士默认棋力', options:['随性','试探','进取','老成','谋势','精算','通玄','入微','忘机','弈圣'], values:[0,1,2,3,4,5,6,7,8,9] },
     { key:'defaultClock', type:'select', name:'默认更漏（秒）', options:[15,30,60,120,300], values:[15,30,60,120,300] },
     { key:'defaultTimeout', type:'select', name:'默认超时', options:['auto','skip','lose'] },
-    { key:'spectatorChat', type:'toggle', name:'观席可闲谈' }
+    { key:'spectatorChat', type:'toggle', name:'观席可闲谈' },
+    { key:'matchMaxWait', type:'select', name:'寻局耐心（秒）', options:[20,30,45,60], values:[20,30,45,60], hint:'候满仍不齐，按池内最高段位请隐士补位开枰' }
   ]},
   { id:'net', name:'联网 · 离线', icon:'◎', items:[
     { key:'autoReconnect', type:'toggle', name:'断线自动重连' },
@@ -60,7 +61,8 @@ export const GROUPS = [
     { key:'externalTime', type:'toggle', name:'赛季校时（可选）' },
     { key:'externalBoards', type:'toggle', name:'公共榜单（可选）' },
     { key:'offlineNotice', type:'toggle', name:'离线状态提示' },
-    { key:'serverUrl', type:'text', name:'本机棋馆地址', hint:'本机跑棋馆填 127.0.0.1:5080 · 不需要外网' }
+    { key:'serverUrl', type:'text', name:'棋馆地址', hint:'任意地址均可：局域网 IP / 域名 / IPv6 / 带路径 / 本机回环；不绑定固定地址' },
+    { key:'defaultPort', type:'number', name:'缺省端口', min:1, max:65535, hint:'地址不写端口时自动补这个端口；写了端口就按写的连，可随时改' }
   ]},
   { id:'privacy', name:'案牍 · 隐私', icon:'▣', items:[
     { key:'autoLogout', type:'select', name:'自动离席', options:['从不','5分','30分','离页即'] },

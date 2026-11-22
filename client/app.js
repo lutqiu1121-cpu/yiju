@@ -340,7 +340,8 @@ function onFrame(m) {
     case 'joined':
       lsSet('qipai.room', m.room);
       $('#lastRoomLine').textContent = `上回雅集：${m.room} · 第 ${m.seat >= 0 ? m.seat : '旁观'} 席`;
-      go('play'); toast(m.matched ? '寻局得人，开枰' : (m.spectating ? '入席旁观' : `赴局 ${m.room}`));
+      const mb = $('#matchBar'); if (mb) mb.hidden = true;
+      go('play'); toast(m.matched ? '寻局得人' + (m.pool ? ' · ' + m.pool : '') + '，开枰' : (m.spectating ? '入席旁观' : `赴局 ${m.room}`));
       if (Settings.get('autoReady') && !m.spectating && S.net) S.net.send({ t:'act', a:'ready' });
       break;
     case 'state':
@@ -362,6 +363,7 @@ function onFrame(m) {
     case 'typing': onTyping(m); break;
     case 'error': toast(m.text || '此令未行'); Sound.alert(); break;
     case 'note': toast(m.text || ''); break;
+    case 'matchState': renderMatchState(m); break;
     case 'undoAsk': askUndo(m.by); break;
     case 'stats':
       S.stats = { ...S.stats, ...m.stats }; save('qipai.stats', S.stats); updateStats(); break;
@@ -718,11 +720,12 @@ function askServerUrl(first) {
   modal(first ? '第一步 · 连接棋馆' : '连接棋馆', `
     <div class="guide"><div class="guide-step">
       <b>填一下棋馆地址</b>
-      <p>你现在用的是 APK / 本地页面，页面本身不带棋馆。先在隐士上运行 <code>dotnet publish/server/qipai-server.dll</code>，启动日志会打印可照抄的局域网地址。</p>
-      <p>手机与隐士需在同一 WiFi。填好后本页会自动重连，状态灯变「已联机」即可开局。</p>
+      <p>填房主棋馆给出的任意地址即可：局域网地址、域名、新式网址、带路径地址、本机回环都认，不绑定任何固定地址，也不限定是哪一台。</p>
+      <p><b>端口写不写都行</b>：不写自动补「案牍 · 设置 → 缺省端口」（默认 5080，可改）；写了就按你写的端口连。</p>
+      <p>填好后本页自动重连，状态灯变「已联机」即可开局。留空则试同源。</p>
     </div></div>
     <div class="field"><label>棋馆地址</label>
-      <input id="suInput" class="url-input" placeholder="192.168.1.8:5080" value="${escapeHtml(S.net.custom || '')}"></div>
+      <input id="suInput" class="url-input" placeholder="任意地址 · 内网 / 域名 / 新式网址 · 端口可省" value="${escapeHtml(S.net.custom || '')}"></div>
     <div class="btn-row"><button class="btn primary" id="suOk">连馆</button>
       <button class="btn" id="suSkip">容后再议</button>
       <button class="btn ghost" id="suGuide">观小引</button></div>`, null);
@@ -798,7 +801,7 @@ function openCreate() {
     const variant = $('#mkVariant').value;
     S.curVariant = variant; renderVariants();
     const opts = collectOpts();
-    if (opts.rankMode === 'local') {
+    if (opts.rankMode === 'local' && !opts.botByRank) {
       const ladder = [0, 1, 2, 3, 5, 7, 9];
       opts.botLevel = ladder[Math.max(0, Math.min(6, rankIdxOf(S.curGame)))];
       toast('自修排位 · 隐士随段位增强至第 ' + (opts.botLevel + 1) + ' 阶');
@@ -811,7 +814,7 @@ function openCreate() {
       opts });
     closeModal();
   };
-  $('#mkMatch').onclick = () => { S.net.send({ t:'match', game:S.curGame, variant:$('#mkVariant').value }); closeModal(); toast('匹配中… 8 秒凑不齐会自动请隐士补位'); };
+  $('#mkMatch').onclick = () => { startMatch($('#mkVariant').value); closeModal(); };
   $('#mkWatch').onclick = () => { closeModal(); go('rooms'); $('#roomCode').focus(); };
   if ($('#mkImport')) $('#mkImport').onclick = () => openScriptImport();
 }
@@ -867,7 +870,7 @@ function playReplay(m) {
 
 function bindUI() {
   $$('.nav-item').forEach(b => b.onclick = () => { go(b.dataset.screen); tap(); });
-  $('#quickMatch').onclick = () => { S.net.send({ t:'match', game:S.curGame, variant:S.curVariant }); toast('匹配中…'); };
+  $('#quickMatch').onclick = () => startMatch();
   $('#openCreate').onclick = openCreate;
   $('#joinRoom').onclick = joinRoom;
   $('#roomCode').onkeydown = (e) => { if (e.key === 'Enter') joinRoom(); };
@@ -1182,7 +1185,7 @@ function openHallPicker(first) {
           <span class="hmeta">${escapeHtml(x.addr || '地址未公布')} · ${x.scripts || 0} 本</span></div>`).join('')
         : '<div class="hint">正在读取目录…若一直空白，直接手动填地址</div>'}</div>
       <div class="field"><label>或手动填棋馆地址</label>
-        <input id="suInput" class="url-input" placeholder="192.168.1.8:5080" value="${escapeHtml(S.net.custom || '')}"></div>
+        <input id="suInput" class="url-input" placeholder="任意地址 · 内网 / 域名 / 新式网址 · 端口可省" value="${escapeHtml(S.net.custom || '')}"></div>
       <div class="btn-row"><button class="btn primary" id="suOk">连馆</button>
         <button class="btn" id="suRefresh">重览名录</button>
         <button class="btn ghost" id="suGuide">入门小引</button></div>`, null);
@@ -1647,7 +1650,7 @@ onStatus = function (s) {
   if (bar) {
     const off = s !== 'online' && Settings.get('offlineNotice');
     bar.hidden = !off;
-    if (off) bar.innerHTML = '<span class="ob-mark">◈</span><span>本机自弈：玩法册、纸色、设置、妆奁、战绩与制本皆可用；开枰只需本机棋馆，不需外网。</span><button class="btn ghost small" id="obFix">连棋馆</button>';
+    if (off) bar.innerHTML = '<span class="ob-mark">◈</span><span>本机自弈：玩法册、纸色、设置、妆奁、战绩与制本皆可用；开枰填任意可达的棋馆地址即可，不需外网、不限固定地址。</span><button class="btn ghost small" id="obFix">连棋馆</button>';
     const b = $('#obFix'); if (b) b.onclick = () => askServerUrl(false);
   }
 };
@@ -1683,7 +1686,8 @@ function renderSettings() {
       if (it.type === 'toggle') ctl = `<button class="toggle ${v ? 'on' : ''}" data-set-toggle="${it.key}">${v ? '启' : '停'}</button>`;
       else if (it.type === 'range') ctl = `<div class="set-range"><input type="range" min="${it.min}" max="${it.max}" step="${it.step || 1}" value="${v}" data-set-range="${it.key}"><b data-set-val="${it.key}">${settingsLabel(v)}</b></div>`;
       else if (it.type === 'select') ctl = `<select class="set-select" data-set-select="${it.key}">${it.options.map((o, ix) => { const val = it.values ? it.values[ix] : o; return `<option value="${escapeAttr(val)}" ${String(val) === String(v) ? 'selected' : ''}>${escapeAttr(o)}</option>`; }).join('')}</select>`;
-      else if (it.type === 'text') ctl = `<input class="set-text" data-set-text="${it.key}" value="${escapeAttr(v)}" placeholder="留空自动试 127.0.0.1">`;
+      else if (it.type === 'text') ctl = `<input class="set-text" data-set-text="${it.key}" value="${escapeAttr(v)}" placeholder="${it.key === 'serverUrl' ? '留空则同源 · 任意 IP / 域名 / 端口可省' : ''}">`;
+      else if (it.type === 'number') ctl = `<input class="set-text" type="number" min="${it.min || 0}" max="${it.max || 99999}" value="${escapeAttr(v)}" data-set-number="${it.key}">`;
       else ctl = `<button class="btn ghost small ${it.danger ? 'danger' : ''}" data-set-action="${it.key}">${it.danger ? '删除' : '打开'}</button>`;
       h += `<div class="set-row ${it.danger ? 'danger' : ''}"><div class="set-name">${escapeHtml(it.name)}${it.hint ? `<small>${escapeHtml(it.hint)}</small>` : ''}</div><div class="set-ctl">${ctl}</div></div>`;
     });
@@ -1704,6 +1708,14 @@ function renderSettings() {
   el.querySelectorAll('[data-set-select]').forEach(sel => sel.onchange = () => {
     Settings.set(sel.dataset.setSelect, isNaN(+sel.value) || sel.value === '' ? sel.value : +sel.value);
     renderSettings();
+  });
+  el.querySelectorAll('[data-set-number]').forEach(inp => inp.onchange = () => {
+    const k = inp.dataset.setNumber;
+    let v = parseInt(inp.value, 10);
+    if (isNaN(v)) v = 5080;
+    v = Math.max(1, Math.min(65535, v)); inp.value = String(v);
+    Settings.set(k, v); renderSettings();
+    if (k === 'defaultPort' && S.net && S.net.custom) S.net.setUrl(S.net.custom);
   });
   el.querySelectorAll('[data-set-text]').forEach(inp => inp.onchange = () => {
     const k = inp.dataset.setText;
@@ -1948,7 +1960,8 @@ openGuide = function () {
         <p><b>局域网联机</b>：同一 WiFi 填房主棋馆地址，多人对局与房内闲谈照常，依然不需要任何外部服务器。</p>
         <p><b>外部服务（默认开、可全关）</b>：棋馆名录、赛季校时、公共榜单。设置里逐项可关；关掉或挂了，前两种用法一点不缺。纯本机时哪怕没网，段位照常记，只标「未校天时」。</p></div>
       <div class="guide-step"><b>贰 · 连上本机棋馆</b>
-        <p>房主那台机器起好棋馆（<code>dotnet run --project server</code>），启动日志会印出可照抄的地址。本机跑棋馆时填 <code>127.0.0.1:5080</code>；APK 与房主同 WiFi 时，在「肆 · 案牍 → 联网 · 离线」手填即可。不填外网地址、不必题名、不上传任何个人信息。</p></div>
+        <p>房主那台机器起好棋馆（<code>dotnet run --project server</code>），启动日志会印出可照抄的地址。在「肆 · 案牍 → 联网 · 离线」填<b>任意可达地址</b>：局域网地址、域名、新式网址、带路径地址、本机回环都认，不绑定任何固定地址或某一台机器。</p>
+        <p><b>端口写不写都行</b>：不写自动补「缺省端口」（默认 5080，设置里可改），写了就按写的连。不填外网地址、不必题名、不上传任何个人信息。</p></div>
       <div class="guide-step"><b>叁 · 设席开枰</b>
         <p>挑一局，可题雅号、设暗语、许旁观、定每步思考 / 出牌之刻、选超时之法与隐士棋力；每局另有本局专属规制，皆在「房规」里。记五字房号邀人，未齐可请隐士补满。</p></div>
       <div class="guide-step"><b>肆 · 落子出牌与卷面</b>
@@ -1992,3 +2005,27 @@ document.addEventListener('pointerdown', (e) => {
   setTimeout(() => { if (c.dataset.longPress === '1') { c.dataset.longPressArmed = '1'; delete c.dataset.longPress; } }, 650);
   setTimeout(() => { if (c.dataset.longPressArmed === '1') delete c.dataset.longPressArmed; }, 1600);
 }, true);
+
+function startMatch(variant) {
+  if (!S.net) return;
+  const v = variant === undefined ? S.curVariant : variant;
+  S.net.send({ t:'match', game:S.curGame, variant:v, maxWait:Number(Settings.get('matchMaxWait')) * 1000 });
+  toast('已入寻局池 · 先同段，候久渐放宽');
+}
+function renderMatchState(m) {
+  const bar = $('#matchBar'), txt = $('#matchText'), btn = $('#matchCancel');
+  if (!bar || !txt) return;
+  if (!m.active) {
+    bar.hidden = true;
+    if (m.note) toast(m.note);
+    return;
+  }
+  bar.hidden = false;
+  txt.textContent = '寻局 · 已候 ' + m.waited + ' 秒 · ' + (m.pool || '同段') +
+    ' · 池中 ' + m.size + ' 人' + (m.need > 0 ? ' · 还差 ' + m.need + ' 人' : '') +
+    (m.etaBot > 0 ? ' · ' + m.etaBot + ' 秒后隐士补位' : '');
+  if (btn) btn.onclick = () => {
+    if (S.net) S.net.send({ t:'matchCancel' });
+    bar.hidden = true; toast('已止寻局');
+  };
+}

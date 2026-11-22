@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
+using System.Diagnostics;
 
 namespace Qipai
 {
@@ -20,28 +21,32 @@ namespace Qipai
         {
             WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-            string url = Environment.GetEnvironmentVariable("QIPAI_URL");
-            for (int i = 0; i < args.Length; i++)
-            {
-                if ((args[i] == "--url" || args[i] == "-u") && i + 1 < args.Length) { url = args[++i]; continue; }
-                if (args[i].StartsWith("--url=")) url = args[i].Substring(6);
-            }
-            if (string.IsNullOrEmpty(url)) url = "http://0.0.0.0:5080";
+            StartupOptions opt = StartupOptions.Load(args, Directory.GetCurrentDirectory(),
+                Environment.GetEnvironmentVariable);
+            if (opt.Help) { Console.WriteLine(Startup.HelpText()); return; }
+            if (opt.Version) { Console.WriteLine("弈局棋馆 " + Startup.VERSION + " · " + Startup.LICENSE); return; }
+            string root = Startup.EnsureLayout(opt.Root, opt);
+            opt.Root = root;
+            string url = opt.EffectiveUrl();
             builder.WebHost.UseUrls(url);
             WebApplication app = builder.Build();
+
             Hub hub = new Hub();
 
-            string contentRoot = ContentRoot(app.Environment.ContentRootPath);
+            string contentRoot = root;
             LocalData.Init(contentRoot);
+            if (opt.HallSet || opt.DirectorySet)
+                LocalData.SetProfile(opt.HallSet ? opt.Hall : LocalData.HallName,
+                    LocalData.DirectoryUrl, opt.DirectoryOn && LocalData.DirectoryOn);
             ScriptLibrary.Init(contentRoot);
             Accounts.Init(contentRoot);
             Console.WriteLine("[弈局] 棋馆：" + LocalData.HallName + " · 指纹 " + LocalData.HallFingerprint);
             Console.WriteLine("[弈局] 剧本库：" + ScriptLibrary.Count + " 个本（" + contentRoot + "/scripts）");
             Console.WriteLine("[弈局] 本机账号：" + Accounts.Count + " 个 · 加密存档在 " + contentRoot + "/data/saves/");
+            Console.WriteLine("[弈局] 布局自检：" + (Startup.LayoutProblems(root).Length == 0 ? "齐备" : string.Join(",", Startup.LayoutProblems(root))));
 
             app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
 
-            string root = app.Environment.ContentRootPath;
             string clientDir = FirstDir(
                 Path.Combine(root, "..", "client"),
                 Path.Combine(root, "wwwroot"),
@@ -55,8 +60,8 @@ namespace Qipai
 
             app.MapGet("/api/health", delegate ()
             {
-                return Results.Text("{\"ok\":true,\"games\":" + RuleRegistry.Count + ",\"accounts\":" + Accounts.Count +
-                    ",\"protocol\":\"yiju-hall/1\"}", "application/json; charset=utf-8", Encoding.UTF8);
+                return Results.Text(Startup.HealthJson(RuleRegistry.Count, Accounts.Count),
+                    "application/json; charset=utf-8", Encoding.UTF8);
             });
             app.MapGet("/rules/manifest.json", delegate () { return JsonFile(root, "rules", "manifest.json"); });
             app.MapGet("/rules/vectors.json", delegate () { return JsonFile(root, "rules", "vectors.json"); });
@@ -64,17 +69,18 @@ namespace Qipai
             app.MapGet("/api/client-root", delegate () { return Results.Text(clientDir ?? "", "text/plain", Encoding.UTF8); });
             app.MapGet("/api/info", delegate ()
             {
-                string addrs = "";
-                List<string> la = LanAddresses(url);
-                for (int i = 0; i < la.Count; i++)
-                {
-                    if (i > 0) addrs += ",";
-                    addrs += "\"" + la[i] + "\"";
-                }
-                return Results.Text("{\"ok\":true,\"protocol\":\"yiju-hall/1\",\"games\":" + RuleRegistry.Count +
-                    ",\"scripts\":" + ScriptLibrary.Count + ",\"hall\":\"" + LocalData.HallName +
-                    "\",\"fp\":\"" + LocalData.HallFingerprint + "\",\"license\":\"PolyForm-Noncommercial-1.0.0\",\"addresses\":["
-                    + addrs + "]}", "application/json; charset=utf-8", Encoding.UTF8);
+                return Results.Text(Startup.InfoJson(RuleRegistry.Count, ScriptLibrary.Count,
+                    LocalData.HallName, LocalData.HallFingerprint, LanAddresses(url),
+                    LocalData.DirectoryOn, opt.TimeOn, opt.BoardsOn),
+                    "application/json; charset=utf-8", Encoding.UTF8);
+            });
+            app.MapGet("/api/startup", delegate ()
+            {
+                return Results.Text("{\"ok\":true,\"version\":\"" + Startup.VERSION +
+                    "\",\"license\":\"" + Startup.LICENSE + "\",\"config\":\"" +
+                    Startup.Esc(opt.ConfigPath) + "\",\"url\":\"" + Startup.Esc(url) +
+                    "\",\"summary\":\"" + Startup.Esc(opt.Summary()) + "\"}",
+                    "application/json; charset=utf-8", Encoding.UTF8);
             });
 
             app.MapGet("/ws", async delegate (HttpContext ctx)
@@ -130,34 +136,18 @@ namespace Qipai
             });
 
             Console.WriteLine("弈局棋馆已启动：" + url + "  (谱页所在: " + (clientDir ?? "未找到") + ")");
-            Console.WriteLine("手机 / APK 在「04 设置 → 棋馆地址」填下面任一地址即可：");
-            List<string> lan = LanAddresses(url);
-            for (int i = 0; i < lan.Count; i++) Console.WriteLine("    " + lan[i]);
-            Console.WriteLine("改监听地址：dotnet run --project server -- --url http://0.0.0.0:9000");
+            Console.Write(Startup.Hint(opt, root));
+            Console.WriteLine("改配置：编辑 yiju.conf 后重跑，或 ./start.sh --port 9000 --no-directory");
+            if (opt.OpenBrowser)
+            {
+                try { Process.Start(new ProcessStartInfo("http://localhost:" + opt.Port) { UseShellExecute = true }); }
+                catch (Exception) { }
+            }
             app.Run();
         }
 
         private static List<string> LanAddresses(string url)
-        {
-            List<string> r = new List<string>();
-            string port = "5080";
-            int idx = url.LastIndexOf(':');
-            if (idx >= 0 && idx < url.Length - 1)
-            {
-                string tail = url.Substring(idx + 1).TrimEnd('/');
-                int p;
-                if (int.TryParse(tail, out p)) port = p.ToString();
-            }
-            try
-            {
-                foreach (IPAddress ip in Dns.GetHostEntry(Dns.GetHostName()).AddressList)
-                    if (ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
-                        r.Add(ip.ToString() + ":" + port);
-            }
-            catch (Exception) { }
-            r.Add("localhost:" + port);
-            return r;
-        }
+        { return Startup.LanAddresses(url); }
 
         private static string ContentRoot(string root)
         {

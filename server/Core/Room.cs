@@ -39,6 +39,7 @@ namespace Qipai
         public int BotDelayMs = 900;
         public long BotNextAt = 0;
         public int BotLevel = 0;
+        public bool BotByRank = false;
         public bool GodMode = false;
         public int GodTier = 1;
         public bool RankRecorded = false;
@@ -156,8 +157,19 @@ namespace Qipai
                 if (Seats[i].Pid != 0 && !Seats[i].Ready) return false;
             return SeatCount() >= Math.Max(1, Rule.MinSeats);
         }
+        public void ApplyRankBots()
+        {
+            if (!BotByRank || GodMode) return;
+            int lv = hub.RankBotLevelFor(this);
+            if (lv >= 0 && lv != BotLevel)
+            {
+                BotLevel = lv;
+                SaySys("隐士依本席最高段位「" + hub.RankBotLabelFor(this) + "」调整棋力");
+            }
+        }
         public void Start()
         {
+            ApplyRankBots();
             RankRecorded = false;
             if (Started && S != null && S.Phase != "end") return;
             Rule = RuleRegistry.Get(Game) ?? RuleRegistry.Fallback;

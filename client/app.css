@@ -634,3 +634,14 @@ body[data-oneHand="1"] #actionBar{position:sticky;bottom:0;background:var(--card
 body[data-reduceFlash="1"] *{animation-duration:.01ms!important}
 body[data-screenReader="1"] #board{outline:1px dashed var(--accent)}
 body[data-screenReader="1"] .set-name small,body[data-screenReader="1"] .hint{font-size:calc(12px * var(--fontScale,1))}
+
+.match-bar{position:fixed;left:8px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:24;
+display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid var(--accent);border-radius:var(--radius);
+background:linear-gradient(120deg,var(--card),var(--bg));color:var(--ink);box-shadow:0 6px 22px rgba(60,40,24,.22);
+font-size:calc(11px * var(--fontScale,1));line-height:1.45;animation:mbIn .24s ease}
+.match-bar[hidden]{display:none}
+.mb-mark{flex:0 0 auto;width:27px;height:27px;display:grid;place-items:center;border-radius:50%;
+background:var(--accent);color:#fff;font-size:13px}
+.match-bar #matchText{flex:1}
+@keyframes mbIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+body.fx-off .match-bar{animation:none}

@@ -65,6 +65,8 @@ namespace Qipai
             a.Add(T("spectators", "开放旁观", true, "局仪"));
             a.Add(T("godMode", "神的领域 · 叩问三尊", false, "局仪",
                 "须此局段位先至「弈圣」，方得叩域"));
+            a.Add(T("botByRank", "隐士随本席最高段位", false, "局仪",
+                "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"));
             a.Add(S("botLevel", "隐士棋力", "0", "局仪",
                 new string[] { "0|随性 · 信手", "1|试探 · 略识", "2|进取 · 争先",
                     "3|老成 · 择要", "4|谋势 · 深算", "5|精算 · 无漏", "6|通玄 · 坐照",
@@ -232,6 +234,7 @@ namespace Qipai
         public string Timeout = "auto";
         public bool AllowUndo = true, AllowDraw = true, SpectatorChat = false, AllowSpectators = true;
         public int BotLevel = 0;
+        public bool BotByRank = false;
         public bool GodMode = false;
         public string RankMode = "none";
         public int RankRate = 50;
@@ -282,6 +285,7 @@ namespace Qipai
             o.SpectatorChat = AsBool(Get(src, m, "spectatorChat"), false);
             o.AllowSpectators = AsBool(Get(src, m, "spectators"), true);
             o.BotLevel = (int)ClampLong(Get(src, m, "botLevel"), 0, 0, 9);
+            o.BotByRank = AsBool(Get(src, m, "botByRank"), false);
             o.GodMode = AsBool(Get(src, m, "godMode"), false);
             o.RankMode = AsStr(Get(src, m, "rankMode"), "none", new string[] { "none", "hall", "local" });
             o.RankRate = (int)ClampLong(Get(src, m, "rankRate"), 50, 0, 100);

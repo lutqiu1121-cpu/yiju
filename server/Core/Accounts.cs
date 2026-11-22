@@ -929,6 +929,56 @@ namespace Qipai
                 return true;
             }
         }
+        public static readonly int[] RANK_BOT = { 0, 1, 3, 5, 6, 8, 9 };
+        public static int RankPoints(string accountId, string game)
+        {
+            if (string.IsNullOrEmpty(accountId)) return 0;
+            lock (sync)
+            {
+                User u = null;
+                foreach (KeyValuePair<string, User> kv in users)
+                    if (kv.Value.Id == accountId) { u = kv.Value; break; }
+                if (u == null) return 0;
+                Dictionary<string, object> d = LoadSave(u);
+                if (d == null) return 0;
+                int pts = 0;
+                object rp;
+                if (d.TryGetValue("rankPts", out rp))
+                {
+                    Dictionary<string, object> map = rp as Dictionary<string, object>;
+                    object gv;
+                    if (map != null && map.TryGetValue(game, out gv))
+                    { try { pts = Convert.ToInt32(gv); } catch (Exception) { } }
+                }
+                int inherit = TitleBook.InheritPts(J.Str(d, "lastRank", "初执")) / 2;
+                int basePts = (int)J.Int(d, "rankBase", 0);
+                return Math.Max(0, Math.Max(pts, Math.Max(inherit, basePts)));
+            }
+        }
+        public static int MmrOf(string accountId, string game)
+        {
+            int pts = RankPoints(accountId, game);
+            if (string.IsNullOrEmpty(accountId)) return 100;
+            return 100 + pts;
+        }
+        public static int BestBotLevel(string[] accountIds, string game, out string rankName)
+        {
+            rankName = "初执";
+            int best = -1, bestPts = 0;
+            if (accountIds != null)
+                foreach (string aid in accountIds)
+                {
+                    if (string.IsNullOrEmpty(aid)) continue;
+                    int pts = RankPoints(aid, game);
+                    if (pts > bestPts) bestPts = pts;
+                    if (pts > 0 || aid.Length > 0) best = Math.Max(best, 0);
+                }
+            if (best < 0) return -1;
+            int idx = TitleBook.RankIndex(bestPts);
+            rankName = TitleBook.RankName(bestPts);
+            return RANK_BOT[Math.Max(0, Math.Min(RANK_BOT.Length - 1, idx))];
+        }
+
         public static int ShopCount() { return ShopBook.Items().Length; }
 
         public static Dictionary<string, object> ShopState(string accountId)

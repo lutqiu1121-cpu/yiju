@@ -19,15 +19,37 @@ export class Net {
     this.lastServerSeq = 0;
   }
 
-  url() {
-    let u = (this.custom || '').trim();
-    if (u) {
-      u = u.replace(/\/ws\/?$/, '').replace(/\/+$/, '');
-      u = u.replace(/^http:\/\//, 'ws://').replace(/^https:\/\//, 'wss://');
-      if (!/^wss?:\/\//.test(u)) u = 'ws://' + u;
-      return u + '/ws';
-    }
+  static normalize(raw, defaultPort) {
+    let s = String(raw || '').trim();
+    if (!s) return '';
+    s = s.replace(/\/ws\/?$/, '').replace(/\/+$/, '');
+    const hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(s);
+    const full = hasScheme ? s : 'ws://' + s;
+    let u;
+    try { u = new URL(full); } catch (e) { return 'ws://' + s + '/ws'; }
+    let proto = String(u.protocol || '').toLowerCase();
+    if (proto === 'http:') proto = 'ws:';
+    else if (proto === 'https:') proto = 'wss:';
+    else if (proto !== 'ws:' && proto !== 'wss:') return 'ws://' + s + '/ws';
+    const authority = (hasScheme ? s.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '') : s)
+      .split('/')[0].split('?')[0].split('#')[0];
+    const explicitPort = /:\d+$/.test(authority);
+    let port = u.port;
+    if (!explicitPort && proto === 'ws:' && !port) port = String(defaultPort || 5080);
+    let host = u.hostname || '';
+    if (host.indexOf(':') >= 0 && host.charAt(0) !== '[') host = '[' + host + ']';
+    let path = String(u.pathname || '').replace(/\/+$/, '');
+    if (path === '/') path = '';
+    return proto + '//' + host + (port ? ':' + port : '') + path + '/ws';
+  }
 
+  url() {
+    let raw = (this.custom || '').trim();
+    if (raw) {
+      const st = (typeof window !== 'undefined' && window.__YJ_SETTINGS__) || {};
+      const dp = Number(st.defaultPort) > 0 ? Number(st.defaultPort) : 5080;
+      return Net.normalize(raw, dp);
+    }
     if (location.protocol === 'file:') return '';
     return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
   }

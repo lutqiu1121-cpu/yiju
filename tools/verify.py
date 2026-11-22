@@ -140,6 +140,22 @@ check("if (location.protocol === 'file:') return '';" in net_src,
       "APK 无地址时不误连手机自身")
 check("need-url" in net_src and "need-url" in (ROOT / "client" / "app.js").read_text(encoding="utf-8"),
       "待填地址状态两端一致")
+check("Net.normalize" in net_src and "defaultPort" in net_src,
+      "地址解析走宽容规范化，缺省端口可配")
+check("127.0.0.1" not in net_src and "192.168" not in net_src and
+      not re.search(r"(只允许|限定|绑定)\s*127", net_src),
+      "地址解析不写死、不绑定任何固定地址")
+check(not re.search(r"localhost|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", net_src),
+      "地址解析无主机白名单与 IP 正则限制")
+check("explicitPort" in net_src and ":\\d+$" in net_src,
+      "端口写或不写都放行：写则尊重、不写则补缺省")
+check("defaultPort" in (ROOT / "client/settings.js").read_text(encoding="utf-8") and
+      "data-set-number" in (ROOT / "client/app.js").read_text(encoding="utf-8"),
+      "缺省端口是设置项且真接线")
+import subprocess
+r = subprocess.run(["node", str(ROOT / "tools/net-url.test.mjs")],
+                   capture_output=True, text=True, timeout=60)
+check(r.returncode == 0, "地址解析行为测试 · " + (r.stdout.strip() or r.stderr.strip()[:120]))
 app_src = (ROOT / "client" / "app.js").read_text(encoding="utf-8")
 check("localStorage['getItem']" in app_src and "localStorage['getItem']" in net_src,
       "本地存储已容错")
@@ -223,8 +239,31 @@ check('J.Str(m, "title", "")' in hub_src and 'J.Str(m, "password", "")' in hub_s
       "建房支持房间名/密码/观战开关")
 check('"fillBots"' in hub_src and '"addBot"' in hub_src and '"removeBot"' in hub_src,
       "建房与房内支持电脑补位")
-check('MATCH_BOT_WAIT' in hub_src and 'StartMatch(key, q, rule, variant' in hub_src,
-      "快速匹配超时自动请电脑补位")
+check('MATCH_DEFAULT_WAIT' in hub_src and 'StartMatch(key, group, fill' in hub_src and
+      '候久 · 隐士补位' in hub_src, "寻局候满按池内最高段位请隐士补位开枰")
+check('PoolText' in hub_src and 'PoolRange' in hub_src and 'PoolDiff' in hub_src and
+      'MATCH_WIDEN_1' in hub_src and 'MATCH_WIDEN_2' in hub_src and 'MATCH_WIDEN_3' in hub_src,
+      "分池随时间阶梯放宽：同段 → ±1 → ±2 → 全段")
+check('MmrOf' in hub_src and 'RankOf(p, game)' in hub_src and 'Provisional' in hub_src,
+      "隐藏棋力分：已题名按本局墨分，未题名按本机胜率定级")
+check('cand.Sort' in hub_src and 'Math.Abs(a.Mmr - anchor.Mmr)' in hub_src and
+      'group.Count >= 4' in hub_src and 'snake' in hub_src,
+      "同池内取最接近者，四人以上按棋力蛇形岔席平衡两队")
+check('"matchState"' in hub_src and 'EmitMatchState' in hub_src and
+      '"matchCancel"' in hub_src and 'RemoveFromQueues' in hub_src,
+      "寻局进度帧 / 止寻局 / 防重复入队与断线出队")
+check('RankBotLevelFor' in hub_src and 'RankBotLabelFor' in (ROOT / 'server/Core/Room.cs').read_text(encoding='utf-8') and
+      'ApplyRankBots' in (ROOT / 'server/Core/Room.cs').read_text(encoding='utf-8') and
+      'BestBotLevel' in (ROOT / 'server/Core/Accounts.cs').read_text(encoding='utf-8') and
+      'RANK_BOT' in (ROOT / 'server/Core/Accounts.cs').read_text(encoding='utf-8'),
+      "自定义房间按席中最高段位自动定隐士棋力（开枰动态生效）")
+check('"botByRank"' in (ROOT / 'server/Core/RoomOptions.cs').read_text(encoding='utf-8') and
+      all(any(o.get('key') == 'botByRank' for o in g.get('options', [])) for g in manifest.get('games', [])),
+      "60 局房规都带「隐士随本席最高段位」开关")
+check('matchBar' in (ROOT / 'client/index.html').read_text(encoding='utf-8') and
+      'renderMatchState' in app_src and 'startMatch' in app_src and
+      'matchMaxWait' in (ROOT / 'client/settings.js').read_text(encoding='utf-8'),
+      "匹配进度条 / 止寻按钮 / 寻局耐心设置真接线")
 check('BotStep(now)' in hub_src and 'public bool BotStep' in room_src and
       'public int AddBots' in room_src and 'public bool RemoveBot' in room_src,
       "服务端电脑自动行动/增减/补位")
@@ -415,7 +454,10 @@ check("Normalize(d, out ve)" in local and "未加载：" in local, "坏本不再
 check("r[\"public\"] = " in local and "a[\"title\"] = " in local, "精简本缺字段被兜底补全（不再回归）")
 check("selfPost" in local and "PushHall" in local, "自家馆帖与目录上报")
 check("SetSelf(ws" in program and "tick % 3600" in program, "启动与每小时刷新馆帖")
-check("yiju-hall/1" in program and "Accounts.Count" in program, "健康检查带账号数")
+check("Startup.HealthJson(RuleRegistry.Count, Accounts.Count)" in program and
+      "yiju-hall/1" in (ROOT / "server/Startup.cs").read_text(encoding="utf-8") and
+      "accounts" in (ROOT / "server/Startup.cs").read_text(encoding="utf-8"),
+      "健康检查带账号数（同源启动函数）")
 check("S.net.send({ t:'scripts' });" not in app.split("function renderVariants")[1].split("function renderRooms")[0],
       "剧本清单不再与 case 'scripts' 形成消息死循环")
 check("g === 'juben'" in ren, "剧本杀不在派对面板重复插按钮")
@@ -581,6 +623,40 @@ check("shopTry" in app_src and "spBuy" in app_src and "WEAR_SETS" in app_src,
       "商店预览 / 试穿 / 定妆 / 购买确认成套")
 check("YJ_NOTICE" in app_src and "renderNotice" in app_src and "openGuide" in app_src,
       "声明弹窗、页脚与六步入引同文")
+
+
+for rel in ["start.sh", "start.bat", "yiju.conf", "server/Startup.cs", "AGENT_PROMPT.md"]:
+    check((ROOT / rel).is_file(), "一键启动 / 最终提示词文件在位：" + rel)
+import subprocess as _sp
+for sh in ["start.sh", "build.sh", "build-apk.sh"]:
+    r = _sp.run(["bash", "-n", str(ROOT / sh)], capture_output=True, text=True)
+    check(r.returncode == 0, "脚本语法通过：" + sh + " · " + r.stderr.strip()[:120])
+startup = (ROOT / "server/Startup.cs").read_text(encoding="utf-8")
+check(all(k in startup for k in ["StartupOptions", "ReadConfig", "EnsureConfig", "EnsureLayout",
+      "LanAddresses", "HealthJson", "InfoJson", "WsAccept", "WsUpgradeResponse", "HelpText"]),
+      "同源启动模块：配置 / 启动项 / 布局 / 健康检查 / WS 升级")
+prog = (ROOT / "server/Program.cs").read_text(encoding="utf-8")
+check("StartupOptions.Load" in prog and "Startup.HealthJson" in prog and
+      "Startup.InfoJson" in prog and '/api/startup' in prog and "Startup.Hint" in prog,
+      "宿主层接入一键配置与启动项，四个端点同源")
+conf = (ROOT / "yiju.conf").read_text(encoding="utf-8")
+check(all(k in conf for k in ["HOST=", "PORT=", "HALL=", "DIRECTORY=", "TIME=", "BOARDS=", "ROOT=", "OPEN="]),
+      "默认配置八项齐备")
+help_txt = startup
+check(all(f in help_txt for f in ["--url", "--port", "--host", "--hall", "--root", "--directory",
+      "--no-directory", "--time", "--no-time", "--boards", "--no-boards", "--open", "--build",
+      "--config", "--help", "--version", "QIPAI_URL", "YIJU_CONF"]),
+      "启动项全表覆盖参数与环境变量")
+agent = (ROOT / "AGENT_PROMPT.md").read_text(encoding="utf-8")
+check(notice_txt in agent and "只上传 `yiju.apk` 一个文件" in agent and
+      "覆盖升级" in agent and "禁止卸载重装" in agent and "报错即停" in agent.replace("任一步失败即停", "报错即停"),
+      "给 agent 的最终提示词自含声明 / 单 APK / 覆盖升级 / 失败即停")
+check("## 一键启动 · 启动项" in (ROOT / "README.md").read_text(encoding="utf-8") and
+      "./start.sh" in (ROOT / "README.md").read_text(encoding="utf-8"),
+      "README 有一键启动与启动项说明")
+check("ServerBootSmoke" in (ROOT / "README.md").read_text(encoding="utf-8") or
+      "真实 TCP" in (ROOT / "README.md").read_text(encoding="utf-8"),
+      "README 如实写明服务器可用性验证方式")
 
 print("静态自检： %d 通过 / %d 失败" % (len(ok), len(err)))
 for m in err: print("  FAIL  " + m)

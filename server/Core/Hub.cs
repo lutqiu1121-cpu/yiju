@@ -38,11 +38,25 @@ namespace Qipai
         private readonly Dictionary<int, Player> players = new Dictionary<int, Player>();
         private readonly Dictionary<string, Room> rooms = new Dictionary<string, Room>();
         private readonly Dictionary<string, Player> tokenIndex = new Dictionary<string, Player>();
-        private readonly Dictionary<string, Queue<Player>> matchQueue = new Dictionary<string, Queue<Player>>();
+        private sealed class MatchEntry
+        {
+            public Player P;
+            public long Since;
+            public int Mmr;
+            public int Rank;
+            public bool Provisional;
+        }
+        private readonly Dictionary<string, List<MatchEntry>> matchQueue = new Dictionary<string, List<MatchEntry>>();
         private readonly Dictionary<string, long> matchSince = new Dictionary<string, long>();
+        private readonly Dictionary<string, long> matchMaxWait = new Dictionary<string, long>();
+        private readonly Dictionary<string, long> matchStateAt = new Dictionary<string, long>();
+        private readonly Dictionary<string, string> matchPoolCache = new Dictionary<string, string>();
         private readonly Dictionary<string, long> chatVer = new Dictionary<string, long>();
         private readonly Dictionary<string, Stats> stats = new Dictionary<string, Stats>();
-        private const long MATCH_BOT_WAIT = 8000;
+        private const long MATCH_DEFAULT_WAIT = 30000;
+        private const long MATCH_WIDEN_1 = 6000;
+        private const long MATCH_WIDEN_2 = 14000;
+        private const long MATCH_WIDEN_3 = 24000;
         private int nextId = 1;
         private int nextSeed = 1;
 
@@ -377,6 +391,7 @@ namespace Qipai
             if (t == "join") { Join(p, m, outFrames); return; }
             if (t == "spectate") { Spectate(p, m, outFrames); return; }
             if (t == "match") { Match(p, m, outFrames); return; }
+            if (t == "matchCancel") { MatchCancel(p, outFrames); return; }
             if (t == "leave") { Leave(p, outFrames); return; }
             if (t == "sync")
             {
@@ -661,6 +676,8 @@ namespace Qipai
             r.Password = pw;
             r.AllowSpectators = opt.AllowSpectators;
             r.BotLevel = opt.BotLevel;
+            r.BotByRank = opt.BotByRank;
+            if (opt.BotByRank) r.SaySys("本席隐士将随席中最高段位定棋力");
             if (opt.GodMode)
             {
                 r.GodMode = true; r.GodTier = godTier;
@@ -722,6 +739,108 @@ namespace Qipai
             r.Collect(outFrames, new HashSet<int> { p.Id });
         }
 
+        private int MmrOf(Player p, string game)
+        {
+            if (!string.IsNullOrEmpty(p.AccountId)) return Accounts.MmrOf(p.AccountId, game);
+            Stats st;
+            if (stats.TryGetValue(p.Token, out st) && st.Plays > 0)
+            {
+                double wr = (double)st.Wins / Math.Max(1, st.Plays);
+                return 100 + (int)Math.Max(-40, Math.Min(120, (wr - .5) * 160));
+            }
+            return 100;
+        }
+        private int RankOf(Player p, string game)
+        {
+            if (!string.IsNullOrEmpty(p.AccountId))
+                return TitleBook.RankIndex(Accounts.RankPoints(p.AccountId, game));
+            return 1;
+        }
+        private string[] RoomAccountIds(Room r)
+        {
+            List<string> ids = new List<string>();
+            for (int i = 0; i < r.Seats.Length; i++)
+            {
+                Seat st = r.Seats[i];
+                if (st.Bot || st.Pid == 0) continue;
+                Player pl;
+                if (players.TryGetValue(st.Pid, out pl) && !string.IsNullOrEmpty(pl.AccountId)) ids.Add(pl.AccountId);
+            }
+            return ids.ToArray();
+        }
+        public int RankBotLevelFor(Room r)
+        {
+            string label;
+            return Accounts.BestBotLevel(RoomAccountIds(r), r.Game, out label);
+        }
+        public string RankBotLabelFor(Room r)
+        {
+            string label;
+            Accounts.BestBotLevel(RoomAccountIds(r), r.Game, out label);
+            return label;
+        }
+        private void RemoveFromQueues(Player p)
+        {
+            List<string> empty = new List<string>();
+            foreach (KeyValuePair<string, List<MatchEntry>> kv in matchQueue)
+            {
+                kv.Value.RemoveAll(delegate (MatchEntry e) { return e.P == p || !e.P.Online || e.P.Room != null; });
+                if (kv.Value.Count == 0) empty.Add(kv.Key);
+            }
+            for (int i = 0; i < empty.Count; i++)
+            {
+                matchQueue.Remove(empty[i]); matchSince.Remove(empty[i]);
+                matchStateAt.Remove(empty[i]); matchPoolCache.Remove(empty[i]);
+            }
+        }
+        private static string PoolText(long waited)
+        {
+            if (waited < MATCH_WIDEN_1) return "同段 · 棋力相近";
+            if (waited < MATCH_WIDEN_2) return "已放宽至 ±1 段";
+            if (waited < MATCH_WIDEN_3) return "已放宽至 ±2 段";
+            return "全段位 · 仍优先相近";
+        }
+        private static int PoolRange(long waited)
+        {
+            if (waited < MATCH_WIDEN_1) return 0;
+            if (waited < MATCH_WIDEN_2) return 1;
+            if (waited < MATCH_WIDEN_3) return 2;
+            return 6;
+        }
+        private static int PoolDiff(long waited)
+        {
+            if (waited < MATCH_WIDEN_1) return 80;
+            if (waited < MATCH_WIDEN_2) return 200;
+            if (waited < MATCH_WIDEN_3) return 400;
+            return 999999;
+        }
+        private long MaxWait(string key)
+        {
+            long v;
+            if (matchMaxWait.TryGetValue(key, out v)) return Math.Max(8000, Math.Min(120000, v));
+            return MATCH_DEFAULT_WAIT;
+        }
+        private void EmitMatchState(string key, List<MatchEntry> q, int need,
+            List<KeyValuePair<Player, object>> outFrames, bool force)
+        {
+            long now = Now;
+            long last;
+            long since;
+            if (!matchSince.TryGetValue(key, out since)) since = now;
+            long waited = now - since;
+            string pool = PoolText(waited);
+            string prev;
+            bool poolChanged = !matchPoolCache.TryGetValue(key, out prev) || prev != pool;
+            if (!force && !poolChanged && matchStateAt.TryGetValue(key, out last) && now - last < 2000) return;
+            matchStateAt[key] = now;
+            matchPoolCache[key] = pool;
+            long left = Math.Max(0, (MaxWait(key) - waited + 999) / 1000);
+            for (int i = 0; i < q.Count; i++)
+                outFrames.Add(new KeyValuePair<Player, object>(q[i].P, J.Frame("t", "matchState",
+                    "active", true, "waited", (int)(waited / 1000), "pool", pool,
+                    "range", PoolRange(waited), "size", q.Count, "need", need,
+                    "etaBot", (int)left, "game", key)));
+        }
         private void Match(Player p, Dictionary<string, object> m, List<KeyValuePair<Player, object>> outFrames)
         {
             string game = J.Str(m, "game", "xiangqi");
@@ -730,43 +849,91 @@ namespace Qipai
             if (variant.Length > 0 && rule.Variants.Length > 0 && Array.IndexOf(rule.Variants, variant) < 0)
                 variant = rule.Variants[0];
             string key = game + "|" + variant;
-            Queue<Player> q;
-            if (!matchQueue.TryGetValue(key, out q)) { q = new Queue<Player>(); matchQueue[key] = q; }
+            long mw = J.Int(m, "maxWait", 0);
+            if (mw > 0) matchMaxWait[key] = Math.Max(8000, Math.Min(120000, mw));
 
-            Queue<Player> fresh = new Queue<Player>();
-            foreach (Player x in q) if (x.Online && x.Room == null) fresh.Enqueue(x);
-            matchQueue[key] = fresh; q = fresh;
+            RemoveFromQueues(p);
             Leave(p, null);
-            if (!q.Contains(p)) q.Enqueue(p);
+            List<MatchEntry> q;
+            if (!matchQueue.TryGetValue(key, out q)) { q = new List<MatchEntry>(); matchQueue[key] = q; }
             if (!matchSince.ContainsKey(key)) matchSince[key] = Now;
-            if (q.Count >= rule.MinSeats) StartMatch(key, q, rule, variant, 0, outFrames);
-            else outFrames.Add(new KeyValuePair<Player, object>(p, J.Frame("t", "note",
-                "text", "匹配中… 还差 " + (rule.MinSeats - q.Count) + " 人；8 秒凑不齐会自动请隐士补位")));
+            q.Add(new MatchEntry { P = p, Since = Now, Mmr = MmrOf(p, game),
+                Rank = RankOf(p, game), Provisional = string.IsNullOrEmpty(p.AccountId) });
+            TryMatch(key, q, rule, variant, outFrames);
+            if (matchQueue.ContainsKey(key))
+                EmitMatchState(key, matchQueue[key], Math.Max(0, rule.MinSeats - matchQueue[key].Count), outFrames, true);
         }
-
-        private void StartMatch(string key, Queue<Player> q, IGameRule rule, string variant, int botFill,
+        private void MatchCancel(Player p, List<KeyValuePair<Player, object>> outFrames)
+        {
+            RemoveFromQueues(p);
+            outFrames.Add(new KeyValuePair<Player, object>(p, J.Frame("t", "matchState",
+                "active", false, "note", "已止寻局")));
+        }
+        private void TryMatch(string key, List<MatchEntry> q, IGameRule rule, string variant,
             List<KeyValuePair<Player, object>> outFrames)
         {
-            int human = Math.Min(q.Count, Math.Max(1, rule.MinSeats - botFill));
+            long now = Now;
+            q.RemoveAll(delegate (MatchEntry e) { return !e.P.Online || e.P.Room != null; });
+            if (q.Count == 0) return;
+            if (!matchSince.ContainsKey(key)) matchSince[key] = q[0].Since;
+            long waited = now - matchSince[key];
+            int range = PoolRange(waited), diff = PoolDiff(waited);
+
+            MatchEntry anchor = q[0];
+            for (int i = 1; i < q.Count; i++) if (q[i].Since < anchor.Since) anchor = q[i];
+            List<MatchEntry> cand = new List<MatchEntry>();
+            for (int i = 0; i < q.Count; i++)
+                if (Math.Abs(q[i].Rank - anchor.Rank) <= range && Math.Abs(q[i].Mmr - anchor.Mmr) <= diff)
+                    cand.Add(q[i]);
+            if (!cand.Contains(anchor)) cand.Add(anchor);
+            cand.Sort(delegate (MatchEntry a, MatchEntry b)
+            {
+                int da = Math.Abs(a.Mmr - anchor.Mmr), db = Math.Abs(b.Mmr - anchor.Mmr);
+                if (da != db) return da.CompareTo(db);
+                return a.Since.CompareTo(b.Since);
+            });
+            int want = Math.Min(Math.Max(rule.MinSeats, 2), q.Count);
+            if (cand.Count < rule.MinSeats || cand.Count < want) return;
             List<Player> group = new List<Player>();
-            for (int i = 0; i < human; i++) group.Add(q.Dequeue());
+            for (int i = 0; i < want && i < cand.Count; i++) group.Add(cand[i].P);
+            if (group.Count >= 4)
+            {
+                List<Player> snake = new List<Player>();
+                int lo = 0, hi = group.Count - 1;
+                while (lo <= hi) { snake.Add(group[lo++]); if (lo <= hi) snake.Add(group[hi--]); }
+                group = snake;
+            }
+            foreach (Player g in group) q.RemoveAll(delegate (MatchEntry e) { return e.P == g; });
+            if (q.Count == 0) { matchQueue.Remove(key); matchSince.Remove(key); }
+            else matchSince[key] = q[0].Since;
+            matchStateAt.Remove(key);
+            StartMatch(key, group, 0, PoolText(waited), rule, variant, outFrames);
+        }
+
+        private void StartMatch(string key, List<Player> group, int botFill, string poolText,
+            IGameRule rule, string variant, List<KeyValuePair<Player, object>> outFrames)
+        {
             string id = NewRoomId();
-            Room r = new Room(this, id, rule.Id, variant, rule.MinSeats, 60000, nextSeed++);
+            int seats = Math.Max(rule.MinSeats, group.Count + botFill);
+            Room r = new Room(this, id, rule.Id, variant, seats, 60000, nextSeed++);
             r.Title = botFill > 0 ? "寻局 · 隐士补位" : "寻局";
+            r.BotByRank = true;
             rooms[id] = r;
             for (int i = 0; i < group.Count; i++)
             {
                 Player g = group[i];
                 g.Room = r; g.Spectating = false; g.Seat = r.AddSeat(g, i);
                 outFrames.Add(new KeyValuePair<Player, object>(g, J.Frame("t", "joined",
-                    "room", id, "seat", g.Seat, "spectating", false, "matched", true)));
+                    "room", id, "seat", g.Seat, "spectating", false, "matched", true,
+                    "pool", poolText, "balance", group.Count)));
             }
-            r.AddBots(rule.MinSeats - group.Count);
-            if (botFill > 0) r.SaySys("寻局候久，已邀 " + r.BotCount() + " 位隐士入席，开枰！");
+            r.SaySys("寻局得人 · " + (poolText.Length > 0 ? poolText : "同段") +
+                (group.Count >= 4 ? " · 已按棋力岔开席位" : ""));
+            if (botFill > 0) r.AddBots(botFill);
             r.Start();
             chatVer[id] = r.ChatVersion;
             r.Collect(outFrames, ForceAll(r));
-            matchSince.Remove(key);
+            matchSince.Remove(key); matchPoolCache.Remove(key);
         }
 
         private void Leave(Player p, List<KeyValuePair<Player, object>> outFrames)
@@ -888,30 +1055,44 @@ namespace Qipai
                     }
                 }
 
-                List<KeyValuePair<string, Queue<Player>>> queueUpdates = new List<KeyValuePair<string, Queue<Player>>>();
                 List<string> emptyKeys = new List<string>();
-                foreach (KeyValuePair<string, Queue<Player>> mq in matchQueue)
+                foreach (KeyValuePair<string, List<MatchEntry>> mq in matchQueue)
                 {
-                    Queue<Player> nq = new Queue<Player>();
-                    foreach (Player x in mq.Value) if (x.Online && x.Room == null) nq.Enqueue(x);
-                    queueUpdates.Add(new KeyValuePair<string, Queue<Player>>(mq.Key, nq));
-                    if (nq.Count == 0) emptyKeys.Add(mq.Key);
+                    mq.Value.RemoveAll(delegate (MatchEntry e) { return !e.P.Online || e.P.Room != null; });
+                    if (mq.Value.Count == 0) emptyKeys.Add(mq.Key);
                 }
-                for (int i = 0; i < queueUpdates.Count; i++) matchQueue[queueUpdates[i].Key] = queueUpdates[i].Value;
-                for (int i = 0; i < emptyKeys.Count; i++) { matchQueue.Remove(emptyKeys[i]); matchSince.Remove(emptyKeys[i]); }
+                for (int i = 0; i < emptyKeys.Count; i++)
+                {
+                    matchQueue.Remove(emptyKeys[i]); matchSince.Remove(emptyKeys[i]);
+                    matchStateAt.Remove(emptyKeys[i]); matchPoolCache.Remove(emptyKeys[i]);
+                }
 
                 List<string> keys = new List<string>(matchQueue.Keys);
                 for (int i = 0; i < keys.Count; i++)
                 {
                     string key = keys[i];
-                    Queue<Player> q = matchQueue[key];
+                    List<MatchEntry> q = matchQueue[key];
                     long since;
-                    if (q.Count == 0 || !matchSince.TryGetValue(key, out since) || now - since < MATCH_BOT_WAIT) continue;
+                    if (!matchSince.TryGetValue(key, out since)) { since = Now; matchSince[key] = since; }
                     int bar = key.IndexOf('|');
                     string game = bar < 0 ? key : key.Substring(0, bar);
                     string variant = bar < 0 ? "" : key.Substring(bar + 1);
                     IGameRule rule = RuleRegistry.Get(game) ?? RuleRegistry.Fallback;
-                    StartMatch(key, q, rule, variant, Math.Max(0, rule.MinSeats - q.Count), outFrames);
+                    TryMatch(key, q, rule, variant, outFrames);
+                    if (!matchQueue.ContainsKey(key)) continue;
+                    q = matchQueue[key];
+                    long waited = now - (matchSince.ContainsKey(key) ? matchSince[key] : now);
+                    if (waited >= MaxWait(key))
+                    {
+                        List<Player> group = new List<Player>();
+                        for (int k = 0; k < q.Count; k++) group.Add(q[k].P);
+                        int fill = Math.Max(0, rule.MinSeats - group.Count);
+                        matchQueue.Remove(key); matchSince.Remove(key);
+                        matchStateAt.Remove(key); matchPoolCache.Remove(key);
+                        StartMatch(key, group, fill, "候久 · 隐士补位", rule, variant, outFrames);
+                        continue;
+                    }
+                    EmitMatchState(key, q, Math.Max(0, rule.MinSeats - q.Count), outFrames, false);
                 }
 
                 foreach (KeyValuePair<string, Room> kv in rooms)

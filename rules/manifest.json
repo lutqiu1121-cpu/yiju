@@ -160,6 +160,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -417,6 +425,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -656,6 +672,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -898,6 +922,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -1171,6 +1203,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -1447,6 +1487,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -1736,6 +1784,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -1991,6 +2047,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -2250,6 +2314,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -2505,6 +2577,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -2767,6 +2847,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -3007,6 +3095,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -3271,6 +3367,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -3511,6 +3615,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -3780,6 +3892,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -4019,6 +4139,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -4262,6 +4390,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -4502,6 +4638,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -4765,6 +4909,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -5023,6 +5175,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -5286,6 +5446,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -5546,6 +5714,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -5797,6 +5973,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -6051,6 +6235,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -6301,6 +6493,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -6555,6 +6755,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -6807,6 +7015,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -7055,6 +7271,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -7320,6 +7544,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -7598,6 +7830,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -7867,6 +8107,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -8117,6 +8365,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -8370,6 +8626,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -8636,6 +8900,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -8886,6 +9158,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -9140,6 +9420,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -9391,6 +9679,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -9654,6 +9950,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -9915,6 +10219,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -10170,6 +10482,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -10412,6 +10732,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -10651,6 +10979,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -10905,6 +11241,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -11157,6 +11501,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -11460,6 +11812,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -11711,6 +12071,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -11977,6 +12345,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -12239,6 +12615,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -12505,6 +12889,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -12755,6 +13147,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -13026,6 +13426,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -13278,6 +13686,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -13592,6 +14008,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -13983,6 +14407,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -14237,6 +14669,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -14495,6 +14935,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -14749,6 +15197,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",
@@ -15007,6 +15463,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -15263,6 +15727,14 @@
           "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -15517,6 +15989,14 @@
           "group": "局仪",
           "def": false,
           "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
+          "key": "botByRank",
+          "label": "隐士随本席最高段位",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "开枰时取席中已题名者的最高段位，自动定隐士棋力；段位越高越难缠，寻局补位同样照此"
         },
         {
           "key": "botLevel",

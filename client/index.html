@@ -26,6 +26,7 @@
   <div id="conn" class="conn"><i></i><span>候馆中</span></div>
 </header>
 <div id="offlineBar" class="offline-bar" hidden></div>
+<div id="matchBar" class="match-bar" hidden><span class="mb-mark">寻</span><span id="matchText">匹配中…</span><button class="btn ghost small" id="matchCancel">止寻</button></div>
 
 <main id="screens">
 
@@ -183,7 +184,7 @@
 <div id="legacySettings" hidden>
     <div class="setting-row"><span>落子有声</span><button class="toggle on" id="soundToggle">启</button></div>
     <div class="setting-row"><span>行云</span><button class="toggle on" id="motionToggle">启</button></div>
-    <div class="setting-row"><span>馆址</span><input id="serverUrl" class="url-input" placeholder="如 192.168.1.8:5080 · 留空=同源"></div>
+    <div class="setting-row"><span>馆址</span><input id="serverUrl" class="url-input" placeholder="任意地址 · 域名 / 带路径 / 本机回环 · 端口可省 · 留空=同源"></div>
     <div class="setting-row"><span>谱源</span><input id="sourceUrl" class="url-input" placeholder="填仓库地址后可一键打开"></div>
     <div class="setting-row"><span>雅号</span><input id="playerName" class="url-input" maxlength="12" placeholder="过客"></div>
     <div class="side-h" style="margin-top:22px">本馆 · 匾额</div>
