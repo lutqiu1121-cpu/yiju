@@ -280,7 +280,7 @@ dotnet run --project server
 
  `yiju-source.zip` 仅本地留档 / 随仓库分发；`yiju-release.zip` 随 Release 一起发，供房主起馆：里面带棋馆、`scripts/` 示例剧本、`leaderboard/` 目录适配器与非商用协议，自己 `dotnet run` 起馆。剧本更新不发版，往 `scripts/` 丢 JSON 即可。
 
-发布提示词见 `PUBLISH_AGENT.md` 与 `AGENT_PROMPT.md` v5：本地 git + 凭证已在机器里，agent 只做构建、提交、推送、建 Release，零接触凭证，报错即停；品牌已定「弈局 / yiju / 印章版像素图标」，生成物哈希记在 `android/branding.sha256`，默认一个字不改。
+发布提示词见 `PUBLISH_AGENT.md` 与 `AGENT_PROMPT.md` v5：本地 git + 凭证已在机器里，agent 只做构建、提交、推送、建 Release，零接触凭证，报错即停；品牌已定「弈局 / yiju / 用户原图逐格还原的像素图标：米白底 + 纯黑墨「弈」字 + 朱砂点，无边框无印章」，生成物哈希记在 `android/branding.sha256`，默认一个字不改。
 
 ---
 

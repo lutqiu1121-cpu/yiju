@@ -4,7 +4,7 @@
 
 | # | 文件 | 说明 | 实测体积 |
 | --- | --- | --- | --- |
-| 1 | `yiju.apk` | 安卓客户端（纯平台 WebView 壳 + 内置静态页，debug 签名；印章版图标） | 由 `build-apk.sh` 填 |
+| 1 | `yiju.apk` | 安卓客户端（纯平台 WebView 壳 + 内置静态页，debug 签名；用户原图像素图标，纯黑墨） | 由 `build-apk.sh` 填 |
 | 2 | `yiju-release.zip` | 服务端运行包，供 .NET 8 机器跑 `./start.sh` 实测 | 由 `build.sh` 填 |
 
 > **`yiju-source.zip` / `SIZES.txt` 不上传 Release。**
@@ -27,7 +27,7 @@ SIZES.txt           ← 仅本地留档：客户端 gzip、棋馆发布、APK �
 - [ ] `server/` `client/` `rules/` `themes/` `scripts/` `leaderboard/` `tools/` `android/` 都在
 - [ ] `README.md`、`LICENSE` 和原文件完全一致，`LICENSE` 为 PolyForm Noncommercial 1.0.0（非商用）
 - [ ] `scripts/` 里至少 3 个示例剧本，`leaderboard/` 未被改动
-- [ ] 品牌保持默认「弈局 / yiju / 印章版图标」，或只改了 `branding.json`；没有手改 `res/` 下的 XML / Java / Gradle；`android/branding.sha256` 与生成物一致
+- [ ] 品牌保持默认「弈局 / yiju / 用户原图逐格还原图标（米白底 + 纯黑墨 + 朱砂点，无框无印）」；没有手改 `res/` 下的 XML / Java / Gradle；`android/branding.sha256` 与生成物一致
 - [ ] 构建命令是 `bash build.sh` 然后 `bash build-apk.sh`，顺序与参数都没变
 - [ ] 仓库根目录产物 = 4 个文件，文件名逐字一致
 - [ ] `SIZES.txt` 已填客户端 gzip、棋馆与 APK 实测体积

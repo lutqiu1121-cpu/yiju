@@ -5,9 +5,9 @@
 > 1. 仓库 `https://github.com/lutqiu1121-cpu/yiju`（分支 `master`）已存在且已有内容；未登录匿名视角的 `This repository is empty.` 是权限表现，不是真没代码，**不要再让用户贴 `git remote -v` 或 push 输出自证**。
 > 2. **Android 强制横屏**（`screenOrientation="landscape"`）。进游戏先登录页：默认「本地模式 · 可局域网联机」，服务器地址**可填可不填**，提示条**可关**；好友用本机生成的不重复凭证（`YJ-XXXX-XXXX-XXXX`）添加，在线状态只在同棋馆 / 局域网内可见，**不连公网、不注册账号**。
 > 3. 大厅按横屏骨架排布：顶栏 / 左好友 / 中央大「对弈」/ 右入口列 / 底部 tab。点「对弈」是**弹层**（主推 8 局 → 二级「更多对弈」52 局），**不是整页跳转**；装扮已从案牍里独立成页；设置页黑底黑字、题记空白、提示被键盘遮挡、象棋红黑难辨、寻局光效闪断，全部已修。
-> 4. App 图标换**印章版**：`render_branding.py` 生成 adaptive icon / 512 PNG / `android/branding.sha256`，`build-apk.sh` 与 CI 逐步核对图标哈希与 APK 内资源，**不要再手改 `ic_launcher.xml`、不要退回旧十字棋盘图**。
+> 4. App 图标**就用用户给的 512×512 原图**：`render_branding.py` 的 `ICON_GRID` 已逐格还原为 64×64，米白底 `#F5F1E6` + **纯黑墨 `#000000`** 的像素「弈」字 + 朱砂 `#9B092D` 点，**不加边框、不加右下印章、不改字形与朱砂位置**。生成 adaptive icon / 512 PNG / `android/branding.sha256`，`build-apk.sh` 与 CI 逐步核对哈希与 APK 内资源，**不要手改生成物、不要换 preset、不要再自作主张加装饰**。
 > 5. **Release 口径统一**：所有 tag（测试版与正式版）都上传 **两个资产 `yiju.apk` + `yiju-release.zip`**。下文 / `PUBLISH_AGENT.md` / `README.md` 里任何「正式版只上传 `yiju.apk` 一个文件」「不上传 `yiju-release.zip`」的旧句**一律作废**。
-> 6. 验收已全绿：静态自检 **787/0**、JS 语法 **21/21**、60 局原规则 **60/60**、真实走法 **10/10**、断网集成 **4/4**、**横屏 HTML 真浏览器 `tools/ui-e2e.cjs` 31/31**（截图与报告在 `ui-shots/`）。CI 用 `apksigner` 取指纹，不再用 `keytool -printcert -jarfile`。
+> 6. 验收已全绿：静态自检 **793/0**、JS 语法 **21/21**、60 局原规则 **60/60**、真实走法 **10/10**、断网集成 **4/4**、**横屏 HTML 真浏览器 `tools/ui-e2e.cjs` 31/31**（截图与报告在 `ui-shots/`）。图标产物与用户原图硬量化后 **262144 像素逐像素一致、4096 格采样 0 处偏差**；`verify.py` 已加断言拦住「压成 32×32 / 加框加印章 / 改三色」。CI 用 `apksigner` 取指纹，不再用 `keytool -printcert -jarfile`。
 > 7. 固定 keystore / `applicationId` / 合规声明 / LICENSE / 60 局注册一律不动；**不需要任何签名 Secret、PAT 或口令**。服务端能否实起仍需 .NET 8 机器上跑 `./start.sh`，CI 不替代。
 
 ---

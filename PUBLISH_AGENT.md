@@ -95,7 +95,7 @@
 【检查清单】
 - [ ] `server/` `client/` `rules/` `themes/` `scripts/` `leaderboard/` `tools/` `android/` 都在
 - [ ] `README.md`、`LICENSE` 和原文件完全一致，`LICENSE` 为 PolyForm Noncommercial 1.0.0（非商用）
-- [ ] 品牌保持默认「弈局 / yiju / 附件像素图标」，或只改了 `branding.json`；没有手改 `res/` 下的 XML、Java、Gradle
+- [ ] 品牌保持默认「弈局 / yiju / 用户原图逐格还原图标（纯黑墨）」，或只改了 `branding.json`；没有手改 `res/` 下的 XML、Java、Gradle
 - [ ] 构建命令是 `bash build.sh` 然后 `bash build-apk.sh`，顺序与参数都没变
 - [ ] 仓库根目录产物 = 4 个文件，文件名逐字一致
 - [ ] `SIZES.txt` 已填客户端 gzip、棋馆与 APK 实测体积
@@ -132,7 +132,7 @@
 - 项目交付时已 `git init` 并有 1 个干净提交，含 `LICENSE`（PolyForm Noncommercial 1.0.0，非商用）与 `.gitignore`；agent 直接进目录即可。
 - 只收单文件时用 `yiju-repo.bundle`：`git clone yiju-repo.bundle yiju`，全离线，不需要任何远程。
 - **凭证路径**：本机 `git credential` / SSH key / `gh auth status` 已就绪即可；提示词里零凭证、零账号、零令牌。若远程名不是 `origin`，先在本机把 remote 配好再交给 agent。
-- **APK 品牌**：已定「弈局 / yiju / 附件像素图标」，`branding.json` 默认 `preset=yiju`，agent 不需要确认、不需要改。真要换名换图，只改这一个 JSON（preset 可选 yiju / board / ink / circle / custom），`build-apk.sh` 会调 `render_branding.py` 重新生成矢量图标。
+- **APK 品牌**：已定「弈局 / yiju / 用户原图逐格还原的像素图标（纯黑墨）」，`branding.json` 默认 `preset=yiju`，agent 不需要确认、不需要改、不要换 preset、不要加边框或印章。真要换图只能改 `render_branding.py` 的 `ICON_GRID`，`build-apk.sh` 会重新生成矢量图标。
 - **APK 前置**：`ANDROID_HOME`（含 `platforms/android-33`、`build-tools`）、JDK 11+、Gradle、python3、首次构建联网。`build-apk.sh` 会自动生成 7.6.4 wrapper，不需要预置 wrapper jar。缺任何一项脚本会以明确错误退出，agent 会停下贴报错。
 - APK 是 debug 签名、纯平台 WebView 壳，静态页装在 `assets/client/`；首启弹「填棋馆地址」，不做 TWA（TWA 要求公网 HTTPS，与局域网填 IP 冲突）。要上架商店需换成自己的 release 签名。
 - 若环境没有 `gh` CLI：agent 会完成到 `git push` 然后停下，网页 Release 由你手动传 `yiju.apk` + `yiju-release.zip`，或单独给一条完整命令。
@@ -173,7 +173,7 @@
 
 - **最终口径以 `AGENT_PROMPT.md` v5 为准**；本文件上文任何「只上传 `yiju.apk` 一个文件」「正式版不带 `yiju-release.zip`」「APK 首启弹填棋馆地址」「图标 preset 可随便改」等旧句一律作废。
 - Android 强制横屏；进游戏先登录页，默认「本地模式 · 可局域网联机」，服务器地址可选、提示可关；好友凭本机不重复凭证添加，在线状态只在同棋馆 / 局域网内可见，不连公网。
-- 图标已是**印章版**（米白纸底 + 细墨框 + 像素「弈」字 + 右下朱砂方印），由 `render_branding.py` 生成 adaptive icon / 512 PNG / `android/branding.sha256`；`build-apk.sh` 与 CI 核对哈希与 APK 内资源。**不要手改生成物，不要退回 `preset=board` 的十字棋盘图。**
+- 图标**就是用户给的 512×512 原图**：`render_branding.py` 的 `ICON_GRID` 逐格还原为 64×64，米白底 `#F5F1E6` + **纯黑墨 `#000000`** 的像素「弈」字 + 朱砂 `#9B092D` 点，**不加边框、不加印章、不改字形与朱砂位置**。由它生成 adaptive icon / 512 PNG / `android/branding.sha256`；`build-apk.sh` 与 CI 核对哈希与 APK 内资源。**不要手改生成物、不要换 preset、不要加任何装饰。**
 - Release 统一发 `yiju.apk` + `yiju-release.zip` 两个资产；CI 用 `apksigner verify --print-certs` 取 APK 证书 SHA256，不用 `keytool -printcert -jarfile`。
 - 新增 `tools/ui-e2e.cjs`：横屏 HTML 真浏览器验收 **31/31**（登录 / 大厅 / 对弈弹层 / 开枰落子 / 装扮 / 设置对比度 / 提示不遮挡 / 竖屏提示 / 无控制台错误），截图与 `report.json` 在 `ui-shots/`。
 - 装扮已独立成 `screen-shop`；设置页改纸底深字；今日题记与好友栏空档都补了引导；开机不再自动弹小引或离线条；主按钮不再循环扫光。

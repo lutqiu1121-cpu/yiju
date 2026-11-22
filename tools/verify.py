@@ -684,11 +684,36 @@ check("screenOrientation=\"landscape\"" in (ROOT / "android/app/src/main/Android
       "Android 强制横屏并引用新 mipmap 图标（不再吃旧 drawable）")
 rb5 = (ROOT / "android/render_branding.py").read_text(encoding="utf-8")
 check(all(k in rb5 for k in ['branding.sha256', 'mipmap-xxxhdpi', 'mipmap-anydpi-v26',
-                             'ic_launcher_foreground', 'write_png']),
+                             'ic_launcher_foreground']) and
+      ('write_icon_png' in rb5 or 'write_png' in rb5),
       "图标生成自适应图标 / 512 位图 / 哈希清单，可逐项核对是否进包")
 check((ROOT / "android/branding.sha256").exists() and
       (ROOT / "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png").exists(),
-      "印章版图标生成物与哈希清单已落盘")
+      "用户原图逐格还原的图标生成物与哈希清单已落盘")
+# 防再犯：图标必须严格是用户 512×512 原图的 64×64 逐格还原，不许再压成 32×32、
+# 不许加细墨框 / 右下朱砂方印 / 任何额外装饰，不许改三色。
+grid_txt = rb5[rb5.find('ICON_GRID = """'):rb5.find('""".strip')]
+check("assert len(ICON_GRID) == 64" in rb5 and "每行必须是 64 列" in rb5 and
+      len(grid_txt.splitlines()) == 65,
+      "图标网格为 64×64（用户原图每格 8px），不是 32×32")
+check(all(bad not in rb5 for bad in ['seal_rects', '细墨外框', '朱砂方印', 'DISC_RING', 'FRAME']),
+      "图标无额外边框 / 印章 / 装饰，严格照抄原图")
+icon_cfg = json.loads((ROOT / "android/branding.json").read_text(encoding="utf-8"))["icon"]
+check(icon_cfg.get("bg") == "#F5F1E6" and icon_cfg.get("ink") == "#000000" and
+      icon_cfg.get("accent") == "#9B092D",
+      "图标三色取自用户原图：米白 / 纯黑墨 / 朱砂")
+icon_svg5 = (ROOT / "client/icon.svg").read_text(encoding="utf-8")
+check('viewBox="0 0 64 64"' in icon_svg5 and "stroke=" not in icon_svg5,
+      "网页图标同为 64×64 逐格还原、无描边")
+# 生成物与清单逐项一致（CI 会再做一遍，这里先拦住脏包）
+import hashlib as _hl
+_bad5 = []
+for _line in (ROOT / "android/branding.sha256").read_text(encoding="utf-8").splitlines():
+    _h, _rel = _line.split(None, 1)
+    _f = ROOT / _rel.strip()
+    if not _f.exists() or _hl.sha256(_f.read_bytes()).hexdigest() != _h:
+        _bad5.append(_rel.strip())
+check(not _bad5, "图标 8 个生成物与 branding.sha256 逐项一致" + (" → " + ",".join(_bad5) if _bad5 else ""))
 check("apksigner" in (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8") and
       "yiju.apk yiju-release.zip" in (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8"),
       "CI 用 apksigner 取指纹且 Release 同时发 APK 与服务端包")
