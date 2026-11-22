@@ -13,7 +13,7 @@
 请阅读并执行本仓库根目录下的 `AGENT_PROMPT.md`（即本文件）与 `PUBLISH_AGENT.md`，一次性完成上传、构建与发布，不要询问、不要擅自改设计、不要加玩法。
 
 **一、上传代码（仓库已存在，不要新建仓库）**
-1. 优先用随附的 `弈局_yiju_源码仓库.zip` 解压取得源码（目录结构齐全，含 `AGENT_PROMPT.md`、`android/keystore/yiju.jks`）。若要保留完整提交历史，改用 `qipai-repo.bundle`：先 `git init yiju && cd yiju`，再 `git fetch <bundle路径> HEAD:refs/heads/master && git checkout master`（`git clone <bundle> yiju` 可用时亦可；若报 `pread` / `index-pack` 错误，一律改用这条 fetch 写法，不要自行修脚本）。
+1. 优先用随附的 `弈局_yiju_源码仓库.zip` 解压取得源码（目录结构齐全，含 `AGENT_PROMPT.md`、`android/keystore/yiju.jks`）。若要保留完整提交历史，改用 `qipai-repo.bundle`：先 `git init yiju && cd yiju`，再依次 `git fetch <bundle路径> HEAD:refs/heads/imported`、`git checkout imported`、`git branch -m master`（`git clone <bundle> yiju` 可用时亦可；若报 `pread` / `index-pack` 错误，一律改用这条 fetch 写法，不要自行修脚本）。
 2. 目标远程固定为 `https://github.com/lutqiu1121-cpu/yiju`（若未配 remote 则 `git remote add origin <地址>`），推送分支 `master`：`git push -u origin master`。**不要** force、不要改历史、不要另建仓库。
 3. 保持目录结构、文件名、`LICENSE`、合规声明不变。`LICENSE` 是 **PolyForm Noncommercial 1.0.0**（源码公开 · 禁止商用）。README 抬头、App 设置页、入门小引、页脚、`PUBLISH_AGENT.md` 里那段技术与合规声明必须逐字保留，不得删改：
    > 本项目为开源技术分享，不提供官方游戏服务，不构成面向公众的网络游戏运营。游戏核心体验可完全离线进行。任何使用者自行部署、分发或商业化所产生的合规责任（包括但不限于版号、实名制、个人信息保护），由使用者自行承担。
