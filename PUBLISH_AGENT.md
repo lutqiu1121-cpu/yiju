@@ -153,3 +153,13 @@
 - 棋馆地址不绑定固定地址、端口可省可填、缺省端口可在设置里改；不要在任何提示里写「只能填 192.168.x.x:5080」。
 - 给 agent 的最终提示词单独在 `AGENT_PROMPT.md`，直接用那一份，不必再拼。
 
+## v2 修订（签名凭证与 GitHub CI，优先于上文冲突条款）
+
+- **基线**：yiju 从未发布、从未安装过任何 APK，不存在需要保覆盖的旧签名；仓库 `https://github.com/lutqiu1121-cpu/yiju` 已建好且为空，分支 `master`，推送即可，不再新建仓库。
+- **签名凭证已内置**：固定密钥 `android/keystore/yiju.jks` 随仓库分发，别名 `yiju`、storepass/keypass `yijuarchive`，见 `android/keystore/README.md` 与 `android/app/build.gradle` 默认值。`bash build-apk.sh` 直接沿用即可出同签名包。
+- **不需要任何签名 Secrets**：`KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD` / `GH_TOKEN` 均无需配置；CI 用默认 `GITHUB_TOKEN`（Workflow permissions 开 Read and write）。不要新建或替换 keystore、不要设 `YIJU_KEYSTORE` 等环境变量——换了签名根会破坏后续覆盖升级。
+- 「凭证零接触」仅指**账号口令 / 令牌 / 登录态**：不读取、不打印、不写入、不索取。仓库里公开的 jks 默认口令属于构建配置，不属此列，按默认值沿用即可，不构成违规。
+- **覆盖升级三件套**：固定 `android/keystore/yiju.jks` + 固定 `app.yiju.archive` + `versionCode` 严格递增，三者缺一不可；装新版用 `adb install -r yiju.apk` 或手机直接点 APK 覆盖，禁止卸载重装。
+- **测试版例外**：tag `v1.0.0-test.1` 的 Pre-release 允许附 `yiju.apk` + `yiju-release.zip`（服务端包，供 .NET 8 服务器实测）；正式版仍只上传 `yiju.apk` 一个文件。
+- `AGENT_PROMPT.md` v2 为最终执行口径，与上文冲突处以 `AGENT_PROMPT.md` 为准。
+
