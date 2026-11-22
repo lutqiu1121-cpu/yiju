@@ -143,6 +143,8 @@ jobs:
           echo "keystore SHA256: $expected"
           echo "apk      SHA256: $actual"
           test "$expected" = "$actual"
+          echo "::notice title=APK 签名证书 SHA256::$actual"
+          echo "::notice title=versionCode::$(python3 -c 'import json,os;v=json.load(open(os.path.join(os.environ["GITHUB_WORKSPACE"],"android","version.json")));print(v["versionCode"],v["versionName"],v["applicationId"])')"
           apksigner verify --verbose "$GITHUB_WORKSPACE/yiju.apk"
           {
             echo "### 弈局 yiju 构建结果"
