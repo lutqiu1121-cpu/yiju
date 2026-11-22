@@ -24,3 +24,6 @@ android/gradle/wrapper/gradle-wrapper.jar
 # Python 缓存
 __pycache__/
 *.pyc
+
+# 离线历史包（随发布附件分发，不进仓库）
+qipai-repo.bundle
