@@ -1,9 +1,10 @@
 import { Net } from './net.js';
 import { Sound } from './audio.js';
 import * as R from './render.js';
+import { Fx } from './fx.js';
 
 const $ = (s) => document.querySelector(s);
-function tap() { tap(); if (navigator.vibrate) navigator.vibrate(8); }
+function tap() { if (navigator.vibrate) navigator.vibrate(8); }
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
 const lsGet = (k, d) => { try { const v = localStorage['getItem'](k); return v === null ? (d === undefined ? null : d) : v; } catch (e) { return d === undefined ? null : d; } };
@@ -148,6 +149,9 @@ function applyTheme(id, persist = true) {
   if (!t) return;
   S.themeId = t.id; if (persist) lsSet('qipai.theme', t.id);
   if (typeof applyWorn === 'function') applyWorn();
+  const mv = (S.sliders && typeof S.sliders.motion === 'number') ? S.sliders.motion : 55;
+  document.documentElement.style.setProperty('--fx', String(mv / 100));
+  document.body.classList.toggle('fx-off', mv <= 0 || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches));
   const r = document.documentElement.style;
   const keys = ['bg','bg2','ink','ink2','accent','line','dot','card','cardInk','tile','tileEdge'];
   keys.forEach(k => r.setProperty('--' + k, t[k]));
@@ -277,8 +281,11 @@ function onFrame(m) {
         S.seasonSource = m.seasonSource || ''; }
       renderAccount(); renderAccountCard(); renderGames(); renderSeasonState();
       seasonSelfCheck(true);
-      S.net.send({ t:'halls' }); S.net.send({ t:'scripts' }); S.net.send({ t:'rooms' }); S.net.send({ t:'shop' });
+      S.net.send({ t:'halls' }); S.net.send({ t:'scripts' }); S.net.send({ t:'rooms' }); S.net.send({ t:'shop' }); S.net.send({ t:'godInfo' });
       break;
+    case 'godInfo':
+      S.godInfo = { best: m.best || 0, title: m.title || '', ranks: m.ranks || {} };
+      renderGodPanel(); break;
     case 'shopState':
       S.shop = { items: m.items || [], yizhu: m.yizhu || 0, owned: m.owned || [], worn: m.worn || {} };
       renderShop(); applyWorn(); renderAccountCard();
@@ -414,14 +421,19 @@ function renderPlayNow() {
     const t = $('#matchTitle'); if (t) t.textContent = '尚未入席';
     syncScriptTheme(); Sound.ambience(null, false);
     const st = $('#stageShow'); if (st) st.hidden = true;
+    S._fxPrev = null; Fx.reset();
     return;
   }
   const g = S.games.find(x => x.id === v.game);
   const title = S.meta && S.meta.title;
   $('#matchTitle').textContent = (title ? title + ' · ' : '') + (g ? g.name : '对局') + (v.variant ? ' · ' + v.variant : '');
   $('#matchMeta').textContent = `${(S.meta && S.meta.id) || v.room || ''} · ${v.phaseName} · 第 ${v.moveNo} 手` +
-    (S.meta && S.meta.bots ? ` · 隐士 ${S.meta.bots} 位` : '');
+    (S.meta && S.meta.bots ? ` · 隐士 ${S.meta.bots} 位` : '') +
+    (S.meta && S.meta.god ? ` · 神域 · ${S.meta.godName || '青冥'}` : '');
   const canvas = $('#board');
+  Fx.observe(S._fxPrev, drawV, canvas);
+  S._fxPrev = drawV ? { seq:drawV.seq, moveNo:drawV.moveNo, phase:drawV.phase, ended:drawV.ended,
+    winner:drawV.winner, cells:(drawV.cells||[]).slice(), hands:drawV.hands, w:drawV.w, h:drawV.h } : null;
   R.drawBoard(canvas, drawV, handleCell);
   R.renderHand($('#handRow'), v, S.selected);
   bindHand();
@@ -613,6 +625,7 @@ function go(name) {
   $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.screen === name));
   $('#screens').scrollTop = 0;
   if (name === 'play') setTimeout(renderPlay, 30);
+  if (typeof renderGodPanel === 'function') renderGodPanel();
   if (name === 'stats') { updateStats(); renderAccountCard(); if (S.net) { S.net.send({ t:'board' }); S.net.send({ t:'halls' }); S.net.send({ t:'accountState' }); } }
   if (name === 'today') updateToday();
 }
@@ -1427,6 +1440,7 @@ function renderAccountCard() {
       <span class="season-check">${S.seasonVerified === false ? '未校天时 · 依本席更漏' : '天时已校 · 段位不可自改'}</span><br>
       段位 <b>${escapeHtml(v.rank || ri.name)}</b> · 共 ${v.rankSum || 0} 墨分 · ${ri.next ? '距下段 ' + ri.next + ' 墨分' : '已至顶阶'}<br>
       匣中弈株 ${v.yizhu || 0} 枚<br>
+      神的领域 · <b style="color:var(--accent)">${v.godTitle || '未叩域'}</b> · 青冥 / 玄枢 / 太虚 三尊<br>
       ${v.rankBase ? '上季承袭 ' + v.rankBase + ' 墨分 · ' : ''}上赛季 ${escapeHtml(v.lastSeason || '—')} · ${escapeHtml(v.lastRank || '初执')}
       <div class="rank-bar"><span style="width:${pct}%"></span></div></div>
       ${gamesRank ? '<div class="rank-games">各局段位 · ' + gamesRank + '</div>' : ''}`;
@@ -1445,14 +1459,32 @@ function applyWorn() {
   document.body.dataset.face = w.face || '';
   document.body.dataset.seal = w.seal || '';
   document.body.dataset.ink = w.ink || '';
+  document.body.dataset.fx = w.fx || '';
   const cv = $('#board'); if (cv) cv.dataset.desk = w.desk || '';
+}
+function renderGodPanel() {
+  const el = $('#godPanel'); if (!el || !S.godInfo) return;
+  const g = (S.pending && S.pending.game) || (S.view && S.view.game) || '';
+  const r = (S.godInfo.ranks || {})[g] || { rank:0, title:'', nextTier:1, nextName:'青冥' };
+  const pts = ((S.account && S.account.save && S.account.save.rankPts) || {})[g] || 0;
+  const need = Math.max(0, 800 - pts);
+  const gname = (S.games.find(x => x.id === g) || {}).name || '此局';
+  let h = '<div class="side-h" style="margin-top:18px">神的领域 · 叩问三尊</div>';
+  h += '<div class="hint">段位七阶至「弈圣」方可叩域；三尊依次青冥 → 玄枢 → 太虚，胜首尊即 <b>弈神</b>，再胜加前缀「玄」「太」。禁悔、禁和、隐士九阶，逐尊收更漏。</div>';
+  h += '<div class="setting-row"><span>' + escapeHtml(gname) + '</span><span class="season-state">' +
+       (r.title ? escapeHtml(r.title) : '未叩域') + '</span></div>';
+  h += '<div class="hint">' + (need > 0
+       ? '此局尚差 ' + need + ' 墨分至弈圣，神域未启。'
+       : '此局已至弈圣 · 下一尊「' + escapeHtml(r.nextName || '青冥') + '」') + '</div>';
+  if (S.godInfo.title) h += '<div class="hint">最高神衔：<b style="color:var(--accent)">' + escapeHtml(S.godInfo.title) + '</b></div>';
+  el.innerHTML = h;
 }
 function renderShop() {
   const el = $('#shopGrid'); if (!el) return;
   const sh = S.shop;
   if (!sh) { el.innerHTML = '<div class="hint">候妆奁目录…</div>'; return; }
   const bal = $('#shopBalance'); if (bal) bal.textContent = sh.yizhu + ' 枚';
-  const kinds = { desk:'牌桌', face:'牌面', seal:'朱印', ink:'墨色' };
+  const kinds = { desk:'牌桌', face:'牌面', seal:'朱印', ink:'墨色', fx:'华彩' };
   const owned = (sh.owned || []).map(String);
   let h = '';
   Object.keys(kinds).forEach(k => {

@@ -92,6 +92,210 @@ namespace Qipai
 
         public virtual string BotLine(GameState s, int seat) { return ""; }
 
+        private static object GodCloneVal(object o)
+        {
+            if (o == null) return null;
+            if (o is string[]) return ((string[])o).Clone();
+            if (o is int[]) return ((int[])o).Clone();
+            if (o is long[]) return ((long[])o).Clone();
+            if (o is bool[]) return ((bool[])o).Clone();
+            if (o is double[]) return ((double[])o).Clone();
+            if (o is object[]) return ((object[])o).Clone();
+            if (o is List<string>) return new List<string>((List<string>)o);
+            if (o is Dictionary<string, object>)
+            {
+                Dictionary<string, object> r = new Dictionary<string, object>();
+                foreach (KeyValuePair<string, object> kv in (Dictionary<string, object>)o) r[kv.Key] = GodCloneVal(kv.Value);
+                return r;
+            }
+            if (o is string || o is int || o is long || o is bool || o is double) return o;
+            return o;
+        }
+        private static GameState GodClone(GameState a)
+        {
+            GameState b = new GameState();
+            b.Game = a.Game; b.Variant = a.Variant; b.Renderer = a.Renderer; b.Room = a.Room;
+            b.Phase = a.Phase; b.PhaseName = a.PhaseName; b.Turn = a.Turn; b.Seats = a.Seats;
+            b.Width = a.Width; b.Height = a.Height; b.Last = a.Last; b.Winner = a.Winner;
+            b.Result = a.Result; b.Ended = a.Ended; b.MoveNo = a.MoveNo;
+            b.Cells = (string[])a.Cells.Clone();
+            b.Hands = new Dictionary<int, List<string>>();
+            foreach (KeyValuePair<int, List<string>> kv in a.Hands) b.Hands[kv.Key] = new List<string>(kv.Value);
+            b.V = new Dictionary<string, object>();
+            foreach (KeyValuePair<string, object> kv in a.V) b.V[kv.Key] = GodCloneVal(kv.Value);
+            b.Log = new List<string>(a.Log);
+            return b;
+        }
+        private static string GodApply(IGameRule r, GameState s, int seat, string code)
+        {
+            string a = code; int p = code.IndexOf(':');
+            if (p >= 0) a = code.Substring(0, p);
+            Dictionary<string, object> d = new Dictionary<string, object> {
+                { "code", code }, { "seat", seat } };
+            try { MoveResult res = r.Act(s, seat, a, d); return res.Ok ? "" : res.Error; }
+            catch (Exception) { return "推演不成"; }
+        }
+        private static double GodPeek(GameState s, int k)
+        {
+            if (!s.V.ContainsKey("rng")) return 0;
+            long x = Convert.ToInt64(s.V["rng"]);
+            for (int i = 0; i <= k; i++) x = (x * 6364136223846793005L + 1442695040888963407L) & 0x7FFFFFFFFFFFFFFFL;
+            return ((x >> 17) % 1000) / 1000.0;
+        }
+        private double GodEval(GameState s, int me, int tier)
+        {
+            if (s.Ended)
+            {
+                string w = s.Winner ?? "";
+                if (w.Length == 0) return -500;
+                if (w.Split(',').Contains(me.ToString(CultureInfo.InvariantCulture)))
+                    return 1000000 - s.MoveNo * 0.02;
+                return -1000000 + s.MoveNo * 0.02;
+            }
+            double e = 0;
+            object so;
+            if (s.V.TryGetValue("score", out so) && so is int[])
+            {
+                int[] sc = (int[])so;
+                double mine = me < sc.Length ? sc[me] : 0, foe = 0;
+                for (int i = 0; i < sc.Length; i++) if (i != me) foe = Math.Max(foe, sc[i]);
+                e += (mine - foe) * 60;
+            }
+            if (s.Hands.Count > 0)
+            {
+                int mine = s.Hands.ContainsKey(me) ? s.Hands[me].Count : 0;
+                double foe = 0; int n = 0;
+                foreach (KeyValuePair<int, List<string>> kv in s.Hands)
+                    if (kv.Key != me) { foe += kv.Value.Count; n++; }
+                if (n > 0) e += (foe / n - mine) * 2;
+            }
+            char own = me == 0 ? 'r' : 'b', own2 = me == 0 ? 'w' : 'B';
+            char foe1 = me == 0 ? 'b' : 'r', foe2 = me == 0 ? 'B' : 'w';
+            foreach (string c in s.Cells)
+            {
+                if (string.IsNullOrEmpty(c)) continue;
+                char k = c[0];
+                if (k == own || k == own2) e += 3;
+                else if (k == foe1 || k == foe2) e -= 3;
+            }
+            if (tier >= 2)
+            {
+                int f = me == 0 ? 1 : 0;
+                if (f < s.Seats) { int n = Legal(s, f).Count; e += (12 - Math.Min(12, n)) * (tier >= 3 ? 1.0 : 0.5); }
+            }
+            if (tier >= 3) e += (GodPeek(s, 0) + GodPeek(s, 1) + GodPeek(s, 2)) * 0.2;
+            return e;
+        }
+        private List<string> GodTop(IGameRule r, GameState st, int cur, List<string> lg, int width)
+        {
+            List<string> pool = new List<string>();
+            foreach (string c in lg)
+                if (c != "pass" && c != "skip" && c != "next" && c != "save" && !c.EndsWith("*")) pool.Add(c);
+            if (pool.Count == 0) pool.AddRange(lg);
+            if (pool.Count <= width) return pool;
+            List<KeyValuePair<string, double>> sc = new List<KeyValuePair<string, double>>();
+            foreach (string c in pool)
+            {
+                GameState nx = GodClone(st);
+                string err = GodApply(r, nx, cur, c);
+                sc.Add(new KeyValuePair<string, double>(c, err.Length > 0 ? -10000 : GodEval(nx, cur, 1)));
+            }
+            sc.Sort((x, y) => y.Value.CompareTo(x.Value));
+            List<string> top = new List<string>();
+            for (int i = 0; i < width; i++) top.Add(sc[i].Key);
+            return top;
+        }
+        private double GodRollout(IGameRule r, GameState st, int me, int plies)
+        {
+            GameState x = GodClone(st);
+            for (int i = 0; i < plies && !x.Ended; i++)
+            {
+                int cur = x.Turn;
+                if (cur < 0 || cur >= x.Seats) cur = 0;
+                List<string> lg = r.Legal(x, cur);
+                if (lg.Count == 0) { x.Turn = (cur + 1) % Math.Max(1, x.Seats); continue; }
+                List<string> pool = new List<string>();
+                foreach (string c in lg)
+                    if (c != "pass" && c != "skip" && c != "next" && c != "save" && !c.EndsWith("*")) pool.Add(c);
+                if (pool.Count == 0) pool.AddRange(lg);
+                int take = Math.Min(pool.Count, 6);
+                string pick = pool[0]; double bv = -1e18;
+                for (int q = 0; q < take; q++)
+                {
+                    GameState nx = GodClone(x);
+                    string err = GodApply(r, nx, cur, pool[q]);
+                    double v = err.Length > 0 ? -10000 : GodEval(nx, cur, 1);
+                    if (v > bv) { bv = v; pick = pool[q]; }
+                }
+                string e2 = GodApply(r, x, cur, pick);
+                if (e2.Length > 0) x.Turn = (cur + 1) % Math.Max(1, x.Seats);
+            }
+            return x.Ended ? GodEval(x, me, 1) : GodEval(x, me, 1) * 0.12;
+        }
+
+        private double GodSearch(IGameRule r, GameState st, int me, int depth, int width, int tier, int ply, ref int nodes, int cap)
+        {
+            if (st.Ended || depth <= 0 || ply >= 6 || nodes >= cap) return GodEval(st, me, tier);
+            int cur = st.Turn;
+            if (cur < 0 || cur >= st.Seats) cur = me;
+            List<string> lg = r.Legal(st, cur);
+            if (lg.Count == 0) return GodEval(st, me, tier);
+            List<string> cand = GodTop(r, st, cur, lg, width);
+            bool max = cur == me;
+            double best = max ? -1e18 : 1e18;
+            foreach (string c in cand)
+            {
+                nodes++;
+                GameState nx = GodClone(st);
+                string err = GodApply(r, nx, cur, c);
+                double v;
+                if (err.Length > 0) v = GodEval(st, me, tier);
+                else v = 0.98 * GodSearch(r, nx, me, depth - 1, width, tier, ply + 1, ref nodes, cap);
+                best = max ? Math.Max(best, v) : Math.Min(best, v);
+                if (nodes >= cap) break;
+            }
+            return best;
+        }
+        public virtual string GodPick(GameState s, int seat, int tier, List<string> legal)
+        {
+            if (s == null || legal == null || legal.Count == 0) return "";
+            int t = Math.Max(1, Math.Min(3, tier));
+            int depth = t == 1 ? 2 : 3;
+            int width = t == 1 ? 5 : (t == 2 ? 7 : 10);
+            int cap = t == 1 ? 120 : (t == 2 ? 350 : 800);
+            int plies = t == 1 ? 8 : (t == 2 ? 14 : 22);
+            int trials = t == 1 ? 1 : (t == 2 ? 2 : 3);
+            List<string> pool = new List<string>();
+            foreach (string c in legal)
+                if (c != "pass" && c != "skip" && c != "next" && c != "save" && !c.EndsWith("*")) pool.Add(c);
+            if (pool.Count == 0) pool.AddRange(legal);
+            List<string> cand = GodTop(this, s, seat, pool, width);
+            string best = cand.Count > 0 ? cand[0] : "";
+            double bv = -1e18;
+            int nodes = 0, failed = 0;
+            foreach (string c in cand)
+            {
+                GameState nx = GodClone(s);
+                string err = GodApply(this, nx, seat, c);
+                double v;
+                if (err.Length > 0) { v = -100000; failed++; }
+                else
+                {
+                    nodes++;
+                    double deep = 0.98 * GodSearch(this, nx, seat, depth - 1, width, t, 1, ref nodes, cap);
+                    double roll = 0;
+                    for (int q = 0; q < trials; q++)
+                        roll += GodRollout(this, nx, seat, plies - q * 2);
+                    roll /= trials;
+                    v = deep * 0.72 + roll * 0.28;
+                }
+                if (v > bv) { bv = v; best = c; }
+                if (nodes >= cap) break;
+            }
+            if (cand.Count > 0 && failed > cand.Count / 2) return "";
+            return legal.Contains(best) ? best : "";
+        }
+
         public virtual string BotPick(GameState s, int seat, int level, List<string> legal) { return ""; }
 
         public virtual double BotScore(GameState s, int seat, string code) { return 0; }

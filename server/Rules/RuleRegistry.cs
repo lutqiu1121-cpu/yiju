@@ -45,7 +45,6 @@ namespace Qipai
             Add(new TrickGame("gongzhu"));
             Add(new TrickGame("hongshi"));
 
-
             Add(new ShowdownGame("shisanszhang"));
             Add(new UnoGame());
             Add(new BridgeGame());

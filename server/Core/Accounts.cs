@@ -257,6 +257,7 @@ namespace Qipai
                  "rankBase", 0,
                 "yizhu", 0, "owned", new object[0], "worn", new Dictionary<string, object>(),
                 "yizhuDay", "", "yizhuToday", 0,
+                "godRank", new Dictionary<string, object>(),
                 "rankPts", new Dictionary<string, object>(), "lastSeason", "", "lastRank", "初执",
                 "created", UnixNow(), "updated", UnixNow());
         }
@@ -509,6 +510,24 @@ namespace Qipai
                 return Public(d);
             }
         }
+        public static Dictionary<string, object> GodState(string accountId, string game)
+        {
+            Dictionary<string, object> empty = J.Frame("rank", 0, "title", "", "tier", 1, "name", "青冥");
+            if (string.IsNullOrEmpty(accountId) || string.IsNullOrEmpty(game)) return empty;
+            lock (sync)
+            {
+                foreach (KeyValuePair<string, User> kv in users)
+                    if (kv.Value.Id == accountId)
+                    {
+                        Dictionary<string, object> d = LoadSave(kv.Value);
+                        if (d == null) return empty;
+                        int r = RankOf(d, game), t = Math.Min(3, r + 1);
+                        return J.Frame("rank", r, "title", GodTitle(r), "tier", t, "name", GodName(t));
+                    }
+            }
+            return empty;
+        }
+
         private static Dictionary<string, object> Public(Dictionary<string, object> d)
         {
             return J.Frame("id", J.Str(d, "id", ""), "name", J.Str(d, "name", ""),
@@ -523,6 +542,8 @@ namespace Qipai
                 "rankNext", TitleBook.RankNext(TopPts(d)),
                 "rankSum", J.Int(d, "rankBase", 0) + TitleBook.SumPts(d["rankPts"] as Dictionary<string, object>),
                 "rankBase", J.Int(d, "rankBase", 0),
+                "godBest", GodBestRank(d),
+                "godTitle", GodTitle(GodBestRank(d)),
                 "yizhu", J.Int(d, "yizhu", 0),
                 "owned", d.ContainsKey("owned") ? d["owned"] : new object[0],
                 "worn", d.ContainsKey("worn") ? d["worn"] : new Dictionary<string, object>(),
@@ -597,6 +618,123 @@ namespace Qipai
                 }
             }
             return false;
+        }
+
+        public static readonly string[] GOD_NAMES = { "青冥", "玄枢", "太虚" };
+        public static readonly string[] GOD_TITLES = { "", "弈神", "玄弈神", "太玄弈神" };
+        public static string GodName(int tier) { return GOD_NAMES[Math.Max(0, Math.Min(2, tier - 1))]; }
+        public static string GodTitle(int rank) { return GOD_TITLES[Math.Max(0, Math.Min(3, rank))]; }
+
+        private static Dictionary<string, object> GodRank(Dictionary<string, object> d)
+        {
+            object o; Dictionary<string, object> g = null;
+            if (d.TryGetValue("godRank", out o)) g = o as Dictionary<string, object>;
+            if (g == null) { g = new Dictionary<string, object>(); d["godRank"] = g; }
+            return g;
+        }
+        private static int RankOf(Dictionary<string, object> d, string game)
+        {
+            object o; int r = 0;
+            if (GodRank(d).TryGetValue(game, out o)) { try { r = Convert.ToInt32(o); } catch (Exception) { } }
+            return Math.Max(0, Math.Min(3, r));
+        }
+        private static int GodBestRank(Dictionary<string, object> d)
+        {
+            int b = 0;
+            foreach (KeyValuePair<string, object> kv in GodRank(d))
+            { int r = 0; try { r = Convert.ToInt32(kv.Value); } catch (Exception) { } b = Math.Max(b, r); }
+            return b;
+        }
+
+        public static bool GodGate(string accountId, string game, out string error)
+        {
+            error = "";
+            if (string.IsNullOrEmpty(accountId))
+            { error = "神的领域须先题名，段位方落得进加密存档"; return false; }
+            lock (sync)
+            {
+                User u = null;
+                foreach (KeyValuePair<string, User> kv in users) if (kv.Value.Id == accountId) { u = kv.Value; break; }
+                if (u == null) { error = "题名不在本馆"; return false; }
+                Dictionary<string, object> d = LoadSave(u);
+                if (d == null) d = NewSave(u.Id, u.Name);
+                Dictionary<string, object> rp = d.ContainsKey("rankPts") ? d["rankPts"] as Dictionary<string, object> : null;
+                object po; int pts = 0;
+                if (rp != null && rp.TryGetValue(game, out po)) { try { pts = Convert.ToInt32(po); } catch (Exception) { } }
+                int idx = TitleBook.RankIndex(pts);
+                if (idx < 6)
+                {
+                    int need = 800 - pts;
+                    error = "此局段位未至「弈圣」，神域不启 · 尚差 " + need + " 墨分";
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        public static int GodTierOf(string accountId, string game)
+        {
+            if (string.IsNullOrEmpty(accountId)) return 1;
+            lock (sync)
+            {
+                foreach (KeyValuePair<string, User> kv in users)
+                    if (kv.Value.Id == accountId)
+                    {
+                        Dictionary<string, object> d = LoadSave(kv.Value);
+                        if (d == null) return 1;
+                        return Math.Min(3, RankOf(d, game) + 1);
+                    }
+            }
+            return 1;
+        }
+
+        public static void RecordGod(string accountId, string game, bool win, bool draw, int tier)
+        {
+            if (string.IsNullOrEmpty(accountId) || string.IsNullOrEmpty(game)) return;
+            lock (sync)
+            {
+                User u = null;
+                foreach (KeyValuePair<string, User> kv in users) if (kv.Value.Id == accountId) { u = kv.Value; break; }
+                if (u == null) return;
+                Dictionary<string, object> d = LoadSave(u);
+                if (d == null) d = NewSave(u.Id, u.Name);
+                int cur = RankOf(d, game);
+                if (win && tier >= cur + 1 && tier <= 3)
+                {
+                    GodRank(d)[game] = tier;
+                    int bonus = Math.Min(18, tier * 6);
+                    d["yizhu"] = J.Int(d, "yizhu", 0) + bonus;
+                }
+                WriteSave(u, d);
+            }
+        }
+
+        public static Dictionary<string, object> GodProgress(string accountId)
+        {
+            Dictionary<string, object> result = J.Frame("t", "godInfo", "best", 0,
+                "title", "", "ranks", new Dictionary<string, object>());
+            if (string.IsNullOrEmpty(accountId)) return result;
+            lock (sync)
+            {
+                foreach (KeyValuePair<string, User> kv in users)
+                    if (kv.Value.Id == accountId)
+                    {
+                        Dictionary<string, object> d = LoadSave(kv.Value);
+                        if (d == null) return result;
+                        int best = GodBestRank(d);
+                        result["best"] = best; result["title"] = GodTitle(best);
+                        Dictionary<string, object> rr = new Dictionary<string, object>();
+                        foreach (KeyValuePair<string, object> x in GodRank(d))
+                        {
+                            int r = 0; try { r = Convert.ToInt32(x.Value); } catch (Exception) { }
+                            rr[x.Key] = J.Frame("rank", r, "title", GodTitle(r),
+                                "nextTier", Math.Min(3, r + 1), "nextName", GodName(Math.Min(3, r + 1)));
+                        }
+                        result["ranks"] = rr;
+                        return result;
+                    }
+            }
+            return result;
         }
 
         public static object[] ShopItems() { return ShopBook.Items(); }
@@ -1050,7 +1188,11 @@ namespace Qipai
                 ByKey("seal_chi", "seal", "螭钮印", 240, "朱印 · 螭钮圆印"),
                 ByKey("ink_song", "ink", "松烟", 60, "墨色 · 松烟青"),
                 ByKey("ink_zhu", "ink", "朱墨", 140, "墨色 · 朱砂沉"),
-                ByKey("ink_ni", "ink", "泥金", 230, "墨色 · 泥金褐")
+                ByKey("ink_ni", "ink", "泥金", 230, "墨色 · 泥金褐"),
+                ByKey("fx_liuying", "fx", "流萤", 120, "华彩 · 落子萤火加倍、拖尾更长"),
+                ByKey("fx_miaojin", "fx", "描金", 200, "华彩 · 落点四向拉出细金线"),
+                ByKey("fx_zhulan", "fx", "朱澜", 300, "华彩 · 终局三叠朱浪"),
+                ByKey("fx_xingyu", "fx", "星雨", 420, "华彩 · 终局星雨自天而落")
             };
             return cache;
         }

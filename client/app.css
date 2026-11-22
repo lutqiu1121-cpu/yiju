@@ -478,3 +478,42 @@ body[data-ink="ink_ni"]{--card:#5b4423;--cardInk:#f6ecd2}
 .rank-bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:6px}
 .rank-bar span{display:block;height:100%;background:var(--seal)}
 
+:root{--fx:.55}
+@keyframes yj-fade-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes yj-sheen{0%{background-position:-160% 0}100%{background-position:260% 0}}
+@keyframes yj-ink-press{0%{box-shadow:0 0 0 0 var(--accent)}100%{box-shadow:0 0 0 14px transparent}}
+@keyframes yj-pulse{0%{filter:brightness(1)}35%{filter:brightness(1.06)}100%{filter:brightness(1)}}
+@keyframes yj-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes yj-seal-in{0%{opacity:0;transform:scale(.82) rotate(-7deg)}60%{opacity:1;transform:scale(1.04) rotate(1deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes yj-glow{0%,100%{box-shadow:0 0 0 0 rgba(180,85,45,0)}50%{box-shadow:0 0 12px 2px rgba(180,85,45,.22)}}
+
+body:not(.fx-off) .panel,body:not(.fx-off) .modal-card{animation:yj-fade-up .42s cubic-bezier(.2,.8,.3,1) both}
+body:not(.fx-off) .btn:active{animation:yj-ink-press .42s ease-out}
+body:not(.fx-off) .btn.primary{position:relative;overflow:hidden}
+body:not(.fx-off) .btn.primary::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(100deg,transparent 35%,rgba(255,255,255,.28) 50%,transparent 65%);
+  background-size:220% 100%;animation:yj-sheen calc(3.6s / var(--fx)) linear infinite;pointer-events:none}
+body:not(.fx-off) .match-title{background:linear-gradient(90deg,var(--ink) 30%,var(--accent) 48%,var(--ink) 66%);
+  background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:yj-sheen calc(6s / var(--fx)) linear infinite}
+body:not(.fx-off) #boardWrap{animation:yj-fade-up .5s ease both}
+body:not(.fx-off) .card,body:not(.fx-off) .tile,body:not(.fx-off) .shop-item{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+body:not(.fx-off) .card:hover,body:not(.fx-off) .shop-item:hover{transform:translateY(-2px)}
+body:not(.fx-off) .season-state,body:not(.fx-off) .game-rank{animation:yj-seal-in .5s ease both}
+body:not(.fx-off) #stageShow:not([hidden]){animation:yj-fade-up .4s ease both}
+body:not(.fx-off) .board-row{animation:yj-fade-up .3s ease both}
+body:not(.fx-off) #toast{animation:yj-seal-in .3s ease both}
+
+body[data-fx="fx_liuying"] #boardWrap{filter:drop-shadow(0 0 6px rgba(180,85,45,.18))}
+body[data-fx="fx_miaojin"] .match-head{border-bottom-color:var(--accent);box-shadow:0 1px 0 rgba(180,85,45,.25)}
+body[data-fx="fx_zhulan"] .btn.primary{animation:yj-glow calc(2.8s / var(--fx)) ease-in-out infinite}
+body[data-fx="fx_xingyu"] #boardWrap::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 20% 18%,rgba(255,240,200,.30) 0 1px,transparent 2px),
+             radial-gradient(circle at 72% 34%,rgba(255,240,200,.24) 0 1px,transparent 2px),
+             radial-gradient(circle at 46% 78%,rgba(255,240,200,.22) 0 1px,transparent 2px);
+  animation:yj-float 4s ease-in-out infinite}
+
+body.fx-off *,body.fx-off *::before,body.fx-off *::after{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+#fxLayer{mix-blend-mode:normal}
+

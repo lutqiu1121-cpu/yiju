@@ -204,6 +204,12 @@ namespace Qipai
                     outFrames.Add(new KeyValuePair<Player, object>(kv.Value, sf));
                 return;
             }
+            if (t == "godInfo")
+            {
+                Dictionary<string, object> gi = Accounts.GodProgress(p.AccountId);
+                outFrames.Add(new KeyValuePair<Player, object>(p, gi));
+                return;
+            }
             if (t == "shop" || t == "shopBuy" || t == "shopWear")
             {
                 Dictionary<string, object> st;
@@ -607,6 +613,17 @@ namespace Qipai
 
             long clock = opt.ClockMs;
             if (variant.IndexOf("快") >= 0) clock = Math.Max(5000, clock / 2);
+            int godTier = 1;
+            if (opt.GodMode)
+            {
+                string gerr = "";
+                if (!Accounts.GodGate(p.AccountId, game, out gerr))
+                { outFrames.Add(Err(p, gerr)); return; }
+                godTier = Accounts.GodTierOf(p.AccountId, game);
+                clock = Math.Max(5000, (long)(clock * (1.0 - 0.18 * (godTier - 1))));
+                opt.AllowUndo = false; opt.AllowDraw = false;
+                opt.RankMode = "none"; opt.SpectatorChat = false;
+            }
             opt.ClockMs = clock;
             Room r = new Room(this, id, game, variant, max, clock, nextSeed++ + opt.SeedOffset, opt);
             string title = J.Str(m, "title", "").Trim();
@@ -617,6 +634,12 @@ namespace Qipai
             r.Password = pw;
             r.AllowSpectators = opt.AllowSpectators;
             r.BotLevel = opt.BotLevel;
+            if (opt.GodMode)
+            {
+                r.GodMode = true; r.GodTier = godTier;
+                r.BotLevel = 9;
+                r.BotDelayMs = (int)Math.Max(100L, opt.BotDelayMs / 4);
+            }
             rooms[id] = r;
             Leave(p, null);
             p.Room = r; p.Spectating = false; p.Seat = r.AddSeat(p, 0);
@@ -804,7 +827,9 @@ namespace Qipai
                     if (win && i >= 0 && i < r.Clocks.Length && r.Clocks[i] > 0 && r.Clocks[i] < 5000)
                         feats.Add("long_think");
                     Accounts.Record(pl.AccountId, r.Game, r.Variant, win,
-                        r.Game == "juben" ? r.Variant : "", feats.ToArray());
+                        r.Game == "juben" ? r.Variant : "", feats.ToArray(), winStr.Length == 0);
+                    if (r.GodMode)
+                        Accounts.RecordGod(pl.AccountId, r.Game, win, winStr.Length == 0, r.GodTier);
                     if (r.Opt != null && (r.Opt.RankMode == "hall" || r.Opt.RankMode == "local"))
                     {
                         bool draw = winStr.Length == 0;

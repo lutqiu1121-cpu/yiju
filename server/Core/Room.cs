@@ -39,6 +39,8 @@ namespace Qipai
         public int BotDelayMs = 900;
         public long BotNextAt = 0;
         public int BotLevel = 0;
+        public bool GodMode = false;
+        public int GodTier = 1;
         public bool RankRecorded = false;
         public IGameRule Rule;
         public GameState S;
@@ -223,7 +225,10 @@ namespace Qipai
                 "allowBots", !Started, "botLevel", BotLevel,
                 "rankMode", Opt == null ? "none" : Opt.RankMode,
                 "rankRate", Opt == null ? 50 : Opt.RankRate,
-                "options", Opt.Meta(), "turnPolicy", Opt.Timeout);
+                "options", Opt.Meta(), "turnPolicy", Opt.Timeout,
+                "god", GodMode, "godTier", GodTier,
+                "godName", Accounts.GodName(GodTier),
+                "godTitle", Accounts.GodTitle(Math.Max(0, GodTier - 1)));
         }
 
         public void Collect(List<KeyValuePair<Player, object>> outFrames, HashSet<int> forceFull)
@@ -403,6 +408,11 @@ namespace Qipai
             RuleBase rb = Rule as RuleBase;
             if (rb != null && S != null)
             {
+                if (GodMode)
+                {
+                    string divine = rb.GodPick(S, seat, GodTier, legal);
+                    if (divine.Length > 0) return divine;
+                }
                 string custom = rb.BotPick(S, seat, BotLevel, legal);
                 if (custom.Length > 0) return custom;
                 string think = rb.BotThink(S, seat, BotLevel, legal);

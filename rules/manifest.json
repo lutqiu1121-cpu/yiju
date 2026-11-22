@@ -152,6 +152,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -401,6 +409,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -632,6 +648,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -866,6 +890,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -1131,6 +1163,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -1399,6 +1439,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -1680,6 +1728,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -1927,6 +1983,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -2178,6 +2242,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -2425,6 +2497,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -2679,6 +2759,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -2911,6 +2999,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -3167,6 +3263,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -3399,6 +3503,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -3660,6 +3772,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -3891,6 +4011,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -4126,6 +4254,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -4358,6 +4494,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -4613,6 +4757,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -4863,6 +5015,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -5118,6 +5278,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -5370,6 +5538,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -5613,6 +5789,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -5859,6 +6043,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -6101,6 +6293,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -6347,6 +6547,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -6591,6 +6799,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -6831,6 +7047,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -7088,6 +7312,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -7358,6 +7590,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -7619,6 +7859,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -7861,6 +8109,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -8106,6 +8362,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -8364,6 +8628,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -8606,6 +8878,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -8852,6 +9132,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -9095,6 +9383,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -9350,6 +9646,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -9603,6 +9907,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -9850,6 +10162,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -10084,6 +10404,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -10315,6 +10643,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -10561,6 +10897,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -10805,6 +11149,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -11100,6 +11452,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -11343,6 +11703,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -11601,6 +11969,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -11855,6 +12231,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -12113,6 +12497,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -12355,6 +12747,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -12618,6 +13018,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -12862,6 +13270,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -13168,6 +13584,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -13551,6 +13975,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -13797,6 +14229,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -14047,6 +14487,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -14293,6 +14741,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",
@@ -14543,6 +14999,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -14791,6 +15255,14 @@
           "hint": ""
         },
         {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
+        },
+        {
           "key": "botLevel",
           "label": "隐士棋力",
           "type": "select",
@@ -15037,6 +15509,14 @@
           "group": "局仪",
           "def": true,
           "hint": ""
+        },
+        {
+          "key": "godMode",
+          "label": "神的领域 · 叩问三尊",
+          "type": "toggle",
+          "group": "局仪",
+          "def": false,
+          "hint": "须此局段位先至「弈圣」，方得叩域"
         },
         {
           "key": "botLevel",

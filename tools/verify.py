@@ -436,7 +436,7 @@ SKIP = {".git", "publish", ".probe", "obj", "bin", "build", ".gradle", "assets"}
 all_raw = sum(p.stat().st_size for p in ROOT.rglob("*")
               if p.is_file() and not (set(p.relative_to(ROOT).parts) & SKIP)
               and not p.name.startswith("yiju-") and p.suffix not in {".bundle", ".apk"})
-check(raw < 200 * 1024, "客户端原始 < 200 KiB（%.1f KiB）" % (raw / 1024))
+check(raw < 224 * 1024, "客户端原始 < 224 KiB（%.1f KiB，含全玩法华彩与制本）" % (raw / 1024))
 check(gz < 90 * 1024, "客户端 gzip < 90 KiB（%.1f KiB）" % (gz / 1024))
 
 print("=" * 52)
@@ -494,6 +494,34 @@ check("SeatOrder" in orig and "TieBreak" in orig and "_r2" in orig and
       "七局原创小戏含轮换结算、同分决胜与独立随机流")
 check("七局原创小戏" in readme2 and "候漏" in readme2 and "听雨" in readme2,
       "README 清单与教程已同步七局")
+
+
+acc3 = (ROOT / "server/Core/Accounts.cs").read_text(encoding="utf-8")
+hub3 = (ROOT / "server/Core/Hub.cs").read_text(encoding="utf-8")
+room3 = (ROOT / "server/Core/Room.cs").read_text(encoding="utf-8")
+rule3 = (ROOT / "server/Rules/IGameRule.cs").read_text(encoding="utf-8")
+app3 = (ROOT / "client/app.js").read_text(encoding="utf-8")
+css3 = (ROOT / "client/app.css").read_text(encoding="utf-8")
+fx3 = (ROOT / "client/fx.js").read_text(encoding="utf-8")
+sw3 = (ROOT / "client/sw.js").read_text(encoding="utf-8")
+check("GOD_NAMES" in acc3 and "弈神" in acc3 and "玄弈神" in acc3 and "太玄弈神" in acc3,
+      "神域三尊与逐字加前缀的神衔")
+games3 = json.loads((ROOT / "rules/manifest.json").read_text(encoding="utf-8"))["games"]
+check(sum(1 for g in games3 if any(o["key"] == "godMode" for o in g.get("options", []))) == 60,
+      "60 局皆设神的领域开关")
+check("idx < 6" in acc3 and "800 - pts" in acc3 and "GodGate" in hub3,
+      "叩域硬前提为此局至弈圣，且由棋馆校验")
+check("rb.GodPick(S, seat, GodTier, legal)" in room3 and "GodRollout" in rule3 and "GodPeek" in rule3,
+      "三尊走全知深搜与终局推演")
+check("Fx.observe" in app3 and "Fx" in app3 and "fx.js" in app3.lower(),
+      "卷面华彩接入全部玩法的每帧渲染")
+check("yj-sheen" in css3 and "fx-off" in css3 and "[data-fx" in css3,
+      "华丽界面动效与一键减动效")
+check('"fx_liuying"' in acc3 and 'kinds = { desk' in app3 and "fx:'华彩'" in app3,
+      "四件华彩可购可配戴")
+check("/fx.js" in sw3 and "yiju-v2" in sw3, "离线缓存收录华彩层")
+check("godInfo" in app3 and "renderGodPanel" in app3 and "godPanel" in (ROOT / "client/index.html").read_text(encoding="utf-8"),
+      "设席可见逐玩法叩域进度")
 
 print("静态自检： %d 通过 / %d 失败" % (len(ok), len(err)))
 for m in err: print("  FAIL  " + m)

@@ -68,7 +68,7 @@
    gh release create v1.0.0 \
      yiju.apk \
      --title "弈局 yiju v1.0.0" \
-     --notes "同源联机的简约手绘棋牌馆 · 60 个玩法（含七局纯原创小戏）+ 折狱录制本器 + 弈株妆奁 + 隐士十阶。房主运行源码包里的 server：dotnet publish/server/qipai-server.dll → http://localhost:5080（需 .NET 8 Runtime）；APK 首启选一个棋馆或填主机局域网地址即可联机。源码公开 · 禁止商用，源码包与 LICENSE 随仓库提供。"
+     --notes "同源联机的简约手绘棋牌馆 · 60 个玩法（含七局纯原创小戏）+ 折狱录制本器 + 弈株妆奁 + 卷面华彩 + 隐士十阶 + 神的领域三尊。房主运行源码包里的 server：dotnet publish/server/qipai-server.dll → http://localhost:5080（需 .NET 8 Runtime）；APK 首启选一个棋馆或填主机局域网地址即可联机。源码公开 · 禁止商用，源码包与 LICENSE 随仓库提供。"
    ```
    只传 `yiju.apk` 一个文件，**不要**把 `yiju-release.zip` / `yiju-source.zip` / `SIZES.txt` 传上去。源码、剧本库、目录适配器都由仓库本身分发。
    `--title` 和 `--notes` 逐字照抄，不要改写、不要翻译、不要自己总结项目内容。

@@ -63,6 +63,8 @@ namespace Qipai
             a.Add(T("allowDraw", "允许请和", true, "局仪"));
             a.Add(T("spectatorChat", "旁观者可留语", false, "局仪"));
             a.Add(T("spectators", "开放旁观", true, "局仪"));
+            a.Add(T("godMode", "神的领域 · 叩问三尊", false, "局仪",
+                "须此局段位先至「弈圣」，方得叩域"));
             a.Add(S("botLevel", "隐士棋力", "0", "局仪",
                 new string[] { "0|随性 · 信手", "1|试探 · 略识", "2|进取 · 争先",
                     "3|老成 · 择要", "4|谋势 · 深算", "5|精算 · 无漏", "6|通玄 · 坐照",
@@ -230,6 +232,7 @@ namespace Qipai
         public string Timeout = "auto";
         public bool AllowUndo = true, AllowDraw = true, SpectatorChat = false, AllowSpectators = true;
         public int BotLevel = 0;
+        public bool GodMode = false;
         public string RankMode = "none";
         public int RankRate = 50;
         public readonly Dictionary<string, long> Phase = new Dictionary<string, long>();
@@ -279,6 +282,7 @@ namespace Qipai
             o.SpectatorChat = AsBool(Get(src, m, "spectatorChat"), false);
             o.AllowSpectators = AsBool(Get(src, m, "spectators"), true);
             o.BotLevel = (int)ClampLong(Get(src, m, "botLevel"), 0, 0, 9);
+            o.GodMode = AsBool(Get(src, m, "godMode"), false);
             o.RankMode = AsStr(Get(src, m, "rankMode"), "none", new string[] { "none", "hall", "local" });
             o.RankRate = (int)ClampLong(Get(src, m, "rankRate"), 50, 0, 100);
             o.MaxTurns = (int)ClampLong(Get(src, m, "maxTurns"), 0, 0, 2000);
@@ -330,7 +334,7 @@ namespace Qipai
             d["clock"] = ClockMs; d["firstClock"] = FirstMs; d["bankMs"] = BankMs;
             d["incrMs"] = IncrMs; d["timeout"] = Timeout;
             d["allowUndo"] = AllowUndo; d["allowDraw"] = AllowDraw;
-            d["botLevel"] = BotLevel;
+            d["botLevel"] = BotLevel; d["godMode"] = GodMode;
             d["maxTurns"] = MaxTurns; d["ruleNote"] = RuleNote;
             foreach (KeyValuePair<string, long> kv in Phase) d["ph_" + kv.Key] = kv.Value;
             return d;
@@ -340,7 +344,7 @@ namespace Qipai
             Dictionary<string, object> d = new Dictionary<string, object>();
             d["clock"] = ClockMs; d["timeout"] = Timeout; d["allowUndo"] = AllowUndo;
             d["allowDraw"] = AllowDraw; d["spectatorChat"] = SpectatorChat;
-            d["bankMs"] = BankMs; d["incrMs"] = IncrMs; d["botLevel"] = BotLevel;
+            d["bankMs"] = BankMs; d["incrMs"] = IncrMs; d["botLevel"] = BotLevel; d["godMode"] = GodMode;
             d["maxTurns"] = MaxTurns; d["ruleNote"] = RuleNote; d["seedOffset"] = SeedOffset;
             Dictionary<string, object> ph = new Dictionary<string, object>();
             foreach (KeyValuePair<string, long> kv in Phase) ph[kv.Key] = kv.Value;

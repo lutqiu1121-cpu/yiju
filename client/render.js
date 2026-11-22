@@ -836,7 +836,6 @@ export function sparkline(svg, values, opts) {
     pts.map(p => `<circle class="pt" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6"/>`).join('');
 }
 
-
 function yjCard(c, info) {
   if (!c || c.length < 6) return '空简';
   const y = +c[1], f = +c[3], m = +c[5];

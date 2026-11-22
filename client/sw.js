@@ -1,7 +1,7 @@
 
-const CACHE = 'yiju-v1';
+const CACHE = 'yiju-v2';
 const FILES = [
-  '/', '/index.html', '/app.css', '/app.js', '/net.js', '/render.js', '/audio.js',
+  '/', '/index.html', '/app.css', '/app.js', '/net.js', '/render.js', '/audio.js', '/fx.js',
   '/icon.svg', '/manifest.webmanifest', '/rules/manifest.json', '/rules/vectors.json', '/themes/themes.json'
 ];
 self.addEventListener('install', (e) => {
