@@ -2,9 +2,11 @@ import { Net } from './net.js';
 import { Sound } from './audio.js';
 import * as R from './render.js';
 import { Fx } from './fx.js';
+import { Settings, GROUPS, DEFAULTS } from './settings.js';
+import { applyWear, WEAR_LIST, WEAR_KINDS, WEAR_RARITY, WEAR_SETS } from './wear.js';
 
 const $ = (s) => document.querySelector(s);
-function tap() { if (navigator.vibrate) navigator.vibrate(8); }
+function tap() { if (Settings.get('haptic') && navigator.vibrate) navigator.vibrate(8); }
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
 const lsGet = (k, d) => { try { const v = localStorage['getItem'](k); return v === null ? (d === undefined ? null : d) : v; } catch (e) { return d === undefined ? null : d; } };
@@ -104,40 +106,49 @@ function rankIdxOf(game) {
   return 0;
 }
 
-async function boot() {
-  try {
-    const [m, t] = await Promise.all([
-      fetch('./rules/manifest.json').then(r => r.ok ? r.json() : Promise.reject()),
-      fetch('./themes/themes.json').then(r => r.ok ? r.json() : Promise.reject())
-    ]);
-    S.manifest = m; S.themes = t;
-    S.games = m.games || []; S.cats = m.categories || [];
-  } catch (e) {
-
-    try {
-      const [m, t] = await Promise.all([
-        fetch('/rules/manifest.json').then(r => r.json()), fetch('/themes/themes.json').then(r => r.json())
-      ]);
-      S.manifest = m; S.themes = t; S.games = m.games || []; S.cats = m.categories || [];
-    } catch (e2) {
-      toast('玩法册未至，请检视卷帙');
-      S.games = []; S.themes = { themes: [], sliders: [] };
-    }
-  }
-  applyTheme(S.themeId);
-  renderThemeGrid(); renderSliders(); renderCats(); renderGames(); renderRooms(); renderQuick();
-  updateToday(); updateStats();
-  bindUI(); bindExtraUI();
-  S.net = new Net(onFrame, onStatus);
-  S.net.connect();
-
-  setTimeout(() => {
-    if (!S.net.custom && location.protocol === 'file:') openHallPicker(true);
-    else if (!S.guideShown) openGuide();
-  }, 500);
-  window.addEventListener('resize', debounce(() => renderPlay(), 120));
-  window.addEventListener('orientationchange', () => setTimeout(() => renderPlay(), 220));
+function boot() {
+  const offline = () => {
+    const o = window.__YJ_OFFLINE__;
+    if (!o || !o.games) return false;
+    S.games = o.games; S.cats = o.categories || [];
+    S.themes = { themes: o.themes || [], sliders: o.sliders || [] };
+    S.offlineAssets = true;
+    return true;
+  };
+  Promise.all([
+    fetch('./rules/manifest.json').then(r => r.ok ? r.json() : Promise.reject()),
+    fetch('./themes/themes.json').then(r => r.ok ? r.json() : Promise.reject())
+  ]).then(([m, t]) => {
+    S.manifest = m; S.themes = t; S.games = m.games || []; S.cats = m.categories || [];
+  }).catch(() => Promise.all([
+    fetch('/rules/manifest.json').then(r => r.json()),
+    fetch('/themes/themes.json').then(r => r.json())
+  ]).then(([m, t]) => {
+    S.manifest = m; S.themes = t; S.games = m.games || []; S.cats = m.categories || [];
+  }).catch(() => { if (!offline()) toast('玩法册未至，请检视卷帙'); })
+  ).then(() => {
+    if (!S.games.length) offline();
+    Settings.apply();
+    try { applyWear(store('qipai.worn', {})); } catch (e) {}
+    applyTheme(S.themeId);
+    renderThemeGrid(); renderSliders(); renderCats(); renderGames(); renderRooms(); renderQuick();
+    renderSettings(); renderShop(); renderNotice();
+    installSendGate(); installLifecycle(); applyAccessibility();
+    updateToday(); updateStats();
+    bindUI(); bindExtraUI();
+    const su = Settings.get('serverUrl');
+    if (su && !lsGet('qipai.url')) lsSet('qipai.url', su);
+    S.net = new Net(onFrame, onStatus);
+    S.net.connect();
+    setTimeout(() => {
+      if (!S.guideShown) openGuide();
+      else if (S.conn !== 'online' && Settings.get('offlineNotice')) showOfflineHint();
+    }, 600);
+    window.addEventListener('resize', debounce(() => renderPlay(), 120));
+    window.addEventListener('orientationchange', () => setTimeout(() => renderPlay(), 220));
+  });
 }
+
 boot();
 
 function rgbaAlpha(rgba, a) {
@@ -288,6 +299,7 @@ function onFrame(m) {
       renderGodPanel(); break;
     case 'shopState':
       S.shop = { items: m.items || [], yizhu: m.yizhu || 0, owned: m.owned || [], worn: m.worn || {} };
+      save('qipai.worn', S.shop.worn); S.shopTry = null;
       renderShop(); applyWorn(); renderAccountCard();
       if (m.note) toast(m.note);
       break;
@@ -329,6 +341,7 @@ function onFrame(m) {
       lsSet('qipai.room', m.room);
       $('#lastRoomLine').textContent = `上回雅集：${m.room} · 第 ${m.seat >= 0 ? m.seat : '旁观'} 席`;
       go('play'); toast(m.matched ? '寻局得人，开枰' : (m.spectating ? '入席旁观' : `赴局 ${m.room}`));
+      if (Settings.get('autoReady') && !m.spectating && S.net) S.net.send({ t:'act', a:'ready' });
       break;
     case 'state':
       S.view = m.view; S.presence = m.presence || []; S.meta = m.meta || S.meta;
@@ -430,10 +443,21 @@ function renderPlayNow() {
   $('#matchMeta').textContent = `${(S.meta && S.meta.id) || v.room || ''} · ${v.phaseName} · 第 ${v.moveNo} 手` +
     (S.meta && S.meta.bots ? ` · 隐士 ${S.meta.bots} 位` : '') +
     (S.meta && S.meta.god ? ` · 神域 · ${S.meta.godName || '青冥'}` : '');
+  const sig = [v.seq, v.phase, v.moveNo, v.ended, S.you, S.chat.length,
+    (S.chat[S.chat.length - 1] || {}).text || '', (S.presence || []).map(p => p && p.name).join(','),
+    ((v.hands && v.hands[S.you]) || []).join(','), (v.cells || []).length, v.last || '',
+    S.selected.size, S.selFrom, S.meta && S.meta.seq, S.meta && S.meta.bots].join('|');
+  if (sig === S._lastSig && !S.predict && !S._forceRender) return;
+  S._lastSig = sig; S._forceRender = false;
+  if (v.ended && !S._autoSaved && Settings.get('autoReplaySave')) {
+    S._autoSaved = true;
+    save('qipai.lastReplay', { game: v.game, variant: v.variant, seq: v.seq, moveNo: v.moveNo, at: Date.now() });
+  }
+  if (!v.ended) S._autoSaved = false;
   const canvas = $('#board');
   Fx.observe(S._fxPrev, drawV, canvas);
   S._fxPrev = drawV ? { seq:drawV.seq, moveNo:drawV.moveNo, phase:drawV.phase, ended:drawV.ended,
-    winner:drawV.winner, cells:(drawV.cells||[]).slice(), hands:drawV.hands, w:drawV.w, h:drawV.h } : null;
+    winner:drawV.winner, cells:drawV.cells, hands:drawV.hands, w:drawV.w, h:drawV.h } : null;
   R.drawBoard(canvas, drawV, handleCell);
   R.renderHand($('#handRow'), v, S.selected);
   bindHand();
@@ -445,8 +469,9 @@ function renderPlayNow() {
   const n = (v.legal || []).length;
   const party = v.renderer === 'party' || v.renderer === 'path';
   const waitText = party ? (v.phaseName || '等待其他人行动') : `等待座位 ${v.turn} 行动`;
+  const hintsOn = Settings.get('showHints');
   hint.textContent = v.ended ? '此局已终 · 可覆局或再开一枰' : (S.you < 0 ? '旁观中 · 可观不可落' :
-    (canAct(v) ? `轮到你 · ${n} 个可点位置` : waitText)) +
+    (canAct(v) ? (hintsOn ? `轮到你 · ${n} 个可点位置` : '轮到你') : waitText)) +
     (S.selected.size ? ` · 已选 ${S.selected.size} 张` : '') + (S.selFrom != null ? ' · 再点目标格' : '');
 }
 function renderSeats() {
@@ -454,7 +479,8 @@ function renderSeats() {
   el.innerHTML = (S.presence || []).map((p, i) =>
     `<div class="seat ${p.online ? 'on' : ''} ${S.view && S.view.turn === i ? 'turn' : ''}">
       <b>${String(i).padStart(2,'0')}</b><i class="dot"></i><span>${p.empty ? (p.sealed ? '已封盘' : '虚席') : p.name || '访客'}</span>
-      <small>${p.bot ? '隐士陪玩' : p.empty ? (p.sealed ? '已封盘' : '虚席') : p.ready ? '已整襟' : p.online ? '在席' : '离席'}</small></div>`).join('');
+      <small>${p.bot ? '隐士陪玩' : p.empty ? (p.sealed ? '已封盘' : '虚席') : p.ready ? '已整襟' : p.online ? '在席' : '离席'}${
+        (Settings.get('showFoeCount') && S.view && S.view.hands && S.view.hands[i] && i !== S.you) ? ' · 余 ' + S.view.hands[i].length : ''}</small></div>`).join('');
 }
 function renderStatus() {
   const v = S.view; if (!v) return;
@@ -577,6 +603,11 @@ function chipLabel(c) {
 }
 
 function handleCell(i) {
+  if (Settings.get('longPressConfirm')) {
+    const c = $('#board');
+    if (c && c.dataset.longPressArmed !== '1') { toast('长按片刻再落子'); return; }
+    if (c) delete c.dataset.longPressArmed;
+  }
   const v = S.predict || S.view; if (!v) return;
   const legal = v.legal || [];
   if (S.selFrom != null) {
@@ -612,6 +643,15 @@ function bindHand() {
   });
 }
 function sendCode(code) {
+  if (!S.net || !code) return;
+  if ((code === 'resign' || code === 'undo') && Settings.get(code === 'resign' ? 'confirmResign' : 'confirmUndo')) {
+    askDanger(code === 'resign' ? '投子认负？' : '乞复一着？', () => sendCodeRaw(code));
+    return;
+  }
+  if (S.view && S.view.ended) { toast('对局已结束'); return; }
+  sendCodeRaw(code);
+}
+function sendCodeRaw(code) {
   if (!S.net || !code) return;
   if (S.view && S.view.ended) { toast('对局已结束'); return; }
   S.predict = S.net.predict(S.view, code);
@@ -697,6 +737,13 @@ function askServerUrl(first) {
 }
 
 function optFieldHtml(o) {
+  const PREF = {
+    botLevel: () => String(Settings.get('defaultBot')),
+    clock: () => Number(Settings.get('defaultClock')) * 1000,
+    timeout: () => Settings.get('defaultTimeout'),
+    spectatorChat: () => Settings.get('spectatorChat')
+  };
+  if (PREF[o.key]) o = Object.assign({}, o, { def: PREF[o.key]() });
   const k = escapeHtml(o.key), l = escapeHtml(o.label);
   if (o.type === 'toggle') return `<label class="check"><input type="checkbox" data-opt="${k}" ${o.def ? 'checked' : ''}> ${l}</label>`;
   if (o.type === 'select') {
@@ -1579,3 +1626,369 @@ function downloadSave(data, name) {
     toast('密谱已携出，口令请自收好');
   } catch (e) { toast('导出失败'); }
 }
+
+renderAll = function () {
+  renderPlay();
+  if (S.screen === 'rooms' || S._roomsDirty) { renderRooms(); renderMyRoom(); S._roomsDirty = false; }
+  if (S.screen === 'today' || S._todayDirty) { updateToday(); S._todayDirty = false; }
+};
+
+onStatus = function (s) {
+  S.conn = s;
+  const el = $('#conn');
+  if (el) {
+    el.className = 'conn' + (s === 'online' ? '' : ' off');
+    const sp = el.querySelector('span');
+    if (sp) sp.textContent = s === 'online' ? '已联机' : s === 'connecting' ? '连接中' :
+      s === 'need-url' ? '待填地址' : '本机自弈 · 未连棋馆';
+    el.onclick = (s === 'need-url') ? () => askServerUrl(false) : null;
+  }
+  const bar = $('#offlineBar');
+  if (bar) {
+    const off = s !== 'online' && Settings.get('offlineNotice');
+    bar.hidden = !off;
+    if (off) bar.innerHTML = '<span class="ob-mark">◈</span><span>本机自弈：玩法册、纸色、设置、妆奁、战绩与制本皆可用；开枰只需本机棋馆，不需外网。</span><button class="btn ghost small" id="obFix">连棋馆</button>';
+    const b = $('#obFix'); if (b) b.onclick = () => askServerUrl(false);
+  }
+};
+
+renderSliders = function () {
+  const el = $('#sliders'); if (!el) return;
+  el.innerHTML = (S.themes.sliders || []).map(sl =>
+    `<div class="slider"><label>${sl.name}<b id="sv-${sl.id}">${S.sliders[sl.id] ?? sl.default}</b></label>
+      <input type="range" min="${sl.min}" max="${sl.max}" value="${S.sliders[sl.id] ?? sl.default}" data-slider="${sl.id}"></div>`).join('');
+  el.querySelectorAll('input[data-slider]').forEach(inp => inp.oninput = () => {
+    S.sliders[inp.dataset.slider] = +inp.value;
+    const b = $('#sv-' + inp.dataset.slider); if (b) b.textContent = inp.value;
+    save('qipai.sliders', S.sliders);
+    if (inp.dataset.slider === 'motion') Settings.set('fxLevel', +inp.value);
+    applyTheme(S.themeId); renderPlay();
+  });
+};
+
+function escapeAttr(v) { return escapeHtml(String(v ?? '')); }
+function settingsLabel(v) {
+  if (typeof v === 'boolean') return v ? '启' : '停';
+  if (typeof v === 'number') return String(v);
+  return escapeHtml(String(v ?? ''));
+}
+function renderSettings() {
+  const el = $('#settingsPanel'); if (!el) return;
+  let h = '';
+  GROUPS.forEach(g => {
+    h += `<section class="set-group"><div class="set-h"><span class="set-icon">${g.icon}</span><b>${g.name}</b><small>${g.items.length} 项</small></div><div class="set-body">`;
+    g.items.forEach(it => {
+      const v = Settings.get(it.key);
+      let ctl = '';
+      if (it.type === 'toggle') ctl = `<button class="toggle ${v ? 'on' : ''}" data-set-toggle="${it.key}">${v ? '启' : '停'}</button>`;
+      else if (it.type === 'range') ctl = `<div class="set-range"><input type="range" min="${it.min}" max="${it.max}" step="${it.step || 1}" value="${v}" data-set-range="${it.key}"><b data-set-val="${it.key}">${settingsLabel(v)}</b></div>`;
+      else if (it.type === 'select') ctl = `<select class="set-select" data-set-select="${it.key}">${it.options.map((o, ix) => { const val = it.values ? it.values[ix] : o; return `<option value="${escapeAttr(val)}" ${String(val) === String(v) ? 'selected' : ''}>${escapeAttr(o)}</option>`; }).join('')}</select>`;
+      else if (it.type === 'text') ctl = `<input class="set-text" data-set-text="${it.key}" value="${escapeAttr(v)}" placeholder="留空自动试 127.0.0.1">`;
+      else ctl = `<button class="btn ghost small ${it.danger ? 'danger' : ''}" data-set-action="${it.key}">${it.danger ? '删除' : '打开'}</button>`;
+      h += `<div class="set-row ${it.danger ? 'danger' : ''}"><div class="set-name">${escapeHtml(it.name)}${it.hint ? `<small>${escapeHtml(it.hint)}</small>` : ''}</div><div class="set-ctl">${ctl}</div></div>`;
+    });
+    h += '</div></section>';
+  });
+  h += '<div class="btn-row"><button class="btn ghost small" id="setReset">复旧 · 全部归默认值</button><button class="btn ghost small" id="setExport">导出偏好</button></div>';
+  h += '<div id="noticeCard" class="notice-card"></div>';
+  el.innerHTML = h;
+  el.querySelectorAll('[data-set-toggle]').forEach(b => b.onclick = () => {
+    const k = b.dataset.setToggle; Settings.set(k, !Settings.get(k)); renderSettings(); renderShop();
+  });
+  el.querySelectorAll('[data-set-range]').forEach(inp => inp.oninput = () => {
+    const k = inp.dataset.setRange, v = +inp.value; Settings.set(k, v);
+    const b = el.querySelector(`[data-set-val="${k}"]`); if (b) b.textContent = String(v);
+    if (k === 'fxLevel') { S.sliders.motion = v; save('qipai.sliders', S.sliders); renderSliders(); }
+    renderPlay();
+  });
+  el.querySelectorAll('[data-set-select]').forEach(sel => sel.onchange = () => {
+    Settings.set(sel.dataset.setSelect, isNaN(+sel.value) || sel.value === '' ? sel.value : +sel.value);
+    renderSettings();
+  });
+  el.querySelectorAll('[data-set-text]').forEach(inp => inp.onchange = () => {
+    const k = inp.dataset.setText;
+    if (k === 'serverUrl') { S.net.setUrl(inp.value.trim()); Settings.set(k, inp.value.trim()); }
+    else Settings.set(k, inp.value.trim());
+  });
+  el.querySelectorAll('[data-set-action]').forEach(b => b.onclick = () => settingsAction(b.dataset.setAction));
+  const r = $('#setReset'); if (r) r.onclick = () => askDanger('设置复旧？', () => { Settings.reset(); renderSettings(); renderShop(); toast('已复旧'); });
+  const ex = $('#setExport'); if (ex) ex.onclick = () => {
+    downloadText('yiju-偏好.json', JSON.stringify(Settings.all, null, 2)); toast('偏好已导出');
+  };
+  renderNotice();
+}
+
+function downloadText(name, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
+  a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function askDanger(title, onYes) {
+  modal(title, `<p>此举只作用于本机与本馆数据，确认后不可复原。</p>
+    <button class="btn primary" id="dYes">确认</button><button class="btn" id="dNo">容后再议</button>`, null);
+  const y = $('#dYes'), n = $('#dNo');
+  if (y) y.onclick = () => { closeModal(); onYes(); };
+  if (n) n.onclick = closeModal;
+}
+const YJ_NOTICE = '本项目为开源技术分享，不提供官方游戏服务，不构成面向公众的网络游戏运营。游戏核心体验可完全离线进行。任何使用者自行部署、分发或商业化所产生的合规责任（包括但不限于版号、实名制、个人信息保护），由使用者自行承担。';
+function renderNotice() {
+  const el = $('#noticeCard');
+  if (el) el.innerHTML = `<div class="notice-seal">告</div><div class="notice-txt"><b>技术与合规声明</b><p>${YJ_NOTICE}</p>
+    <small>源码以 PolyForm Noncommercial 1.0.0 公开，禁止商用；本页与「案牍 · 设置」同文，可随时复阅。</small></div>`;
+  const foot = $('#appFooter');
+  if (foot) foot.innerHTML = `<span>弈局 · 源码公开 · 禁止商用</span><button class="link" id="footNotice">技术与合规声明</button>`;
+  const f = $('#footNotice'); if (f) f.onclick = openNotice;
+}
+function openNotice() {
+  modal('技术与合规声明', `<div class="notice-full"><p>${YJ_NOTICE}</p>
+    <p>棋馆是使用者自行在本机运行的本地程序，名录、校时、公共榜单均为可关闭的外部可选项；不联网时，本机棋馆与局域网联机的全部功能照常可用。项目不收集、不上传个人信息，也不提供任何官方在线服务。</p>
+    <p>许可：PolyForm Noncommercial 1.0.0 · 源码公开、可改可分发，禁止任何商用。</p></div>
+    <button class="btn primary" id="noticeOk">领了</button>`, null);
+  const b = $('#noticeOk'); if (b) b.onclick = closeModal;
+}
+function settingsAction(k) {
+  if (k === 'notice') { openNotice(); return; }
+  if (k === 'license') { modal('源码公开 · 禁止商用', `<div class="notice-full"><p>PolyForm Noncommercial 1.0.0</p><p>源码照常公开、可阅读、可修改、可分发；任何商业用途须另取书面许可。按 OSI 开源定义，此类限制不属于 OSI 认证开源，故全站称「源码公开」而非「开源软件」。</p></div><button class="btn primary" id="licOk">领了</button>`, null); const b = $('#licOk'); if (b) b.onclick = closeModal; return; }
+  if (k === 'diagnostics') {
+    modal('本机诊断', `<div class="notice-full"><p>连接：${S.conn} · ${S.net && S.net.custom ? escapeHtml(S.net.custom) : '本机回环 / 同源'}</p>
+      <p>玩法册：${S.games.length} 局 ${S.offlineAssets ? '（离线内嵌册）' : '（棋馆下发）'}</p>
+      <p>画质：${Settings.get('quality')} · 清晰倍率 ${Settings.get('dpr')} · 华彩 ${Settings.get('fxLevel')}</p>
+      <p>妆奁：${WEAR_LIST.length} 件可购 · 题名 ${S.account && S.account.ok ? '已入席' : '未题名'}</p>
+      <p>外部服务：名录 ${Settings.get('externalDir') ? '开' : '关'} · 校时 ${Settings.get('externalTime') ? '开' : '关'} · 榜单 ${Settings.get('externalBoards') ? '开' : '关'}</p>
+      <p>本机数据：账号与加密存档仅存于房主棋馆的 data/；页面不上传个人信息。</p></div>
+      <button class="btn primary" id="diagOk">领了</button>`, null);
+    const b = $('#diagOk'); if (b) b.onclick = closeModal; return;
+  }
+  if (k === 'clearCache') { askDanger('清除本机页面缓存？', () => {
+    ['qipai.worn','qipai.theme','qipai.sliders','qipai.history','qipai.guideSeen'].forEach(x => { try { localStorage.removeItem(x); } catch (e) {} });
+    toast('本机缓存已清，加密存档未动'); setTimeout(() => location.reload(), 700);
+  }); return; }
+  if (k === 'clearLocalStats') { askDanger('清空本馆本机榜？', () => {
+    if (!S.net) return; S.net.send({ t: 'clearLocalStats' }); toast('已请棋馆清空本机榜');
+  }); return; }
+  if (k === 'changePassword') { modal('更换口令', `<div class="field"><label>旧口令</label><input id="pwOld" type="password" class="url-input"></div>
+    <div class="field"><label>新口令（8–64 字）</label><input id="pwNew" type="password" class="url-input"></div>
+    <button class="btn primary" id="pwOk">更</button>`, null);
+    const b = $('#pwOk'); if (b) b.onclick = () => {
+      S.net.send({ t: 'accountPassword', old: $('#pwOld').value, password: $('#pwNew').value });
+      closeModal();
+    }; return; }
+  if (k === 'deleteAccount') { modal('删除本馆账号', `<p>连加密存档、段位、妆奁一并删去，不可复原。请先「携谱」备份。</p>
+    <div class="field"><label>口令核验</label><input id="delPass" type="password" class="url-input"></div>
+    <button class="btn danger" id="delOk">确认删除</button>`, null);
+    const b = $('#delOk'); if (b) b.onclick = () => {
+      S.net.send({ t: 'accountDelete', password: $('#delPass').value }); closeModal();
+    }; return; }
+}
+
+function isCellular() {
+  const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!c) return false;
+  return /cellular|2g|3g|4g|5g/i.test(String(c.type || '') + ' ' + String(c.effectiveType || ''));
+}
+function installSendGate() {
+  const ext = { halls: 'externalDir', hallDir: 'externalDir', boards: 'externalBoards', season: 'externalTime', seasonCheck: 'externalTime' };
+  window.__YJ_SEND_GATE__ = (m) => {
+    const key = ext[m && m.t];
+    if (!key) return true;
+    if (!Settings.get(key)) return false;
+    if (Settings.get('wifiOnly') && isCellular()) return false;
+    return true;
+  };
+}
+function applyAccessibility() {
+  const s = Settings.all, b = document.body;
+  b.dataset.largeTap = s.largeTap ? '1' : '';
+  b.dataset.oneHand = s.oneHand ? '1' : '';
+  b.dataset.reduceFlash = s.reduceFlash ? '1' : '';
+  b.dataset.screenReader = s.screenReader ? '1' : '';
+  const cv = $('#board');
+  if (cv && s.screenReader && S.view) cv.setAttribute('aria-label',
+    (gameName(S.view.game) || '对局') + ' · 第 ' + S.view.moveNo + ' 手 · ' + (S.view.phaseName || '对局中'));
+}
+function installLifecycle() {
+  let logoutTimer = null, wake = null;
+  const arm = () => {
+    clearTimeout(logoutTimer);
+    const v = Settings.get('autoLogout');
+    const ms = v === '5分' ? 300000 : v === '30分' ? 1800000 : 0;
+    if (ms) logoutTimer = setTimeout(() => {
+      if (S.net) S.net.send({ t: 'accountLogout' });
+      toast('久未操作，已自动离席');
+    }, ms);
+  };
+  ['click', 'keydown', 'touchstart'].forEach(e => document.addEventListener(e, arm, { passive: true }));
+  arm();
+  document.addEventListener('visibilitychange', () => {
+    const lock = $('#privacyLock');
+    if (document.hidden && Settings.get('lockOnHide') && lock) lock.hidden = false;
+    else if (lock) lock.hidden = true;
+    if (document.hidden) { clearTimeout(logoutTimer); if (wake) { try { wake.release(); } catch (e) {} wake = null; } }
+    else { arm(); applyWakeLock(); }
+  });
+  async function applyWakeLock() {
+    if (!Settings.get('keepAwake') || S.screen !== 'play' || !('wakeLock' in navigator)) return;
+    try { wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+  Settings.subscribe((k) => { if (k === 'keepAwake') applyWakeLock(); applyAccessibility(); });
+  window.addEventListener('pagehide', () => {
+    if (Settings.get('clearOnExit')) {
+      ['qipai.worn', 'qipai.history'].forEach(x => { try { localStorage.removeItem(x); } catch (e) {} });
+    }
+  });
+}
+function showOfflineHint() {
+  if (!Settings.get('offlineNotice')) return;
+  toast('未连棋馆：本机自弈可用，开枰请起本机棋馆（不需要外网）');
+}
+
+renderShop = function () {
+  const grid = $('#shopGrid'); if (!grid) return;
+  const sh = S.shop || { items: WEAR_LIST, yizhu: 0, owned: [], worn: store('qipai.worn', {}) };
+  const items = (sh.items && sh.items.length) ? sh.items : WEAR_LIST;
+  const owned = (sh.owned || []).map(String);
+  const worn = sh.worn || {};
+  const bal = $('#shopBalance'); if (bal) bal.textContent = (sh.yizhu || 0) + ' 枚';
+  const tab = S.shopTab || 'all', filter = S.shopFilter || 'all', q = (S.shopQuery || '').trim();
+  const kinds = Object.keys(WEAR_KINDS);
+  const tools = $('#shopToolbar');
+  if (tools) {
+    tools.innerHTML = `<div class="shop-tabs">` +
+      `<button class="shop-tab ${tab === 'all' ? 'on' : ''}" data-shop-tab="all">全目 · ${items.length}</button>` +
+      kinds.map(k => `<button class="shop-tab ${tab === k ? 'on' : ''}" data-shop-tab="${k}">${WEAR_KINDS[k]}</button>`).join('') +
+      `</div><div class="shop-tools"><input id="shopSearch" placeholder="搜妆奁 / 品阶 / 套系" value="${escapeAttr(q)}">` +
+      `<select id="shopFilter">${[['all','全部'],['owned','已入匣'],['buy','可购'],['miss','未得']].map(([v,n]) => `<option value="${v}" ${filter === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>` +
+      `<div class="shop-sets">${Object.keys(WEAR_SETS).map(st => {
+        const ks = items.filter(x => x.set === st).map(x => x.key);
+        const got = ks.filter(k => owned.indexOf(k) >= 0).length;
+        return `<span class="set-chip ${got === ks.length && ks.length ? 'done' : ''}">${st} ${got}/${ks.length}</span>`;
+      }).join('')}</div>` +
+      `<div class="shop-tip">共 ${items.length} 件 · 已入匣 ${owned.length} 件 · 点击可预览试穿，定妆后才写入存档；离线也能试穿，购买须连本机棋馆。</div>`;
+    tools.querySelectorAll('[data-shop-tab]').forEach(b => b.onclick = () => { S.shopTab = b.dataset.shopTab; renderShop(); });
+    const ss = $('#shopSearch'); if (ss) ss.oninput = (e) => { S.shopQuery = e.target.value; renderShop(); };
+    const sf = $('#shopFilter'); if (sf) sf.onchange = (e) => { S.shopFilter = e.target.value; renderShop(); };
+  }
+  const list = items.filter(x => {
+    if (tab !== 'all' && x.kind !== tab) return false;
+    const has = owned.indexOf(String(x.key)) >= 0;
+    if (filter === 'owned' && !has) return false;
+    if (filter === 'miss' && has) return false;
+    if (filter === 'buy' && (has || (sh.yizhu || 0) < (x.cost || 0))) return false;
+    if (q && !((x.name || '') + (x.note || '') + (x.rarity || '') + (x.set || '') + (x.key || '')).toLowerCase().includes(q.toLowerCase())) return false;
+    return true;
+  });
+  grid.innerHTML = `<button class="shop-item plain ${Object.keys(worn).length ? '' : 'on'}" data-shop-wear="素妆">素妆 · 卸下全部</button>` +
+    list.map(x => {
+      const has = owned.indexOf(String(x.key)) >= 0, on = worn[x.kind] === x.key;
+      return `<button class="shop-item ${on ? 'on' : ''} rar-${x.rarity || '常'}" data-shop-key="${escapeAttr(x.key)}">
+        <span class="si-rar">${WEAR_RARITY[x.rarity] || '常品'}</span><b>${escapeHtml(x.name)}</b>
+        <small>${escapeHtml(x.set && x.set !== '—' ? x.set : WEAR_KINDS[x.kind] || '')}</small>
+        <em>${has ? (on ? '配戴中' : '已入匣') : (x.cost + ' 株')}</em></button>`;
+    }).join('') + (list.length ? '' : '<div class="hint">此处暂无合条件的妆奁</div>');
+  grid.querySelectorAll('[data-shop-key]').forEach(b => b.onclick = () => shopPreview(b.dataset.shopKey, sh, items, owned));
+  const pw = grid.querySelector('[data-shop-wear]');
+  if (pw) pw.onclick = () => { S.shopTry = { w: {}, t: Date.now() }; applyWear({}); save('qipai.worn', {}); if (S.net) S.net.send({ t: 'shopWear', key: '', kind: 'all' }); renderShop(); toast('已卸下全部妆奁'); };
+  renderShopPreview(sh, items, owned);
+};
+
+function shopPreview(key, sh, items, owned) {
+  S.shopPreview = key;
+  renderShopPreview(sh, items, owned);
+}
+function renderShopPreview(sh, items, owned) {
+  const el = $('#shopPreview'); if (!el) return;
+  const key = S.shopPreview;
+  const it = items.find(x => x.key === key);
+  if (!it) { el.innerHTML = `<div class="sp-empty">点一件妆奁，可先看样式、再试穿。素妆亦在此处卸下。</div>`; return; }
+  const has = owned.indexOf(String(it.key)) >= 0;
+  const w = Object.assign({}, sh.worn || {}); w[it.kind] = it.key;
+  const trial = S.shopTry && S.shopTry.w && S.shopTry.w[it.kind] === it.key;
+  el.innerHTML = `<div class="sp-card rar-${it.rarity || '常'}" data-sp-kind="${it.kind}">
+    <div class="sp-swatch"><span class="sp-seal">${escapeHtml(it.name.slice(0, 1))}</span></div>
+    <div class="sp-info"><b>${escapeHtml(it.name)}</b><span class="si-rar">${WEAR_RARITY[it.rarity] || '常品'} · ${WEAR_KINDS[it.kind]}</span>
+    <p>${escapeHtml(it.note || '')}</p><small>${it.set !== '—' ? '套系 · ' + escapeHtml(it.set) : '散品'} · ${has ? '已入匣' : it.cost + ' 株'}</small></div>
+    <div class="sp-act"><button class="btn ghost small" id="spTry">试穿</button>
+    <button class="btn ghost small" id="spFix">定妆</button>
+    <button class="btn primary small" id="spBuy">${has ? '配戴' : '购并配戴'}</button></div></div>`;
+  const t = $('#spTry'); if (t) t.onclick = () => {
+    S.shopTry = { w, t: Date.now() }; applyWear(w); toast('试穿中 · 点「定妆」写入存档'); renderShopPreview(sh, items, owned);
+  };
+  const f = $('#spFix'); if (f) f.onclick = () => {
+    applyWear(w); save('qipai.worn', w);
+    if (S.net && S.conn === 'online') S.net.send({ t: 'shopWear', key: it.key, kind: it.kind });
+    else toast('离线试穿已留在本机，连馆后可定妆');
+    S.shopTry = null; renderShop(); toast('已定妆 · ' + it.name);
+  };
+  const b = $('#spBuy'); if (b) b.onclick = () => {
+    if (!has) {
+      if (S.conn !== 'online') { toast('购买须连本机棋馆；可先试穿'); return; }
+      if ((sh.yizhu || 0) < it.cost) { toast('弈株未足，尚差 ' + (it.cost - (sh.yizhu || 0)) + ' 枚'); return; }
+      askDanger('购「' + it.name + '」· ' + it.cost + ' 株？', () => S.net.send({ t: 'shopBuy', key: it.key, kind: it.kind }));
+    } else if (S.net && S.conn === 'online') S.net.send({ t: 'shopWear', key: it.key, kind: it.kind });
+    else { applyWear(w); save('qipai.worn', w); toast('已在本机配戴'); }
+  };
+}
+
+applyWorn = function () {
+  const w = (S.shop && S.shop.worn) || store('qipai.worn', {}) || {};
+  document.body.dataset.face = w.face || '';
+  document.body.dataset.seal = w.seal || '';
+  document.body.dataset.ink = w.ink || '';
+  document.body.dataset.fx = w.fx || '';
+  const cv = $('#board'); if (cv) cv.dataset.desk = w.desk || '';
+  try { applyWear(w); } catch (e) {}
+  if (window.Sound && window.Sound.profile) window.Sound.profile(Settings.all);
+};
+
+openGuide = function () {
+  modal('入门小引 · 与君同弈', `
+    <div class="guide">
+      <div class="guide-step"><b>壹 · 三种用法，服务器只是可选项</b>
+        <p><b>本机自弈（完全不联网）</b>：在本机跑棋馆程序，本页连本机回环即可。60 局、隐士陪玩、加密存档、段位、妆奁、制本、神的领域全部可用；仅「多人联机」需另有人入席。</p>
+        <p><b>局域网联机</b>：同一 WiFi 填房主棋馆地址，多人对局与房内闲谈照常，依然不需要任何外部服务器。</p>
+        <p><b>外部服务（默认开、可全关）</b>：棋馆名录、赛季校时、公共榜单。设置里逐项可关；关掉或挂了，前两种用法一点不缺。纯本机时哪怕没网，段位照常记，只标「未校天时」。</p></div>
+      <div class="guide-step"><b>贰 · 连上本机棋馆</b>
+        <p>房主那台机器起好棋馆（<code>dotnet run --project server</code>），启动日志会印出可照抄的地址。本机跑棋馆时填 <code>127.0.0.1:5080</code>；APK 与房主同 WiFi 时，在「肆 · 案牍 → 联网 · 离线」手填即可。不填外网地址、不必题名、不上传任何个人信息。</p></div>
+      <div class="guide-step"><b>叁 · 设席开枰</b>
+        <p>挑一局，可题雅号、设暗语、许旁观、定每步思考 / 出牌之刻、选超时之法与隐士棋力；每局另有本局专属规制，皆在「房规」里。记五字房号邀人，未齐可请隐士补满。</p></div>
+      <div class="guide-step"><b>肆 · 落子出牌与卷面</b>
+        <p>棋盘小圆点是可落处；走子类先点己子再点目标格，牌类先点手牌再按「落牌」，也可双击快捷出牌。折狱录跟幕卡走：旁白逐句、线索翻牌、轮流发言、终幕指认，私本只你可见。弈卷两席同时覆简，启简后界墨推移。</p>
+        <p>全 60 局共用一套卷面华彩；画质、字大、高对比、色觉辅助、音量分路、动效浓淡都在「案牍 · 设置」，随系统减动效亦自动收敛。</p></div>
+      <div class="guide-step"><b>伍 · 妆奁 / 段位 / 神的领域</b>
+        <p>弈株只由终局相赠（每日至多六十枚），不入局内、不兑换、无充值。妆奁 49 件分十一类、四品阶、四套系，可搜、可筛、可预览试穿、可一键素妆；纸色十品与微调笔意也在设置里。</p>
+        <p>段位七阶按赛季重置；此局至顶阶「弈圣」方可叩「神的领域」三尊青冥 / 玄枢 / 太虚，胜首尊即弈神，再胜加前缀为玄弈神、太玄弈神。</p></div>
+      <div class="guide-step"><b>陆 · 存档 / 隐私 / 声明</b>
+        <p>不题名照样玩，战绩记本机榜；题名后自动建一份本机加密存档，每局终了自动写回，可导出 <code>.yijusave</code> 携往别馆，导入须再验口令。设置里可换口令、清缓存、清本机战绩、删除本馆账号。</p>
+        <p>剧本只在房主本地 <code>scripts/</code>，丢新 JSON 即更新，亦可当场呈本。源码以「源码公开 · 禁止商用」协议随版本发布。</p>
+        <p class="guide-notice">${YJ_NOTICE}</p></div>
+    </div>
+    <button class="btn primary" id="guideOk">领了</button><button class="btn ghost" id="guideNotice">观声明</button><button class="btn ghost" id="guideConn">连棋馆</button>`, null);
+  $('#guideOk').onclick = () => { S.guideShown = true; lsSet('qipai.guideSeen', '1'); closeModal(); };
+  $('#guideNotice').onclick = openNotice;
+  $('#guideConn').onclick = () => { closeModal(); askServerUrl(false); };
+};
+
+document.addEventListener('click', (e) => {
+  const b = e.target && e.target.closest && e.target.closest('#actionBar .chip[data-act]');
+  if (!b || b.disabled) return;
+  const a = b.dataset.act;
+  if ((a === 'resign' && Settings.get('confirmResign')) || (a === 'undo' && Settings.get('confirmUndo'))) {
+    if (b.dataset.ok === '1') { delete b.dataset.ok; return; }
+    e.preventDefault(); e.stopImmediatePropagation();
+    askDanger(a === 'resign' ? '投子认负？' : '乞复一着？', () => { b.dataset.ok = '1'; b.click(); });
+  }
+}, true);
+document.addEventListener('dblclick', (e) => {
+  if (!Settings.get('quickPlay')) return;
+  const c = e.target && e.target.closest && e.target.closest('#handRow [data-card], #handRow .card');
+  if (!c) return;
+  const b = document.querySelector('#actionBar .chip[data-act="play-selected"]');
+  if (b && !b.disabled) b.click();
+});
+document.addEventListener('pointerdown', (e) => {
+  if (!Settings.get('longPressConfirm')) return;
+  const c = $('#board'); if (!c || !c.contains(e.target)) return;
+  c.dataset.longPress = '1';
+  setTimeout(() => { if (c.dataset.longPress === '1') { c.dataset.longPressArmed = '1'; delete c.dataset.longPress; } }, 650);
+  setTimeout(() => { if (c.dataset.longPressArmed === '1') delete c.dataset.longPressArmed; }, 1600);
+}, true);

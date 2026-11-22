@@ -65,7 +65,10 @@ export class Net {
 
   schedule() {
     if (this.closed) return;
-    const wait = Math.min(8000, 800 * Math.pow(2, this.retry++));
+    const st = window.__YJ_SETTINGS__ || {};
+    if (st.autoReconnect === false) { this.onStatus('offline'); return; }
+    const base = Number(st.reconnectMs) || 3000;
+    const wait = Math.min(Math.max(base, 1000), 8000);
     this.timer = setTimeout(() => this.connect(), wait);
   }
   disconnect() {
@@ -76,7 +79,11 @@ export class Net {
     if (!this.ws || this.ws.readyState !== 1) return false;
     this.ws.send(JSON.stringify(o)); return true;
   }
-  send(o) { o.seq = this.seq++; return this.sendRaw(o); }
+  send(o) {
+    const gate = window.__YJ_SEND_GATE__;
+    if (gate && !gate(o)) return false;
+    o.seq = this.seq++; return this.sendRaw(o);
+  }
   setName(n) { this.name = n; lsSet('qipai.name', n); }
   setUrl(u) { this.custom = (u || '').trim(); lsSet('qipai.url', this.custom); this.disconnect(); this.connect(); }
 

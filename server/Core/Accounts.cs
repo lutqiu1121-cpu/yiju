@@ -10,9 +10,16 @@ namespace Qipai
 
     public static class Accounts
     {
-        private const int ITER = 100000;
+        private const int ITER = 240000;
+        private const int ITER_LEGACY = 100000;
+        private const int ITER_MAX = 2000000;
         private const string MAGIC_LOCAL = "YJUV";
         private const string MAGIC_EXPORT = "YJUS";
+        private const string MAGIC_LOCAL2 = "YJW2";
+        private const string MAGIC_EXPORT2 = "YJX2";
+        private const string AAD_EXPORT = "YJX2:export";
+        private static bool vaultAlert = false;
+        public static bool VaultAlert { get { lock (sync) return vaultAlert; } }
         private static readonly object sync = new object();
         private static string dir = "data";
         private static byte[] vaultKey = null;
@@ -25,6 +32,7 @@ namespace Qipai
         {
             public string Id = "", Name = "", Salt = "", Hash = "", File = "";
             public long Created = 0;
+            public int Iter = ITER_LEGACY;
         }
 
         public static int Count { get { lock (sync) return users.Count; } }
@@ -34,7 +42,7 @@ namespace Qipai
             lock (sync)
             {
 
-                vaultKey = null; vaultMac = null;
+                vaultKey = null; vaultMac = null; vaultAlert = false;
                 users = new Dictionary<string, User>();
                 cache = new Dictionary<string, Dictionary<string, object>>();
                 dir = Path.Combine(contentRoot, "data");
@@ -50,7 +58,7 @@ namespace Qipai
                 if (vaultKey == null || vaultKey.Length != 32)
                 {
                     vaultKey = Random(32);
-                    File.WriteAllText(kf, Convert.ToBase64String(vaultKey), Encoding.UTF8);
+                    AtomicWriteText(kf, Convert.ToBase64String(vaultKey));
                 }
                 vaultMac = SHA(vaultKey, Encoding.UTF8.GetBytes("yiju-vault-mac"));
                 LoadUsers();
@@ -64,7 +72,18 @@ namespace Qipai
             {
                 string f = Path.Combine(dir, "accounts.json");
                 if (!File.Exists(f)) return;
-                Dictionary<string, object> d = J.Parse(File.ReadAllText(f, Encoding.UTF8));
+                byte[] raw = File.ReadAllBytes(f);
+                string mf = Path.Combine(dir, "accounts.mac");
+                if (File.Exists(mf))
+                {
+                    try
+                    {
+                        byte[] want = Convert.FromBase64String(File.ReadAllText(mf, Encoding.UTF8).Trim());
+                        if (!Eq(Hmac(vaultMac, raw), want)) { vaultAlert = true; return; }
+                    }
+                    catch (Exception) { vaultAlert = true; return; }
+                }
+                Dictionary<string, object> d = J.Parse(Encoding.UTF8.GetString(raw).TrimStart('\uFEFF'));
                 object arr; if (!d.TryGetValue("users", out arr)) return;
                 object[] a = arr as object[];
                 if (a == null) return;
@@ -78,7 +97,8 @@ namespace Qipai
                     {
                         Id = J.Str(u, "id", ""), Name = name,
                         Salt = J.Str(u, "salt", ""), Hash = J.Str(u, "hash", ""),
-                        File = J.Str(u, "file", ""), Created = J.Int(u, "created", 0)
+                        File = J.Str(u, "file", ""), Created = J.Int(u, "created", 0),
+                        Iter = Math.Max(ITER_LEGACY, Math.Min(ITER_MAX, J.Int(u, "iter", ITER_LEGACY)))
                     };
                 }
             }
@@ -91,9 +111,12 @@ namespace Qipai
                 List<object> a = new List<object>();
                 foreach (KeyValuePair<string, User> kv in users)
                     a.Add(J.Frame("id", kv.Value.Id, "name", kv.Value.Name, "salt", kv.Value.Salt,
-                        "hash", kv.Value.Hash, "file", kv.Value.File, "created", kv.Value.Created));
-                File.WriteAllText(Path.Combine(dir, "accounts.json"),
-                    Dump(J.Frame("v", 1, "users", a.ToArray())), Encoding.UTF8);
+                        "hash", kv.Value.Hash, "file", kv.Value.File, "created", kv.Value.Created,
+                        "iter", kv.Value.Iter));
+                byte[] raw = new UTF8Encoding(false).GetBytes(Dump(J.Frame("v", 2, "users", a.ToArray())));
+                AtomicWriteBytes(Path.Combine(dir, "accounts.json"), raw);
+                AtomicWriteBytes(Path.Combine(dir, "accounts.mac"),
+                    new UTF8Encoding(false).GetBytes(Convert.ToBase64String(Hmac(vaultMac, raw))));
             }
             catch (Exception) { }
         }
@@ -113,13 +136,18 @@ namespace Qipai
         }
 
         private static byte[] Derive(string password, byte[] salt, int len)
+        { return Derive(password, salt, len, ITER); }
+        private static byte[] Derive(string password, byte[] salt, int len, int iter)
         {
             byte[] pw = Encoding.UTF8.GetBytes(password ?? "");
+            byte[] dk;
 #if NET8_0_OR_GREATER
-            return Rfc2898DeriveBytes.Pbkdf2(pw, salt, ITER, HashAlgorithmName.SHA256, len);
+            dk = Rfc2898DeriveBytes.Pbkdf2(pw, salt, iter, HashAlgorithmName.SHA256, len);
 #else
-            return Pbkdf2Sha256(pw, salt, ITER, len);
+            dk = Pbkdf2Sha256(pw, salt, iter, len);
 #endif
+            Array.Clear(pw, 0, pw.Length);
+            return dk;
         }
         private static byte[] Pbkdf2Sha256(byte[] pw, byte[] salt, int iter, int len)
         {
@@ -169,10 +197,104 @@ namespace Qipai
             using (HMACSHA256 h = new HMACSHA256(key)) return h.ComputeHash(data);
         }
 
+        private static void PutInt(byte[] b, int p, int v)
+        {
+            b[p] = (byte)(v >> 24); b[p + 1] = (byte)(v >> 16);
+            b[p + 2] = (byte)(v >> 8); b[p + 3] = (byte)v;
+        }
+        private static int GetInt(byte[] b, int p)
+        {
+            return ((int)b[p] << 24) | ((int)b[p + 1] << 16) | ((int)b[p + 2] << 8) | (int)b[p + 3];
+        }
+        private static byte[] SubKey(byte[] master, string label, string id)
+        { return SHA(master, Encoding.UTF8.GetBytes(label + ":" + (id ?? ""))); }
+        private static void SetPrivate(string path)
+        {
+#if NET8_0_OR_GREATER
+            try
+            {
+                if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
+                    System.Runtime.InteropServices.OSPlatform.Windows))
+                    File.SetUnixFileMode(path, System.IO.UnixFileMode.UserRead | System.IO.UnixFileMode.UserWrite);
+            }
+            catch (Exception) { }
+#endif
+        }
+        private static void AtomicWriteBytes(string path, byte[] data)
+        {
+            string tmp = path + ".tmp";
+            File.WriteAllBytes(tmp, data);
+            if (File.Exists(path)) File.Delete(path);
+            File.Move(tmp, path);
+            SetPrivate(path);
+        }
+        private static void AtomicWriteText(string path, string text)
+        { AtomicWriteBytes(path, new UTF8Encoding(false).GetBytes(text)); }
+
+        private static byte[] SealV2(string json, string magic, byte[] aesKey, byte[] macKey,
+            string aad, int iter, byte[] salt)
+        {
+            byte[] a = Encoding.UTF8.GetBytes(aad ?? "");
+            byte[] iv = Random(16);
+            byte[] plain = Encoding.UTF8.GetBytes(json);
+            byte[] ct = AesCrypt(plain, aesKey, iv, true);
+            Array.Clear(plain, 0, plain.Length);
+            int saltLen = salt == null ? 0 : 16;
+            int headLen = 4 + 1 + 4 + 1 + a.Length + saltLen + 16 + ct.Length;
+            byte[] head = new byte[headLen];
+            Buffer.BlockCopy(Encoding.ASCII.GetBytes(magic), 0, head, 0, 4);
+            head[4] = 2;
+            PutInt(head, 5, iter);
+            head[9] = (byte)Math.Min(255, a.Length);
+            Buffer.BlockCopy(a, 0, head, 10, head[9]);
+            int q = 10 + head[9];
+            if (salt != null) { Buffer.BlockCopy(salt, 0, head, q, 16); q += 16; }
+            Buffer.BlockCopy(iv, 0, head, q, 16); q += 16;
+            Buffer.BlockCopy(ct, 0, head, q, ct.Length);
+            byte[] mac = Hmac(macKey, head);
+            byte[] outp = new byte[head.Length + 32];
+            Buffer.BlockCopy(head, 0, outp, 0, head.Length);
+            Buffer.BlockCopy(mac, 0, outp, head.Length, 32);
+            return outp;
+        }
+        private static bool OpenV2(byte[] blob, string magic, byte[] aesKey, byte[] macKey,
+            string aad, bool withSalt, out string json, out byte[] salt, out int iter)
+        {
+            json = ""; salt = null; iter = ITER;
+            int min = 4 + 1 + 4 + 1 + (withSalt ? 16 : 0) + 16 + 16 + 32;
+            if (blob == null || blob.Length < min) return false;
+            if (Encoding.ASCII.GetString(blob, 0, 4) != magic || blob[4] != 2) return false;
+            int headLen = blob.Length - 32;
+            byte[] head = new byte[headLen];
+            Buffer.BlockCopy(blob, 0, head, 0, headLen);
+            byte[] mac = new byte[32];
+            Buffer.BlockCopy(blob, headLen, mac, 0, 32);
+            if (!Eq(Hmac(macKey, head), mac)) return false;
+            iter = GetInt(head, 5);
+            if (iter < ITER_LEGACY || iter > ITER_MAX) return false;
+            int alen = head[9], pos = 10;
+            if (pos + alen + (withSalt ? 16 : 0) + 16 + 16 > headLen) return false;
+            if (Encoding.UTF8.GetString(head, pos, alen) != (aad ?? "")) return false;
+            pos += alen;
+            if (withSalt) { salt = new byte[16]; Buffer.BlockCopy(head, pos, salt, 0, 16); pos += 16; }
+            byte[] iv = new byte[16]; Buffer.BlockCopy(head, pos, iv, 0, 16); pos += 16;
+            byte[] ct = new byte[headLen - pos]; Buffer.BlockCopy(head, pos, ct, 0, ct.Length);
+            try
+            {
+                byte[] plain = AesCrypt(ct, aesKey, iv, false);
+                json = Encoding.UTF8.GetString(plain);
+                Array.Clear(plain, 0, plain.Length);
+                return true;
+            }
+            catch (Exception) { return false; }
+        }
+
         private static byte[] Seal(string json, string magic, byte[] aesKey, byte[] macKey, byte[] salt)
         {
             byte[] iv = Random(16);
-            byte[] ct = AesCrypt(Encoding.UTF8.GetBytes(json), aesKey, iv, true);
+            byte[] plain = Encoding.UTF8.GetBytes(json);
+            byte[] ct = AesCrypt(plain, aesKey, iv, true);
+            Array.Clear(plain, 0, plain.Length);
             int n = 4 + (salt == null ? 0 : 16) + 16 + ct.Length;
             byte[] head = new byte[n];
             byte[] m = Encoding.ASCII.GetBytes(magic);
@@ -231,8 +353,12 @@ namespace Qipai
             }
             try
             {
-                byte[] b = File.ReadAllBytes(Path.Combine(dir, "saves", u.File));
-                Dictionary<string, object> d = OpenLocal(b);
+                string text = Encoding.UTF8.GetString(File.ReadAllBytes(Path.Combine(dir, "saves", u.File))).Trim();
+                byte[] blob = Convert.FromBase64String(text);
+                Dictionary<string, object> d = null;
+                if (blob.Length >= 4 && Encoding.ASCII.GetString(blob, 0, 4) == MAGIC_LOCAL2)
+                    d = OpenLocalV2(blob, u.Id);
+                if (d == null) d = OpenLocal(blob);
                 if (d != null) lock (sync) { cache[u.Id] = d; return d; }
             }
             catch (Exception) { }
@@ -241,11 +367,28 @@ namespace Qipai
         private static void WriteSave(User u, Dictionary<string, object> d)
         {
             d["updated"] = UnixNow();
-            byte[] blob = SealLocal(Dump(d));
+            byte[] blob = SealLocalV2(Dump(d), u.Id);
             string f = string.IsNullOrEmpty(u.File) ? u.Id + ".bin" : u.File;
-            File.WriteAllText(Path.Combine(dir, "saves", f), Convert.ToBase64String(blob), Encoding.UTF8);
+            AtomicWriteText(Path.Combine(dir, "saves", f), Convert.ToBase64String(blob));
             u.File = f;
             lock (sync) cache[u.Id] = d;
+        }
+        private static byte[] SealLocalV2(string json, string accountId)
+        {
+            lock (sync)
+                return SealV2(json, MAGIC_LOCAL2, SubKey(vaultKey, "aes-v2", accountId),
+                    SubKey(vaultKey, "mac-v2", accountId), accountId, ITER, null);
+        }
+        private static Dictionary<string, object> OpenLocalV2(byte[] blob, string accountId)
+        {
+            string json; byte[] salt; int iter;
+            lock (sync)
+            {
+                if (!OpenV2(blob, MAGIC_LOCAL2, SubKey(vaultKey, "aes-v2", accountId),
+                    SubKey(vaultKey, "mac-v2", accountId), accountId, false,
+                    out json, out salt, out iter)) return null;
+            }
+            try { return J.Parse(json); } catch (Exception) { return null; }
         }
         private static Dictionary<string, object> NewSave(string id, string name)
         {
@@ -334,8 +477,8 @@ namespace Qipai
                 User u = new User
                 {
                     Id = id, Name = name, Salt = Convert.ToBase64String(salt),
-                    Hash = Convert.ToBase64String(Derive(password, salt, 32)),
-                    File = id + ".bin", Created = UnixNow()
+                    Hash = Convert.ToBase64String(Derive(password, salt, 32, ITER)),
+                    File = id + ".bin", Created = UnixNow(), Iter = ITER
                 };
                 users[key] = u;
                 try
@@ -362,7 +505,7 @@ namespace Qipai
                 if (!users.TryGetValue(name.ToLowerInvariant(), out u)) { error = "没有这个账号"; return ""; }
                 byte[] salt;
                 try { salt = Convert.FromBase64String(u.Salt); } catch (Exception) { error = "账号数据损坏"; return ""; }
-                string got = Convert.ToBase64String(Derive(password ?? "", salt, 32));
+                string got = Convert.ToBase64String(Derive(password ?? "", salt, 32, u.Iter));
                 if (!Eq(Encoding.UTF8.GetBytes(got), Encoding.UTF8.GetBytes(u.Hash)))
                 { error = "口令不合"; return ""; }
                 Dictionary<string, object> d = LoadSave(u);
@@ -572,16 +715,17 @@ namespace Qipai
 
                 byte[] salt0;
                 try { salt0 = Convert.FromBase64String(u.Salt); } catch (Exception) { error = "账号数据损坏"; return ""; }
-                if (!Eq(Encoding.UTF8.GetBytes(Convert.ToBase64String(Derive(password, salt0, 32))),
+                if (!Eq(Encoding.UTF8.GetBytes(Convert.ToBase64String(Derive(password, salt0, 32, u.Iter))),
                         Encoding.UTF8.GetBytes(u.Hash))) { error = "口令不合，携谱被拒"; return ""; }
                 Dictionary<string, object> d = LoadSave(u);
                 if (d == null) { error = "存档读不出来"; return ""; }
                 byte[] salt = Random(16);
-                byte[] key = Derive(password, salt, 64);
+                byte[] key = Derive(password, salt, 64, ITER);
                 byte[] aesKey = new byte[32], macKey = new byte[32];
                 Buffer.BlockCopy(key, 0, aesKey, 0, 32);
                 Buffer.BlockCopy(key, 32, macKey, 0, 32);
-                byte[] blob = Seal(Dump(d), MAGIC_EXPORT, aesKey, macKey, salt);
+                byte[] blob = SealV2(Dump(d), MAGIC_EXPORT2, aesKey, macKey, AAD_EXPORT, ITER, salt);
+                Array.Clear(key, 0, key.Length);
                 fileName = "yiju-" + u.Name + ".yijusave";
                 return Convert.ToBase64String(blob);
             }
@@ -738,6 +882,55 @@ namespace Qipai
         }
 
         public static object[] ShopItems() { return ShopBook.Items(); }
+        public static bool ChangePassword(string accountId, string oldPass, string newPass, out string error)
+        {
+            error = "";
+            if (string.IsNullOrEmpty(accountId)) { error = "尚未入席题名"; return false; }
+            if (string.IsNullOrEmpty(newPass) || newPass.Length < 8 || newPass.Length > 64)
+            { error = "新口令要 8–64 字"; return false; }
+            lock (sync)
+            {
+                User u = null; string lk = "";
+                foreach (KeyValuePair<string, User> kv in users)
+                    if (kv.Value.Id == accountId) { u = kv.Value; lk = kv.Key; break; }
+                if (u == null) { error = "题名不在本馆"; return false; }
+                byte[] oldSalt;
+                try { oldSalt = Convert.FromBase64String(u.Salt); } catch (Exception) { error = "账号数据损坏"; return false; }
+                string got = Convert.ToBase64String(Derive(oldPass ?? "", oldSalt, 32, u.Iter));
+                if (!Eq(Encoding.UTF8.GetBytes(got), Encoding.UTF8.GetBytes(u.Hash)))
+                { error = "旧口令不合"; return false; }
+                byte[] salt = Random(16);
+                u.Salt = Convert.ToBase64String(salt);
+                u.Hash = Convert.ToBase64String(Derive(newPass, salt, 32, ITER));
+                u.Iter = ITER;
+                SaveUsers();
+                return true;
+            }
+        }
+        public static bool DeleteAccount(string accountId, string password, out string error)
+        {
+            error = "";
+            if (string.IsNullOrEmpty(accountId)) { error = "尚未入席题名"; return false; }
+            lock (sync)
+            {
+                User u = null; string lk = "";
+                foreach (KeyValuePair<string, User> kv in users)
+                    if (kv.Value.Id == accountId) { u = kv.Value; lk = kv.Key; break; }
+                if (u == null) { error = "题名不在本馆"; return false; }
+                byte[] salt;
+                try { salt = Convert.FromBase64String(u.Salt); } catch (Exception) { error = "账号数据损坏"; return false; }
+                string got = Convert.ToBase64String(Derive(password ?? "", salt, 32, u.Iter));
+                if (!Eq(Encoding.UTF8.GetBytes(got), Encoding.UTF8.GetBytes(u.Hash)))
+                { error = "口令不合，未删"; return false; }
+                try { File.Delete(Path.Combine(dir, "saves", u.File)); } catch (Exception) { }
+                users.Remove(lk);
+                lock (sync) { cache.Remove(u.Id); }
+                SaveUsers();
+                return true;
+            }
+        }
+        public static int ShopCount() { return ShopBook.Items().Length; }
+
         public static Dictionary<string, object> ShopState(string accountId)
         {
             Dictionary<string, object> d = null;
@@ -827,17 +1020,29 @@ namespace Qipai
             byte[] blob;
             try { blob = Convert.FromBase64String(data.Trim()); }
             catch (Exception) { error = "存档格式不对（应选 .yijusave 文本）"; return ""; }
-            if (blob.Length < 4 + 16 + 16 + 16 + 32 || Encoding.ASCII.GetString(blob, 0, 4) != MAGIC_EXPORT)
+            if (blob.Length < 4 + 1 + 4 + 1 + 16 + 16 + 16 + 32)
             { error = "这不是弈局存档，或已损坏"; return ""; }
+            string magic = Encoding.ASCII.GetString(blob, 0, 4);
+            bool v2 = magic == MAGIC_EXPORT2;
+            if (!v2 && magic != MAGIC_EXPORT) { error = "这不是弈局存档，或已损坏"; return ""; }
             byte[] salt = new byte[16];
-            Buffer.BlockCopy(blob, 4, salt, 0, 16);
-            byte[] key = Derive(password ?? "", salt, 64);
+            if (v2)
+            {
+                int alen = blob[9], pos = 10 + alen;
+                if (pos + 16 > blob.Length - 32) { error = "存档头部坏了"; return ""; }
+                Buffer.BlockCopy(blob, pos, salt, 0, 16);
+            }
+            else Buffer.BlockCopy(blob, 4, salt, 0, 16);
+            byte[] key = Derive(password ?? "", salt, 64, v2 ? ITER : ITER_LEGACY);
             byte[] aesKey = new byte[32], macKey = new byte[32];
             Buffer.BlockCopy(key, 0, aesKey, 0, 32);
             Buffer.BlockCopy(key, 32, macKey, 0, 32);
-            string json; byte[] gotSalt;
-            if (!Open(blob, MAGIC_EXPORT, aesKey, macKey, true, out json, out gotSalt))
-            { error = "口令不合，或谱被改过 · 还谱被拒"; return ""; }
+            Array.Clear(key, 0, key.Length);
+            string json = ""; byte[] gotSalt = null; int it = ITER;
+            bool opened = v2
+                ? OpenV2(blob, MAGIC_EXPORT2, aesKey, macKey, AAD_EXPORT, true, out json, out gotSalt, out it)
+                : Open(blob, MAGIC_EXPORT, aesKey, macKey, true, out json, out gotSalt);
+            if (!opened) { error = "口令不合，或谱被改过 · 还谱被拒"; return ""; }
             Dictionary<string, object> d;
             try { d = J.Parse(json); } catch (Exception) { error = "存档内容坏了"; return ""; }
             if (d == null || J.Str(d, "id", "").Length == 0 || J.Int(d, "v", 0) != 1)
@@ -865,8 +1070,8 @@ namespace Qipai
                 User u = new User
                 {
                     Id = id, Name = name, Salt = Convert.ToBase64String(loginSalt),
-                    Hash = Convert.ToBase64String(Derive(password, loginSalt, 32)),
-                    File = id + ".bin", Created = UnixNow()
+                    Hash = Convert.ToBase64String(Derive(password, loginSalt, 32, ITER)),
+                    File = id + ".bin", Created = UnixNow(), Iter = ITER
                 };
                 users[lk] = u;
                 try
@@ -1176,24 +1381,7 @@ namespace Qipai
         public static object[] Items()
         {
             if (cache != null) return cache;
-            cache = new object[] {
-                ByKey("desk_bamboo", "desk", "竹簟", 80, "牌桌 · 细竹横纹"),
-                ByKey("desk_cloud", "desk", "云石", 160, "牌桌 · 淡云石纹"),
-                ByKey("desk_gold", "desk", "洒金", 260, "牌桌 · 暗底洒金"),
-                ByKey("face_cheng", "face", "澄心笺", 90, "牌面 · 澄心薄笺"),
-                ByKey("face_zhu", "face", "朱丝栏", 180, "牌面 · 朱丝界栏"),
-                ByKey("face_wu", "face", "乌金栏", 280, "牌面 · 乌金细栏"),
-                ByKey("seal_zhuan", "seal", "小篆印", 70, "朱印 · 小篆方印"),
-                ByKey("seal_hulu", "seal", "葫芦印", 150, "朱印 · 葫芦形"),
-                ByKey("seal_chi", "seal", "螭钮印", 240, "朱印 · 螭钮圆印"),
-                ByKey("ink_song", "ink", "松烟", 60, "墨色 · 松烟青"),
-                ByKey("ink_zhu", "ink", "朱墨", 140, "墨色 · 朱砂沉"),
-                ByKey("ink_ni", "ink", "泥金", 230, "墨色 · 泥金褐"),
-                ByKey("fx_liuying", "fx", "流萤", 120, "华彩 · 落子萤火加倍、拖尾更长"),
-                ByKey("fx_miaojin", "fx", "描金", 200, "华彩 · 落点四向拉出细金线"),
-                ByKey("fx_zhulan", "fx", "朱澜", 300, "华彩 · 终局三叠朱浪"),
-                ByKey("fx_xingyu", "fx", "星雨", 420, "华彩 · 终局星雨自天而落")
-            };
+            cache = WearItems.All();
             return cache;
         }
         public static Dictionary<string, object> Find(string key)

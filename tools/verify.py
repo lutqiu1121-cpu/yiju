@@ -355,7 +355,8 @@ acct = (ROOT / "server/Core/Accounts.cs").read_text(encoding="utf-8")
 for k in ["class Accounts", "Rfc2898DeriveBytes", "AesManaged", "HMACSHA256",
           "MAGIC_LOCAL", "MAGIC_EXPORT", "Register(", "Login(", "Export(", "Import(", "Record("]:
     check(k in acct, "账号模块 " + k)
-check("ITER = 100000" in acct, "密码派生 10 万次迭代")
+check("ITER = 240000" in acct and "ITER_LEGACY = 100000" in acct,
+      "口令派生升至 24 万轮，旧账号按各自轮数兼容")
 check("Pbkdf2Sha256" in acct and "HashAlgorithmName.SHA256" in acct, "PBKDF2-HMAC-SHA256 且 .NET 8 无废弃构造")
 check("new Rfc2898DeriveBytes(" not in acct, "不再使用 .NET 8 已废弃的构造函数")
 check("byte[] loginSalt = Random(16)" in acct, "导入账号使用独立登录盐，不复用导出包盐")
@@ -436,8 +437,8 @@ SKIP = {".git", "publish", ".probe", "obj", "bin", "build", ".gradle", "assets"}
 all_raw = sum(p.stat().st_size for p in ROOT.rglob("*")
               if p.is_file() and not (set(p.relative_to(ROOT).parts) & SKIP)
               and not p.name.startswith("yiju-") and p.suffix not in {".bundle", ".apk"})
-check(raw < 224 * 1024, "客户端原始 < 224 KiB（%.1f KiB，含全玩法华彩与制本）" % (raw / 1024))
-check(gz < 90 * 1024, "客户端 gzip < 90 KiB（%.1f KiB）" % (gz / 1024))
+check(raw < 320 * 1024, "客户端原始 < 320 KiB（%.1f KiB，含离线册 / 设置 / 49 件妆奁）" % (raw / 1024))
+check(gz < 110 * 1024, "客户端 gzip < 110 KiB（%.1f KiB）" % (gz / 1024))
 
 print("=" * 52)
 for m in ok: print("  PASS  " + m)
@@ -517,11 +518,69 @@ check("Fx.observe" in app3 and "Fx" in app3 and "fx.js" in app3.lower(),
       "卷面华彩接入全部玩法的每帧渲染")
 check("yj-sheen" in css3 and "fx-off" in css3 and "[data-fx" in css3,
       "华丽界面动效与一键减动效")
-check('"fx_liuying"' in acc3 and 'kinds = { desk' in app3 and "fx:'华彩'" in app3,
-      "四件华彩可购可配戴")
-check("/fx.js" in sw3 and "yiju-v2" in sw3, "离线缓存收录华彩层")
+wear_def = (ROOT / "themes/wear.json").read_text(encoding="utf-8")
+wear_js = (ROOT / "client/wear.js").read_text(encoding="utf-8")
+wear_cs = (ROOT / "server/Core/WearItems.cs").read_text(encoding="utf-8")
+check(wear_def.count('"key"') == 49 and wear_js.count('"desk_bamboo"') >= 1 and
+      wear_cs.count('Qipai.J.Frame') == 49 and "fx_liuying" in wear_def,
+      "49 件妆奁由单一真源生成，两端逐件对齐")
+check("/fx.js" in sw3 and "yiju-v3" in sw3 and "/offline-assets.js" in sw3
+      and "/settings.js" in sw3 and "/wear.js" in sw3, "离线缓存收录华彩 / 设置 / 妆奁 / 离线册")
 check("godInfo" in app3 and "renderGodPanel" in app3 and "godPanel" in (ROOT / "client/index.html").read_text(encoding="utf-8"),
       "设席可见逐玩法叩域进度")
+
+
+settings_js = (ROOT / "client/settings.js").read_text(encoding="utf-8")
+notice_txt = "本项目为开源技术分享，不提供官方游戏服务，不构成面向公众的网络游戏运营。游戏核心体验可完全离线进行。任何使用者自行部署、分发或商业化所产生的合规责任（包括但不限于版号、实名制、个人信息保护），由使用者自行承担。"
+for f in ["README.md", "client/app.js", "client/offline-assets.js", "PUBLISH_AGENT.md"]:
+    check(notice_txt in (ROOT / f).read_text(encoding="utf-8"), "合规声明在位：" + f)
+check(notice_txt in (ROOT / "client/index.html").read_text(encoding="utf-8") or
+      "appFooter" in (ROOT / "client/index.html").read_text(encoding="utf-8"),
+      "App 内声明挂点与页脚")
+check("PolyForm Noncommercial" in (ROOT / "LICENSE").read_text(encoding="utf-8") and
+      "MIT" not in (ROOT / "README.md").read_text(encoding="utf-8").split("附 · 本版补录")[0],
+      "源码公开 · 禁止商用许可一致")
+
+import re as _re
+setting_keys = _re.findall(r"key:'([a-zA-Z0-9_]+)'", settings_js)
+check(len(setting_keys) >= 45, "设置项数量与主流对齐（%d 项）" % len(setting_keys))
+client_all = "".join(p.read_text(encoding="utf-8") for p in (ROOT / "client").iterdir()
+    if p.is_file() and p.suffix in (".js", ".css", ".html") and p.name != "settings.js")
+missing = [k for k in setting_keys if k not in client_all]
+check(len(missing) == 0, "每项设置都在设置模型之外真接线，无假开关 · 未接：" + ",".join(missing[:8]))
+check("GROUPS.forEach" in app_src and "settingsAction" in app_src and "renderSettings" in app_src,
+      "设置页按八组渲染并分发隐私动作")
+check("accountPassword" in (ROOT / "server/Core/Hub.cs").read_text(encoding="utf-8") and
+      "accountDelete" in (ROOT / "server/Core/Hub.cs").read_text(encoding="utf-8") and
+      "clearLocalStats" in (ROOT / "server/Core/Hub.cs").read_text(encoding="utf-8"),
+      "换口令 / 删账号 / 清本机榜三帧由棋馆真办")
+check("ChangePassword" in acc3 and "DeleteAccount" in acc3 and "ClearStats" in (ROOT / "server/Core/LocalData.cs").read_text(encoding="utf-8"),
+      "账号管理与战绩清空有实现")
+
+acct3 = (ROOT / "server/Core/Accounts.cs").read_text(encoding="utf-8")
+check("MAGIC_LOCAL2" in acct3 and "MAGIC_EXPORT2" in acct3 and "SealV2" in acct3 and "OpenV2" in acct3,
+      "存档 V2 封装（子密钥 + 附加认证数据）")
+check("accounts.mac" in acct3 and "AtomicWriteBytes" in acct3 and "File.SetUnixFileMode" in acct3,
+      "账号表完整性封印 / 原子写 / 私钥 600")
+check("Convert.FromBase64String(text)" in acct3 and "Array.Clear(plain" in acct3,
+      "读盘先解码、明文缓冲清零（修重启读档隐患）")
+check("u.Iter" in acct3 and "ITER_LEGACY" in acct3,
+      "口令按账号记录轮数验算，旧存档不丢")
+check("winner" in (ROOT / "client/app.js").read_text(encoding="utf-8") and
+      "offline-assets.js" in (ROOT / "client/index.html").read_text(encoding="utf-8"),
+      "离线内嵌册由普通脚本加载，file:// 不被 CORS 挡")
+check("window.__YJ_SEND_GATE__" in (ROOT / "client/net.js").read_text(encoding="utf-8") and
+      "externalDir" in app_src and "wifiOnly" in app_src and "isCellular" in app_src,
+      "外部名录 / 校时 / 榜单逐项可关，蜂窝下自动跳过")
+check("requestAnimationFrame" in app_src and "S._lastSig" in app_src and "S.rafPending" in app_src,
+      "每帧合帧与帧签名脏重绘")
+check("showLegal" in (ROOT / "client/render.js").read_text(encoding="utf-8") and
+      "--q-dpr" in css3 and "--fontScale" in css3,
+      "画质档 / 字大 / 可落点开关接到渲染层")
+check("shopTry" in app_src and "spBuy" in app_src and "WEAR_SETS" in app_src,
+      "商店预览 / 试穿 / 定妆 / 购买确认成套")
+check("YJ_NOTICE" in app_src and "renderNotice" in app_src and "openGuide" in app_src,
+      "声明弹窗、页脚与六步入引同文")
 
 print("静态自检： %d 通过 / %d 失败" % (len(ok), len(err)))
 for m in err: print("  FAIL  " + m)

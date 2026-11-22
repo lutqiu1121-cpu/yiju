@@ -34,6 +34,16 @@ function palette() {
     edge: css('--tileEdge') || '#cdc4ad', shadow: css('--shadow') || 'rgba(60,50,35,.16)',
     shadowA: parseFloat(css('--shadowA') || '.16'), motion: parseFloat(css('--motion') || '1')
   };
+  const cs = getComputedStyle(document.documentElement);
+  const pa = (cs.getPropertyValue('--wear-piece-a') || '').trim();
+  const pb = (cs.getPropertyValue('--wear-piece-b') || '').trim();
+  const pr = (cs.getPropertyValue('--wear-piece-rim') || '').trim();
+  if (pa) _pal.pieceA = pa;
+  if (pb) _pal.pieceB = pb;
+  if (pr) _pal.edge = pr;
+  const cb = (window.__YJ_SETTINGS__ && window.__YJ_SETTINGS__.colorBlind) || document.body.dataset.cb || '关';
+  if (cb === '红绿') { _pal.accent = '#2a6f97'; _pal.edge = '#5b8fa8'; }
+  else if (cb === '蓝黄') { _pal.accent = '#b8860b'; _pal.edge = '#a89a5b'; }
   return _pal;
 }
 function jitter(seed, k) { const x = Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453; return (x - Math.floor(x) - .5); }
@@ -71,6 +81,7 @@ function label(ctx, text, x, y, size, color) {
 }
 function legalFrom(view) {
   const r = { cell:new Set(), from:new Set(), to:new Map(), other:[] };
+  if (window.__YJ_SETTINGS__ && window.__YJ_SETTINGS__.showLegal === false) return r;
   for (const code of (view.legal || [])) {
     if (code.startsWith('c:') || code.startsWith('f:') || code.startsWith('x:')) r.cell.add(parseInt(code.slice(2), 10));
     else if (code.startsWith('m:') || code.startsWith('o:') || code.startsWith('d:')) {
@@ -87,7 +98,7 @@ export function drawBoard(canvas, view, onPick) {
   const p = palette();
   if (!canvas || !view) return;
   const W = canvas.clientWidth || 320, H = canvas.clientHeight || 320;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = Math.min((window.__YJ_QUALITY__ || {}).dpr || 2, window.devicePixelRatio || 1);
   canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

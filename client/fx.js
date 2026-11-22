@@ -1,7 +1,6 @@
 let layer = null, cx = null, W = 0, H = 0, dpr = 1;
 let parts = [], ribbons = [], ripples = [], seals = [], running = false, lastT = 0;
 let strength = 1, reduced = false;
-let paid = { liuying: false, miaojin: false, zhulan: false, xingyu: false };
 
 function ensure(canvas) {
   if (!canvas) return false;
@@ -13,9 +12,10 @@ function ensure(canvas) {
     else return false;
   }
   const r = canvas.getBoundingClientRect();
-  W = r.width || canvas.clientWidth || 320;
-  H = r.height || canvas.clientHeight || 320;
-  dpr = Math.min(2, window.devicePixelRatio || 1);
+  const nw = r.width || canvas.clientWidth || 320, nh = r.height || canvas.clientHeight || 320;
+  const nd = Math.min((window.__YJ_QUALITY__ || {}).dpr || 2, window.devicePixelRatio || 1);
+  if (nw === W && nh === H && nd === dpr && cx) return true;
+  W = nw; H = nh; dpr = nd;
   layer.width = Math.round(W * dpr); layer.height = Math.round(H * dpr);
   layer.style.width = W + 'px'; layer.style.height = H + 'px';
   cx = layer.getContext('2d');
@@ -23,19 +23,21 @@ function ensure(canvas) {
   return !!cx;
 }
 
+let lastVer = -1, fxP = {}, trailP = {}, cfg = {};
 function conf() {
-  const m = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
-  reduced = !!(m && m.matches);
-  let v = 55;
-  try { const s = JSON.parse(localStorage.getItem('qipai.sliders') || '{}'); if (typeof s.motion === 'number') v = s.motion; } catch (e) {}
-  strength = reduced ? 0 : Math.max(0, Math.min(1, v / 100));
-  const fx = document.body.dataset.fx || '';
-  paid = {
-    liuying: fx === 'fx_liuying',
-    miaojin: fx === 'fx_miaojin',
-    zhulan: fx === 'fx_zhulan',
-    xingyu: fx === 'fx_xingyu'
-  };
+  const ver = window.__YJ_SETTINGS_VER__ || 0;
+  if (ver === lastVer && lastVer >= 0) return;
+  lastVer = ver;
+  const st = window.__YJ_SETTINGS__ || {};
+  const q = window.__YJ_QUALITY__ || { particle: 1 };
+  const sys = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  reduced = !!(st.reduceSystem !== false && sys);
+  const level = st.fxMaster === false ? 0 : (typeof st.fxLevel === 'number' ? st.fxLevel : 55);
+  strength = (reduced || level <= 0) ? 0 : Math.min(1.6, level / 100 * (q.particle || 1));
+  const w = window.__YJ_WEAR__ || {};
+  fxP = (w.fx && w.fx.p) || {};
+  trailP = (w.trail && w.trail.p) || {};
+  cfg = st;
 }
 
 function rand(a, b) { return a + Math.random() * (b - a); }
@@ -58,7 +60,8 @@ function burst(x, y, n, color, opt) {
   }
 }
 function ripple(x, y, color, big) {
-  ripples.push({ x, y, t: 0, dur: big ? .95 : .62, c: color, big: !!big });
+  ripples.push({ x, y, t: 0, dur: big ? .95 : .62,
+    c: trailP.c || color, w: parseFloat(trailP.w || 1), big: !!big });
 }
 function ribbon(color, dir) {
   ribbons.push({ t: 0, dur: .72, c: color, dir: dir || 1 });
@@ -88,22 +91,24 @@ function onMove(prev, next) {
     const nh = JSON.stringify(next.hands), oh = prev ? JSON.stringify(prev.hands) : '';
     if (nh !== oh) found = true;
   }
-  ripple(sx, sy, c.accent, false);
-  burst(sx, sy, Math.round((paid.liuying ? 22 : 10) * strength + 4), c.accent, { sp1: paid.liuying ? 96 : 60, r: 2.2 });
-  if (paid.miaojin) {
+  if (cfg.fxTrail !== false) ripple(sx, sy, c.accent, false);
+  const spark = parseFloat(fxP.spark || 1);
+  burst(sx, sy, Math.round((10 * spark) * strength + 4), c.accent, { sp1: 60 * spark, r: 2.2 });
+  if (fxP.gold) {
     for (let k = 0; k < 4; k++) {
       const a = Math.PI / 4 + k * Math.PI / 2;
       ribbons.push({ t: 0, dur: .55, c: c.accent, x: sx, y: sy,
         vx: Math.cos(a) * 150 * strength, vy: Math.sin(a) * 150 * strength, line: true });
     }
   }
-  if (cnt > 3) seal(sx, sy, c.accent);
+  if (cnt > 3 && cfg.fxTrail !== false) seal(sx, sy, c.accent);
 }
 
 function onPhase(prev, next) {
   if (!strength) return;
   const c = ink();
-  ribbon(c.ink, 1);
+  if (cfg.fxCurtain !== false) ribbon(c.ink, 1);
+  if (fxP.moon) ripple(W * .5, H * .32, c.tile, true);
   seal(W * .5, H * .32, c.accent);
   burst(W * .5, H * .32, Math.round(14 * strength + 4), c.accent, { sp1: 110, lift: 14 });
 }
@@ -112,14 +117,14 @@ function onEnd(next) {
   if (!strength) return;
   const c = ink();
   const win = !!(next.winner && String(next.winner).length);
+  if (cfg.fxFinale === false) { ripple(W * .5, H * .5, c.accent, false); return; }
   ribbon(win ? c.accent : c.ink, win ? 1 : -1);
   ripple(W * .5, H * .5, win ? c.accent : c.ink, true);
-  burst(W * .5, H * .5, Math.round((paid.xingyu ? 90 : 38) * strength + 12),
-    win ? c.accent : c.ink, { sp0: 40, sp1: paid.xingyu ? 240 : 150, r: paid.xingyu ? 2.4 : 2.8, lift: 30 });
-  if (paid.zhulan) {
-    for (let k = 0; k < 3; k++) ribbons.push({ t: -k * .12, dur: 1.1, c: c.accent, wave: true, k: k });
-  }
-  if (paid.xingyu) {
+  const spark = parseFloat(fxP.spark || 1), waves = parseInt(fxP.wave || 0, 10);
+  burst(W * .5, H * .5, Math.round((38 * spark) * strength + 12),
+    win ? c.accent : c.ink, { sp0: 40, sp1: 150 * spark, r: 2.8, lift: 30 });
+  for (let k = 0; k < waves; k++) ribbons.push({ t: -k * .12, dur: 1.1, c: c.accent, wave: true, k: k });
+  if (fxP.star) {
     for (let k = 0; k < 26; k++)
       parts.push({ x: rand(0, W), y: -rand(0, H * .4), vx: rand(-8, 8), vy: rand(40, 110) * strength,
         life: rand(1.1, 2.0), max: 2, r: rand(.8, 2.0), c: c.accent, g: 12, tw: Math.random() * 6.28, star: true });
@@ -138,9 +143,9 @@ function frame(t) {
     const k = r.t / r.dur; if (k >= 1) { ripples.splice(i, 1); continue; }
     cx.beginPath(); cx.arc(r.x, r.y, (r.big ? 18 : 8) + k * (r.big ? Math.max(W, H) * .42 : 34), 0, 7);
     cx.strokeStyle = r.c; cx.globalAlpha = (1 - k) * .55 * strength;
-    cx.lineWidth = (r.big ? 2.4 : 1.4) * (1 - k) + .4; cx.stroke();
+    cx.lineWidth = ((r.big ? 2.4 : 1.4) * r.w) * (1 - k) + .4; cx.stroke();
     if (r.big) { cx.beginPath(); cx.arc(r.x, r.y, 10 + k * Math.max(W, H) * .22, 0, 7);
-      cx.globalAlpha = (1 - k) * .22 * strength; cx.lineWidth = 1; cx.stroke(); }
+      cx.globalAlpha = (1 - k) * .22 * strength; cx.lineWidth = r.w; cx.stroke(); }
   }
 
   for (let i = ribbons.length - 1; i >= 0; i--) {

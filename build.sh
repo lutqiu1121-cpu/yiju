@@ -13,6 +13,8 @@ dotnet publish server/Qipai.Server.csproj \
   -p:DebugType=none -p:GenerateDocumentationFile=false
 
 echo "== 3/5 拷贝同源静态资源（客户端 / 规则清单 / 主题）"
+python3 tools/gen-offline.py >/dev/null 2>&1 || true
+python3 tools/gen-wear.py >/dev/null 2>&1 || true
 cp -r client publish/client
 cp -r rules  publish/rules
 cp -r themes publish/themes

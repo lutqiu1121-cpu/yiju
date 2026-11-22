@@ -8,6 +8,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./app.css">
+<script src="./offline-assets.js"></script>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -24,6 +25,7 @@
   <div class="sub">棋 · 牌 · 雅 集</div>
   <div id="conn" class="conn"><i></i><span>候馆中</span></div>
 </header>
+<div id="offlineBar" class="offline-bar" hidden></div>
 
 <main id="screens">
 
@@ -178,6 +180,7 @@
     <div id="themeGrid" class="theme-grid"></div>
     <div class="side-h" style="margin-top:22px">微调 · 笔意</div>
     <div id="sliders" class="sliders"></div>
+<div id="legacySettings" hidden>
     <div class="setting-row"><span>落子有声</span><button class="toggle on" id="soundToggle">启</button></div>
     <div class="setting-row"><span>行云</span><button class="toggle on" id="motionToggle">启</button></div>
     <div class="setting-row"><span>馆址</span><input id="serverUrl" class="url-input" placeholder="如 192.168.1.8:5080 · 留空=同源"></div>
@@ -197,6 +200,9 @@
       <option value="6">通玄 · 坐照</option>
       <option value="7">入微 · 察势</option><option value="8">忘机 · 穷变</option>
       <option value="9">弈圣 · 无咎</option></select></div>
+</div>
+    <div id="settingsPanel" class="settings-panel"></div>
+
     <div class="side-h" style="margin-top:22px">题名 · 本馆</div>
     <div id="accountState" class="board-row"><span class="bname">未题名</span></div>
     <div class="btn-row">
@@ -211,8 +217,10 @@
     <div id="godPanel"></div>
     <div class="side-h" style="margin-top:22px">弈株 · 妆奁</div>
     <div class="setting-row"><span>匣中弈株</span><span id="shopBalance" class="season-state">—</span></div>
+    <div id="shopToolbar" class="shop-toolbar"></div>
+    <div id="shopPreview" class="shop-preview"></div>
     <div id="shopGrid" class="shop-grid"></div>
-    <div class="hint">弈株只由对局终了按胜负相赠，每日至多六十枚；不入局内、不改胜负、不兑换、无充值，只换牌桌 / 牌面 / 朱印 / 墨色等外观。</div>
+    <div class="hint">弈株只由对局终了按胜负相赠，每日至多六十枚；不入局内、不改胜负、不兑换、无充值。四十九件妆奁分十一类、四品阶、四套系，只换外观。</div>
     <div class="side-h" style="margin-top:22px">卷帙 · 内容</div>
     <div class="btn-row">
       <button class="btn ghost" id="openScriptImport">呈本</button>
@@ -226,6 +234,7 @@
       <button class="btn ghost" id="openSource">观谱源</button>
       <button class="btn ghost" id="openGuide2">入门小引</button>
     </div>
+    <div id="appFooter" class="app-footer"></div>
     <div class="foot-note">六十局，纸色十品 · 横竖皆宜，随手开枰<br>断线自续，终局可覆 · 谱可携可还<br>源码公开 · 禁商用 · 与君同弈</div>
   </section>
 </main>
@@ -246,6 +255,7 @@
 </div>
 <div id="toast"></div>
 
+<div id="privacyLock" class="privacy-lock" hidden><div class="pl-card"><div class="pl-seal">缄</div><b>卷已暂缄</b><p>回到页面即续前局</p></div></div>
 <script type="module" src="./app.js"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

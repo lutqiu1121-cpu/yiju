@@ -217,6 +217,14 @@ namespace Qipai
                 SaveLeaderboard(); SaveHall();
             }
         }
+        public static void ClearStats()
+        {
+            lock (sync)
+            {
+                board.Clear();
+                try { SaveLeaderboard(); } catch (Exception) { }
+            }
+        }
         public static object[] Leaderboard()
         {
             lock (sync)

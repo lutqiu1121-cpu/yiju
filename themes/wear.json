@@ -1,0 +1,710 @@
+{
+  "kinds": {
+    "desk": "牌桌",
+    "face": "牌面",
+    "seal": "朱印",
+    "ink": "墨色",
+    "fx": "华彩",
+    "frame": "卷框",
+    "piece": "棋子",
+    "trail": "落痕",
+    "sound": "音色",
+    "curtain": "幕帘",
+    "badge": "衔牌"
+  },
+  "sets": {
+    "竹窗": "竹窗 · 竹簟/澄心笺/清磬/淡墨",
+    "金石": "金石 · 云石/乌金栏/螭钮印/玉振",
+    "星汉": "星汉 · 星槎/蝉翼笺/星雨/星帷",
+    "丹霞": "丹霞 · 洒金/薛涛笺/朱澜/朱线"
+  },
+  "rarity": {
+    "常": "常品",
+    "珍": "珍品",
+    "秘": "秘藏",
+    "逸": "逸格"
+  },
+  "items": [
+    {
+      "key": "desk_bamboo",
+      "kind": "desk",
+      "name": "竹簟",
+      "cost": 80,
+      "note": "牌桌 · 细竹横纹",
+      "rarity": "常",
+      "set": "竹窗",
+      "params": {
+        "a": "#e7e2d2",
+        "b": "#d8d0b6",
+        "pat": "bamboo"
+      }
+    },
+    {
+      "key": "desk_cloud",
+      "kind": "desk",
+      "name": "云石",
+      "cost": 160,
+      "note": "牌桌 · 淡云石纹",
+      "rarity": "珍",
+      "set": "金石",
+      "params": {
+        "a": "#e9e8e4",
+        "b": "#d5d9da",
+        "pat": "cloud"
+      }
+    },
+    {
+      "key": "desk_gold",
+      "kind": "desk",
+      "name": "洒金",
+      "cost": 260,
+      "note": "牌桌 · 暗底洒金",
+      "rarity": "秘",
+      "set": "丹霞",
+      "params": {
+        "a": "#2f2a22",
+        "b": "#4a3c28",
+        "pat": "gold"
+      }
+    },
+    {
+      "key": "desk_celadon",
+      "kind": "desk",
+      "name": "青瓷",
+      "cost": 220,
+      "note": "牌桌 · 雨过天青",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "a": "#dce9e2",
+        "b": "#b9cfc6",
+        "pat": "celadon"
+      }
+    },
+    {
+      "key": "desk_kesi",
+      "kind": "desk",
+      "name": "缂丝",
+      "cost": 340,
+      "note": "牌桌 · 织金界纹",
+      "rarity": "逸",
+      "set": "—",
+      "params": {
+        "a": "#efe4d2",
+        "b": "#c9a97e",
+        "pat": "kesi"
+      }
+    },
+    {
+      "key": "desk_star",
+      "kind": "desk",
+      "name": "星槎",
+      "cost": 420,
+      "note": "牌桌 · 夜航星河",
+      "rarity": "逸",
+      "set": "星汉",
+      "params": {
+        "a": "#1d2430",
+        "b": "#33405a",
+        "pat": "star"
+      }
+    },
+    {
+      "key": "face_cheng",
+      "kind": "face",
+      "name": "澄心笺",
+      "cost": 90,
+      "note": "牌面 · 澄心薄笺",
+      "rarity": "常",
+      "set": "竹窗",
+      "params": {
+        "bg": "#fbf8ef",
+        "ink": "#2b2a26",
+        "edge": "#d8cfb8"
+      }
+    },
+    {
+      "key": "face_zhu",
+      "kind": "face",
+      "name": "朱丝栏",
+      "cost": 180,
+      "note": "牌面 · 朱丝界栏",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "bg": "#fcf6ea",
+        "ink": "#6c2f22",
+        "edge": "#c98b6b"
+      }
+    },
+    {
+      "key": "face_wu",
+      "kind": "face",
+      "name": "乌金栏",
+      "cost": 280,
+      "note": "牌面 · 乌金细栏",
+      "rarity": "秘",
+      "set": "金石",
+      "params": {
+        "bg": "#27251f",
+        "ink": "#e8dcc0",
+        "edge": "#8a7446"
+      }
+    },
+    {
+      "key": "face_xue",
+      "kind": "face",
+      "name": "薛涛笺",
+      "cost": 200,
+      "note": "牌面 · 桃色小笺",
+      "rarity": "珍",
+      "set": "丹霞",
+      "params": {
+        "bg": "#f8e6e0",
+        "ink": "#7a3b3f",
+        "edge": "#d7a9a0"
+      }
+    },
+    {
+      "key": "face_huang",
+      "kind": "face",
+      "name": "硬黄纸",
+      "cost": 320,
+      "note": "牌面 · 染黄蜡笺",
+      "rarity": "秘",
+      "set": "—",
+      "params": {
+        "bg": "#eed9a6",
+        "ink": "#4a3a1c",
+        "edge": "#b99a58"
+      }
+    },
+    {
+      "key": "face_chan",
+      "kind": "face",
+      "name": "蝉翼笺",
+      "cost": 400,
+      "note": "牌面 · 轻透如翼",
+      "rarity": "逸",
+      "set": "星汉",
+      "params": {
+        "bg": "#eef3f2",
+        "ink": "#2c3e42",
+        "edge": "#9db9bb"
+      }
+    },
+    {
+      "key": "seal_zhuan",
+      "kind": "seal",
+      "name": "小篆印",
+      "cost": 70,
+      "note": "朱印 · 小篆方印",
+      "rarity": "常",
+      "set": "—",
+      "params": {
+        "shape": "square",
+        "c": "#b4552d",
+        "glow": ".18"
+      }
+    },
+    {
+      "key": "seal_hulu",
+      "kind": "seal",
+      "name": "葫芦印",
+      "cost": 150,
+      "note": "朱印 · 葫芦形",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "shape": "gourd",
+        "c": "#a8472c",
+        "glow": ".24"
+      }
+    },
+    {
+      "key": "seal_chi",
+      "kind": "seal",
+      "name": "螭钮印",
+      "cost": 240,
+      "note": "朱印 · 螭钮圆印",
+      "rarity": "秘",
+      "set": "金石",
+      "params": {
+        "shape": "round",
+        "c": "#9c3b2a",
+        "glow": ".32"
+      }
+    },
+    {
+      "key": "seal_wa",
+      "kind": "seal",
+      "name": "瓦当印",
+      "cost": 190,
+      "note": "朱印 · 瓦当纹",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "shape": "tile",
+        "c": "#8d5a3b",
+        "glow": ".22"
+      }
+    },
+    {
+      "key": "seal_jiu",
+      "kind": "seal",
+      "name": "九叠印",
+      "cost": 330,
+      "note": "朱印 · 九叠篆",
+      "rarity": "秘",
+      "set": "—",
+      "params": {
+        "shape": "nine",
+        "c": "#a02f22",
+        "glow": ".40"
+      }
+    },
+    {
+      "key": "ink_song",
+      "kind": "ink",
+      "name": "松烟",
+      "cost": 60,
+      "note": "墨色 · 松烟青",
+      "rarity": "常",
+      "set": "—",
+      "params": {
+        "c": "#2b2a26",
+        "soft": "#6d685c"
+      }
+    },
+    {
+      "key": "ink_zhu",
+      "kind": "ink",
+      "name": "朱墨",
+      "cost": 140,
+      "note": "墨色 · 朱砂沉",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "c": "#7a2f22",
+        "soft": "#a8685a"
+      }
+    },
+    {
+      "key": "ink_ni",
+      "kind": "ink",
+      "name": "泥金",
+      "cost": 230,
+      "note": "墨色 · 泥金褐",
+      "rarity": "秘",
+      "set": "—",
+      "params": {
+        "c": "#5a4322",
+        "soft": "#9b7b45"
+      }
+    },
+    {
+      "key": "ink_dai",
+      "kind": "ink",
+      "name": "青黛",
+      "cost": 180,
+      "note": "墨色 · 青黛远山",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "c": "#2b3b45",
+        "soft": "#617783"
+      }
+    },
+    {
+      "key": "ink_qi",
+      "kind": "ink",
+      "name": "漆烟",
+      "cost": 300,
+      "note": "墨色 · 漆光乌亮",
+      "rarity": "秘",
+      "set": "—",
+      "params": {
+        "c": "#1c1b18",
+        "soft": "#4d4a42"
+      }
+    },
+    {
+      "key": "fx_liuying",
+      "kind": "fx",
+      "name": "流萤",
+      "cost": 120,
+      "note": "华彩 · 落子萤火加倍",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "spark": "2.0",
+        "trail": "1.6",
+        "glow": ".18"
+      }
+    },
+    {
+      "key": "fx_miaojin",
+      "kind": "fx",
+      "name": "描金",
+      "cost": 200,
+      "note": "华彩 · 落点四向金线",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "gold": "1",
+        "spark": "1.1",
+        "glow": ".24"
+      }
+    },
+    {
+      "key": "fx_zhulan",
+      "kind": "fx",
+      "name": "朱澜",
+      "cost": 300,
+      "note": "华彩 · 终局三叠朱浪",
+      "rarity": "秘",
+      "set": "丹霞",
+      "params": {
+        "wave": "3",
+        "spark": "1.2",
+        "glow": ".30"
+      }
+    },
+    {
+      "key": "fx_xingyu",
+      "kind": "fx",
+      "name": "星雨",
+      "cost": 420,
+      "note": "华彩 · 终局星雨",
+      "rarity": "逸",
+      "set": "星汉",
+      "params": {
+        "star": "1",
+        "spark": "2.4",
+        "glow": ".36"
+      }
+    },
+    {
+      "key": "fx_yuehua",
+      "kind": "fx",
+      "name": "月华",
+      "cost": 360,
+      "note": "华彩 · 幕间月华渐晕",
+      "rarity": "逸",
+      "set": "—",
+      "params": {
+        "moon": "1",
+        "spark": "1.4",
+        "glow": ".34"
+      }
+    },
+    {
+      "key": "frame_su",
+      "kind": "frame",
+      "name": "素边",
+      "cost": 60,
+      "note": "卷框 · 一线素框",
+      "rarity": "常",
+      "set": "—",
+      "params": {
+        "c": "#d5cebc",
+        "w": "1",
+        "rad": "2"
+      }
+    },
+    {
+      "key": "frame_hui",
+      "kind": "frame",
+      "name": "回纹",
+      "cost": 140,
+      "note": "卷框 · 双线回纹",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "c": "#b4552d",
+        "w": "1.5",
+        "rad": "3"
+      }
+    },
+    {
+      "key": "frame_yun",
+      "kind": "frame",
+      "name": "云雷",
+      "cost": 220,
+      "note": "卷框 · 云雷暗纹",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "c": "#8d6a3f",
+        "w": "2",
+        "rad": "4"
+      }
+    },
+    {
+      "key": "frame_zhi",
+      "kind": "frame",
+      "name": "缠枝",
+      "cost": 320,
+      "note": "卷框 · 缠枝绕边",
+      "rarity": "秘",
+      "set": "—",
+      "params": {
+        "c": "#7a3b3f",
+        "w": "2.4",
+        "rad": "6"
+      }
+    },
+    {
+      "key": "piece_su",
+      "kind": "piece",
+      "name": "素子",
+      "cost": 70,
+      "note": "棋子 · 素木圆子",
+      "rarity": "常",
+      "set": "—",
+      "params": {
+        "a": "#f3eee0",
+        "b": "#4a463c",
+        "rim": "#cdc4ad"
+      }
+    },
+    {
+      "key": "piece_ma",
+      "kind": "piece",
+      "name": "玛瑙",
+      "cost": 160,
+      "note": "棋子 · 玛瑙赤纹",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "a": "#c45a3e",
+        "b": "#7a2f22",
+        "rim": "#e0a486"
+      }
+    },
+    {
+      "key": "piece_yu",
+      "kind": "piece",
+      "name": "青玉",
+      "cost": 260,
+      "note": "棋子 · 青玉温润",
+      "rarity": "秘",
+      "set": "—",
+      "params": {
+        "a": "#8fb6a8",
+        "b": "#2f5d57",
+        "rim": "#cfe2d8"
+      }
+    },
+    {
+      "key": "piece_jin",
+      "kind": "piece",
+      "name": "鎏金",
+      "cost": 360,
+      "note": "棋子 · 鎏金错边",
+      "rarity": "逸",
+      "set": "—",
+      "params": {
+        "a": "#d8b45c",
+        "b": "#6b4a1e",
+        "rim": "#f0d99a"
+      }
+    },
+    {
+      "key": "trail_dan",
+      "kind": "trail",
+      "name": "淡墨",
+      "cost": 60,
+      "note": "落痕 · 落痕淡墨",
+      "rarity": "常",
+      "set": "竹窗",
+      "params": {
+        "c": "#6d685c",
+        "w": "1",
+        "blur": "2"
+      }
+    },
+    {
+      "key": "trail_fei",
+      "kind": "trail",
+      "name": "飞白",
+      "cost": 140,
+      "note": "落痕 · 飞白笔意",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "c": "#b4552d",
+        "w": "1.6",
+        "blur": "3"
+      }
+    },
+    {
+      "key": "trail_zhu",
+      "kind": "trail",
+      "name": "朱线",
+      "cost": 220,
+      "note": "落痕 · 朱砂细线",
+      "rarity": "珍",
+      "set": "丹霞",
+      "params": {
+        "c": "#a83c28",
+        "w": "2",
+        "blur": "4"
+      }
+    },
+    {
+      "key": "trail_jin",
+      "kind": "trail",
+      "name": "金鳞",
+      "cost": 320,
+      "note": "落痕 · 金鳞碎光",
+      "rarity": "秘",
+      "set": "—",
+      "params": {
+        "c": "#c9a24a",
+        "w": "2.4",
+        "blur": "6"
+      }
+    },
+    {
+      "key": "sound_qing",
+      "kind": "sound",
+      "name": "清磬",
+      "cost": 60,
+      "note": "音色 · 清磬一声",
+      "rarity": "常",
+      "set": "竹窗",
+      "params": {
+        "f": "1.00",
+        "wave": "sine",
+        "dur": "1.00"
+      }
+    },
+    {
+      "key": "sound_song",
+      "kind": "sound",
+      "name": "松风",
+      "cost": 140,
+      "note": "音色 · 松风低回",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "f": "0.86",
+        "wave": "triangle",
+        "dur": "1.20"
+      }
+    },
+    {
+      "key": "sound_yu",
+      "kind": "sound",
+      "name": "玉振",
+      "cost": 220,
+      "note": "音色 · 玉振清越",
+      "rarity": "珍",
+      "set": "金石",
+      "params": {
+        "f": "1.22",
+        "wave": "sine",
+        "dur": "0.82"
+      }
+    },
+    {
+      "key": "sound_shuang",
+      "kind": "sound",
+      "name": "霜钟",
+      "cost": 300,
+      "note": "音色 · 霜钟沉远",
+      "rarity": "秘",
+      "set": "—",
+      "params": {
+        "f": "0.68",
+        "wave": "sine",
+        "dur": "1.60"
+      }
+    },
+    {
+      "key": "curtain_su",
+      "kind": "curtain",
+      "name": "素幕",
+      "cost": 80,
+      "note": "幕帘 · 素幕轻落",
+      "rarity": "常",
+      "set": "—",
+      "params": {
+        "c": "#2b2a26",
+        "a": ".55",
+        "speed": "1.00"
+      }
+    },
+    {
+      "key": "curtain_xia",
+      "kind": "curtain",
+      "name": "霞帔",
+      "cost": 200,
+      "note": "幕帘 · 霞帔渐染",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "c": "#a8472c",
+        "a": ".62",
+        "speed": "1.25"
+      }
+    },
+    {
+      "key": "curtain_xing",
+      "kind": "curtain",
+      "name": "星帷",
+      "cost": 340,
+      "note": "幕帘 · 星帷垂光",
+      "rarity": "逸",
+      "set": "星汉",
+      "params": {
+        "c": "#2a3a58",
+        "a": ".70",
+        "speed": "1.45"
+      }
+    },
+    {
+      "key": "badge_mu",
+      "kind": "badge",
+      "name": "木牌",
+      "cost": 70,
+      "note": "衔牌 · 木衔牌",
+      "rarity": "常",
+      "set": "—",
+      "params": {
+        "bg": "#e8ddc6",
+        "c": "#5a4322",
+        "edge": "#c2ad86"
+      }
+    },
+    {
+      "key": "badge_tong",
+      "kind": "badge",
+      "name": "铜牌",
+      "cost": 180,
+      "note": "衔牌 · 铜衔牌",
+      "rarity": "珍",
+      "set": "—",
+      "params": {
+        "bg": "#d9b077",
+        "c": "#4a3318",
+        "edge": "#a87b3e"
+      }
+    },
+    {
+      "key": "badge_yu",
+      "kind": "badge",
+      "name": "玉牌",
+      "cost": 300,
+      "note": "衔牌 · 玉衔牌",
+      "rarity": "秘",
+      "set": "—",
+      "params": {
+        "bg": "#d3e5dc",
+        "c": "#2f5d57",
+        "edge": "#8fb6a8"
+      }
+    }
+  ]
+}

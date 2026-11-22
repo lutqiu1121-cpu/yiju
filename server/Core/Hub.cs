@@ -251,6 +251,33 @@ namespace Qipai
                 outFrames.Add(new KeyValuePair<Player, object>(p, J.Frame("t", "account", "ok", false)));
                 return;
             }
+            if (t == "accountPassword")
+            {
+                string e = "";
+                bool ok = Accounts.ChangePassword(p.AccountId, J.Str(m, "old", ""), J.Str(m, "password", ""), out e);
+                outFrames.Add(new KeyValuePair<Player, object>(p, ok
+                    ? J.Frame("t", "note", "text", "口令已更换，加密存档未动")
+                    : Err(p, e).Value));
+                return;
+            }
+            if (t == "accountDelete")
+            {
+                string e = "";
+                bool ok = Accounts.DeleteAccount(p.AccountId, J.Str(m, "password", ""), out e);
+                if (ok) p.AccountId = "";
+                outFrames.Add(new KeyValuePair<Player, object>(p, ok
+                    ? J.Frame("t", "account", "ok", false, "note", "本馆账号与加密存档已删去")
+                    : Err(p, e).Value));
+                if (ok) outFrames.Add(new KeyValuePair<Player, object>(p, Accounts.ShopState("")));
+                return;
+            }
+            if (t == "clearLocalStats")
+            {
+                LocalData.ClearStats();
+                outFrames.Add(new KeyValuePair<Player, object>(p, J.Frame("t", "note", "text", "本馆本机榜已清空")));
+                outFrames.Add(new KeyValuePair<Player, object>(p, J.Frame("t", "board", "list", LocalData.Leaderboard())));
+                return;
+            }
             if (t == "accountState" || t == "accountSave")
             {
                 Dictionary<string, object> sv = string.IsNullOrEmpty(p.AccountId) ? null : Accounts.State(p.AccountId);

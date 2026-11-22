@@ -1,3 +1,5 @@
+> **技术与合规声明** · 本项目为开源技术分享，不提供官方游戏服务，不构成面向公众的网络游戏运营。游戏核心体验可完全离线进行。任何使用者自行部署、分发或商业化所产生的合规责任（包括但不限于版号、实名制、个人信息保护），由使用者自行承担。
+>
 # 给「本地凭证 · 打包发布 agent」的提示词
 
 > 环境说明（给人看的）：认证凭证**已经在本机里**（git credential / SSH key / gh 登录态），agent 能联网、能 push、能建 Release，也能构建 APK。
@@ -132,3 +134,13 @@
 - **覆盖升级**：固定 keystore + 固定 applicationId + 递增 versionCode 三者缺一不可。密钥随仓库公开分发只为「签名一致」，不上商店；详见 `android/keystore/README.md`。
 - **发布形态**：Release 只发 `yiju.apk` 一个文件；`yiju-source.zip` 里带完整棋馆、`scripts/` 示例剧本、`leaderboard/` 目录适配器与非商用协议，房主拿它起自己的棋馆。剧本更新 = 房主往 `scripts/` 丢新 JSON，不发版。
 - `build.sh` 需要 .NET 8 SDK；只有 Runtime 时改用已构建好的 `publish/` 目录打包，不要改 `build.sh`。
+
+
+## 本版追加核对项
+
+- 只上传 `yiju.apk` 一个文件；`yiju-release.zip` / `yiju-source.zip` / `SIZES.txt` 仅本地留档。
+- 覆盖升级：固定 `android/keystore/yiju.jks` + 固定 `app.yiju.archive` + `versionCode` 每次 +1，禁止卸载重装。
+- 构建前 `build.sh` 会重生成 `client/offline-assets.js` 与 `client/wear.js`；不要手改这两个生成物，改 `themes/wear.json` 或 `rules/manifest.json`。
+- 全量验证：`python3 tools/verify.py` 静态自检 + 各 C# 专项实编译实跑；沙盒若缺 .NET 8 / Android SDK，宿主层与 APK 由本环境实构建。
+- 声明文案必须同时出现在 README、App 设置页、入门小引、页脚与离线资产里，不得删改。
+- 凭证零接触、报错即停；`scripts/` 与 `leaderboard/` 不碰不传。
