@@ -68,5 +68,5 @@ dotnet run --project leaderboard/BoardServer -- --url http://0.0.0.0:5090
 
 ## 发布
 
-Release **只上传 `yiju.apk`**。`leaderboard/` 与 `scripts/` 一起放在 `yiju-source.zip` 里，
+Release 上传 `yiju.apk` + `yiju-release.zip` 两个资产。`leaderboard/` 与 `scripts/` 一起放在 `yiju-source.zip` 里，
 打包 agent 不构建、不上传、不改动这两个目录。

@@ -1,8 +1,9 @@
 
-const CACHE = 'yiju-v5';
-const LEGACY = ['yiju-v4', 'yiju-v3'];
+const CACHE = 'yiju-v6';
+const LEGACY = ['yiju-v5', 'yiju-v4', 'yiju-v3'];
 const FILES = [
-  '/', '/index.html', '/app.css', '/app.js', '/net.js', '/render.js', '/audio.js', '/fx.js',
+  '/', '/index.html', '/app.css', '/shell.css', '/app.js', '/shell.js', '/friends.js',
+  '/net.js', '/render.js', '/audio.js', '/fx.js',
   '/icon.svg', '/offline-assets.js', '/local-net.js', '/cultivation.js',
   '/rules-port/base.js', '/rules-port/cs-runtime.js', '/rules-port/all-rules.js',
   '/rules-port/registry.js', '/settings.js', '/wear.js', '/manifest.webmanifest',

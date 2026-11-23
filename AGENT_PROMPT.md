@@ -1,6 +1,18 @@
-# 给 agent 的最终提示词（可直接复制 · v3 · 现行口径）
+# 给 agent 的最终提示词（可直接复制 · v5 · 现行口径）
 
-> **v3 修订（权威性高于下文所有旧段落，冲突处以本段为准）**
+> **v5 修订（权威性最高，冲突处以本段为准；v3 / v2 / 历史正文全部让位）**
+> 本源码包**已完成横屏重构与全部收尾**，agent 只需「落地改动 + 推代码 + 跑 CI」，**不要重新设计、不要改玩法规则、不要改页面布局、不要另建 workflow**。
+> 1. 仓库 `https://github.com/lutqiu1121-cpu/yiju`（分支 `master`）已存在且已有内容；未登录匿名视角的 `This repository is empty.` 是权限表现，不是真没代码，**不要再让用户贴 `git remote -v` 或 push 输出自证**。
+> 2. **Android 强制横屏**（`screenOrientation="landscape"`）。进游戏先登录页：默认「本地模式 · 可局域网联机」，服务器地址**可填可不填**，提示条**可关**；好友用本机生成的不重复凭证（`YJ-XXXX-XXXX-XXXX`）添加，在线状态只在同棋馆 / 局域网内可见，**不连公网、不注册账号**。
+> 3. 大厅按横屏骨架排布：顶栏 / 左好友 / 中央大「对弈」/ 右入口列 / 底部 tab。点「对弈」是**弹层**（主推 8 局 → 二级「更多对弈」52 局），**不是整页跳转**；装扮已从案牍里独立成页；设置页黑底黑字、题记空白、提示被键盘遮挡、象棋红黑难辨、寻局光效闪断，全部已修。
+> 4. App 图标**就用用户给的 512×512 原图**：`render_branding.py` 的 `ICON_GRID` 已逐格还原为 64×64，米白底 `#F5F1E6` + **纯黑墨 `#000000`** 的像素「弈」字 + 朱砂 `#9B092D` 点，**不加边框、不加右下印章、不改字形与朱砂位置**。生成 adaptive icon / 512 PNG / `android/branding.sha256`，`build-apk.sh` 与 CI 逐步核对哈希与 APK 内资源，**不要手改生成物、不要换 preset、不要再自作主张加装饰**。
+> 5. **Release 口径统一**：所有 tag（测试版与正式版）都上传 **两个资产 `yiju.apk` + `yiju-release.zip`**。下文 / `PUBLISH_AGENT.md` / `README.md` 里任何「正式版只上传 `yiju.apk` 一个文件」「不上传 `yiju-release.zip`」的旧句**一律作废**。
+> 6. 验收已全绿：静态自检 **793/0**、JS 语法 **21/21**、60 局原规则 **60/60**、真实走法 **10/10**、断网集成 **4/4**、**横屏 HTML 真浏览器 `tools/ui-e2e.cjs` 31/31**（截图与报告在 `ui-shots/`）。图标产物与用户原图硬量化后 **262144 像素逐像素一致、4096 格采样 0 处偏差**；`verify.py` 已加断言拦住「压成 32×32 / 加框加印章 / 改三色」。CI 用 `apksigner` 取指纹，不再用 `keytool -printcert -jarfile`。
+> 7. 固定 keystore / `applicationId` / 合规声明 / LICENSE / 60 局注册一律不动；**不需要任何签名 Secret、PAT 或口令**。服务端能否实起仍需 .NET 8 机器上跑 `./start.sh`，CI 不替代。
+
+---
+
+> **v3 修订（历史参考，与 v5 冲突处以 v5 为准）**
 > 本源码包**已完成全部改版**，不需要 agent 再设计、再改代码、再补 workflow：
 > 1. 仓库 `https://github.com/lutqiu1121-cpu/yiju`（分支 `master`）**已存在且已有内容**（用户已确认）。未登录的匿名视角显示 `This repository is empty.` 属权限/私有仓库的正常表现，**不是真没代码，不要再要求用户贴 `git remote -v` 或 push 输出自证**。包内已自带 `.git` 与配好的 `origin`：若远端是同源历史，`git fetch origin master` 后直接 `git push -u origin master`；若提示 non-fast-forward，**改用随附的 `yiju_v3.patch` 在现有仓库上 `git apply`**，不要 `init`、不要 `remote add`、不要 force、不要覆盖远端历史。
 > 2. `.github/workflows/release.yml` **已随包提供**（零 Secret、用默认 `GITHUB_TOKEN`、首发 versionCode 放行、指纹实测、真实报错即停）。**不要再新建或覆盖它**。请在仓库 Settings → Actions → General 把 Workflow permissions 勾为 **Read and write**。
@@ -42,7 +54,7 @@
 
 **三、发布**
 9. 首发 tag `v1.0.0-test.1`，以 **Pre-release（测试版）** 发布，标题「弈局 yiju v1.0.0 测试版 · 服务端联机实测」。
-10. **测试版**允许上传两个资产：`yiju.apk` + `yiju-release.zip`（服务端包，供 .NET 8 服务器 `./start.sh` 实测）。正式版恢复「只上传 `yiju.apk` 一个文件」。`SIZES.txt`、源码包、bundle 仅本地留档，不进 Release。
+10. **所有 Release**都上传两个资产：`yiju.apk` + `yiju-release.zip`（服务端包，供 .NET 8 服务器 `./start.sh` 实测）。`SIZES.txt`、源码包、bundle 仅本地留档，不进 Release。
 11. Release 正文写清：60 个玩法（含七局原创）、折狱录制本、弈株装扮 49 件、隐士十阶、神的领域三尊、按最高段位定隐士的房规、分池寻局与进度条；房主一键启动 `./start.sh`（Windows `start.bat`），改 `yiju.conf` 即改端口 / 匾额 / 名录 / 校时 / 榜单，可 `--port 9000 --no-directory` 临时覆盖；棋馆地址**任意可达地址**都认（局域网 IP / 域名 / IPv6 / 带路径 / 本机回环），端口写不写都行，不写补可配置的缺省端口；服务器只是可选项——本机自弈完全不联网可用全部除多人联机外的功能，局域网联机不需外部服务，名录 / 校时 / 榜单默认开但可全关、挂了自动降级；源码公开 · 禁止商用，以及上面那段技术与合规声明全文。
 12. 如实说明：本版服务端宿主未经实起验证，APK 由 GitHub CI 真实产出；不得声称「服务器已验证可用」。任一步失败即停并原样贴报错，不要绕过、不要伪造构建或发布结果。
 

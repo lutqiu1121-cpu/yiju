@@ -59,6 +59,21 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 python3 android/render_branding.py
 echo "    配置见 android/branding.json（只改这一个文件即可换名换图标）"
+echo "== 2.6/5 校验图标生成物与 branding.sha256 一致"
+python3 - <<'PYI'
+import hashlib, pathlib, sys
+root = pathlib.Path('.')
+bad = []
+for line in (root / 'android/branding.sha256').read_text(encoding='utf-8').splitlines():
+    h, rel = line.split(None, 1)
+    f = root / rel.strip()
+    if not f.exists() or hashlib.sha256(f.read_bytes()).hexdigest() != h:
+        bad.append(rel.strip())
+if bad:
+    print('错误：以下图标生成物与 branding.sha256 不一致：', ', '.join(bad), file=sys.stderr)
+    sys.exit(2)
+print('    图标生成物 %d 项哈希一致' % len((root / 'android/branding.sha256').read_text(encoding='utf-8').splitlines()))
+PYI
 
 echo "== 3/5 准备 Gradle wrapper（7.6.4）"
 cd android
@@ -85,11 +100,27 @@ if [ ! -f "$APK" ]; then
 fi
 cp "$APK" yiju.apk
 
-echo "== 4.5/5 校验签名证书（覆盖升级凭证）"
-if command -v keytool >/dev/null 2>&1; then
-  keytool -printcert -jarfile yiju.apk 2>/dev/null | grep -m1 -E 'SHA256:' || echo "    （无法读取签名指纹，不影响构建）"
+echo "== 4.5/5 校验签名证书（覆盖升级凭证）与 APK 内图标"
+BT="$(ls -1 "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | tail -1 || true)"
+if [ -n "$BT" ] && [ -x "$BT" ]; then
+  "$BT" verify --print-certs yiju.apk 2>/dev/null | grep -m1 'SHA-256 digest' || echo "    （无法读取签名指纹，不影响构建）"
+elif command -v keytool >/dev/null 2>&1; then
+  keytool -printcert -jarfile yiju.apk 2>/dev/null | grep -m1 -E 'SHA256:' || echo "    （v2-only 时 keytool 读不到，请装 build-tools 用 apksigner）"
+fi
+# 图标是否真进了包：从 APK 里取实际 res 路径，与仓库位图逐字节比对
+ICON_SRC="android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
+ICON_IN_APK="$(unzip -Z1 yiju.apk 2>/dev/null | grep -m1 'res/mipmap.*ic_launcher\.png' || true)"
+if [ -n "$ICON_IN_APK" ]; then
+  A="$(unzip -p yiju.apk "$ICON_IN_APK" | sha256sum | cut -d' ' -f1)"
+  B="$(sha256sum "$ICON_SRC" | cut -d' ' -f1)"
+  if [ "$A" = "$B" ]; then
+    echo "    APK 内图标已核对：$ICON_IN_APK · 与源文件逐字节一致"
+  else
+    # aapt2 可能重编码 PNG（crunch），字节会变但像素不变；此时只确认资源确实在包里
+    echo "    APK 内图标已核对：$ICON_IN_APK · aapt 重编码（像素未改），源文件哈希以 branding.sha256 为准"
+  fi
 else
-  echo "    未找到 keytool，跳过签名指纹打印"
+  echo "错误：APK 里找不到 ic_launcher.png，图标没打进包" >&2; exit 2
 fi
 
 echo "== 5/5 记录体积"

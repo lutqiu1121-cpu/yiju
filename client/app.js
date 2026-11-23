@@ -147,10 +147,9 @@ function boot() {
     S.net.local.setCatalog(S.games);
     S.net.connect();
     Cultivation.mount();
-    setTimeout(() => {
-      if (!S.guideShown) openGuide();
-      else if (S.conn !== 'online' && Settings.get('offlineNotice')) showOfflineHint();
-    }, 600);
+    // v5：开机不再自动弹「入门小引」或离线 toast——旧版它们会在入局后
+    // 半透明盖住横屏大厅，也是「提示被遮挡 / 点不了」的来源。
+    // 小引改由大厅右列「引」手动打开；离线说明写进登录页提示条与大厅题记，且均可关闭。
     window.addEventListener('resize', debounce(() => renderPlay(), 120));
     window.addEventListener('orientationchange', () => setTimeout(() => renderPlay(), 220));
   });
@@ -692,11 +691,14 @@ function go(name) {
   if (typeof renderGodPanel === 'function') renderGodPanel();
   if (name === 'stats') { updateStats(); renderAccountCard(); if (S.net) { S.net.send({ t:'board' }); S.net.send({ t:'halls' }); S.net.send({ t:'accountState' }); } }
   if (name === 'today') updateToday();
+  if (window.YJ_SHELL && window.YJ_SHELL.onGo) window.YJ_SHELL.onGo(name);
 }
 
 function modal(title, html, onOk) {
+  const el = $('#modal');
   $('#modalTitle').textContent = title; $('#modalBody').innerHTML = html;
-  $('#modal').hidden = false;
+  el.style.removeProperty('display');
+  el.hidden = false;
   $('#modalClose').onclick = closeModal;
   const ok = $('#modalOk'); if (ok && onOk) ok.onclick = () => { onOk(); closeModal(); };
 }
@@ -805,7 +807,7 @@ function openCreate() {
     : (g.variants || []).map(v => `<option value="${escapeHtml(v)}" ${v === S.curVariant ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
   modal('设席 · ' + g.name, `
     <div class="field"><label>对弈变体</label><select id="mkVariant">${variants}</select></div>
-    <div class="field"><label>雅号（可留空）</label><input id="mkTitle" maxlength="24" placeholder="例：周末手谈 · 来者不拒"></div>
+    <div class="field"><label>房间名（可留空）</label><input id="mkTitle" maxlength="24" placeholder="例：周末手谈 · 来者不拒"></div>
     <div class="field"><label>开局人数 ${g.min}–${g.max} 人 · 开局后空席封存</label>
       <input id="mkSeats" type="number" min="${g.min}" max="${g.max}" value="${g.min}"></div>
     <div class="field"><label>入席暗语（留空=公开）</label><input id="mkPassword" maxlength="24" placeholder="不填即无暗语"></div>
@@ -853,8 +855,19 @@ function recent(n) {
   S.history.slice(0, n).reverse().forEach((h, i) => out[i] = h.win ? 1 : 0);
   return out;
 }
+function setTodayLine(text) {
+  const el = $('#todayLine'); if (!el) return;
+  if (text) { el.textContent = text; return; }
+  const d = new Date(), s = S.stats || { plays: 0, wins: 0 };
+  const day = (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  el.textContent = !s.plays
+    ? day + ' · 卷上尚无落子。先与隐士手谈一局，题记自会记下第一笔。'
+    : day + ' · 已对 ' + s.plays + ' 局，胜 ' + s.wins + ' 局。' +
+      (s.wins >= s.plays / 2 ? '棋路渐稳，宜复盘一局。' : '胜负兵家常事，再开一枰。');
+}
 function updateToday() {
   $('#gameCount').textContent = S.games.length;
+  setTodayLine();
   $('#themeCount').textContent = (S.themes.themes || []).length;
   $('#rendererCount').textContent = (S.manifest && S.manifest.renderers || []).length;
   $('#streakNum').textContent = (S.stats.streak || 0) + ' 天';
@@ -2053,3 +2066,44 @@ function renderMatchState(m) {
     bar.hidden = true; toast('已止寻局');
   };
 }
+
+/* 横屏大厅外壳（shell.js）通过这组接口调用对局内核，不重复实现任何玩法逻辑 */
+window.YJ = {
+  S, go, toast, modal, closeModal, openCreate, joinRoom, startMatch, openGuide,
+  setTodayLine,
+  settings: Settings,
+  games: () => S.games,
+  mainIds: ['yijuan','houlou','duzhou','dengying','huiwen','cuojin','shiyi','tingyu'],
+  presenceCodes: () => {
+    const out = [];
+    (S.presence || []).forEach(p => {
+      if (!p) return;
+      ['code', 'name', 'id'].forEach(k => {
+        const v = p[k];
+        if (typeof v === 'string') {
+          out.push(v);
+          const m = v.match(/YJ-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/);
+          if (m) out.push(m[0]);
+        }
+      });
+    });
+    (S.chat || []).forEach(c => {
+      const m = String((c && c.text) || '').match(/YJ-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}/);
+      if (m) out.push(m[0]);
+    });
+    return out;
+  },
+  reconnect: () => {
+    if (!S.net) return;
+    S.net.disconnect(); S.net.connect();
+  },
+  startGame: (id) => {
+    const g = S.games.find(x => x.id === id);
+    if (!g) { toast('玩法册里没有这一局'); return; }
+    S.curGame = id;
+    S.curVariant = (g.variants || [])[0] || '';
+    renderVariants();
+    closeModal();
+    startMatch(S.curVariant);
+  }
+};

@@ -4,11 +4,12 @@
   "package": "yiju",
   "icon": {
     "preset": "yiju",
-    "bg": "#F4F0E6",
-    "ink": "#2B2A26",
+    "bg": "#F5F1E6",
+    "ink": "#000000",
     "accent": "#9B092D",
-    "note": "浅色统一版：米白纸底 #F4F0E6 + 墨线 #2B2A26 + 朱砂 #9B092D，与 App 内页同色，不割裂",
-    "line": "#D5CEBC"
+    "note": "图标严格按用户提供的 512×512 原图逐格还原为 64×64 网格（见 render_branding.py 的 ICON_GRID）：米白纸底 #F5F1E6 + 纯黑墨 #000000 的像素「弈」字 + 朱砂 #9B092D 点。不加边框、不加右下印章、不改字形笔画与朱砂位置。生成 adaptive icon / 512 PNG / branding.sha256 供 CI 核对；不要改 preset，不要手改生成物",
+    "line": "#D5CEBC",
+    "adaptive": true
   },
   "paths": []
 }

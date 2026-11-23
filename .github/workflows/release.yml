@@ -94,6 +94,23 @@ jobs:
           bash build-apk.sh
           test -f yiju.apk || { echo "未产出 yiju.apk"; exit 1; }
 
+      - name: 校验图标生成物（防止旧图混进包）
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          python3 - <<'PY'
+          import hashlib, pathlib, sys
+          bad = []
+          for line in pathlib.Path('android/branding.sha256').read_text(encoding='utf-8').splitlines():
+              h, rel = line.split(None, 1)
+              f = pathlib.Path(rel.strip())
+              if not f.exists() or hashlib.sha256(f.read_bytes()).hexdigest() != h:
+                  bad.append(rel.strip())
+          if bad:
+              print('图标生成物与清单不一致:', bad, file=sys.stderr); sys.exit(1)
+          print('图标生成物哈希一致，用户原图 64×64 逐格还原版已就位')
+          PY
+
       - name: 校验覆盖升级三要素与签名指纹
         run: |
           set -euo pipefail
@@ -110,13 +127,10 @@ jobs:
                 '历史 tag 数=' + str(len(prev)), '(首发不比对)')
           PY
           KS_SHA=$(keytool -list -v -keystore android/keystore/yiju.jks \
-            -storepass yijuarchive -alias yiju 2>/dev/null \
-            | sed -n 's/.*SHA256: //p' | head -1 | tr -d ' :\t' | tr 'A-Z' 'a-z')
-          # APK 仅带 v2/v3 签名，keytool -printcert -jarfile 只认 JAR 式 v1，改用 apksigner
-          APKSIGNER="$ANDROID_HOME/build-tools/33.0.2/apksigner"
-          [ -x "$APKSIGNER" ] || APKSIGNER="$(command -v apksigner)"
+            -storepass yijuarchive -alias yiju 2>/dev/null | grep -m1 'SHA256:' | sed 's/.*: //' | tr -d ' :' | tr 'A-Z' 'a-z')
+          APKSIGNER=$(ls -1 "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
           APK_SHA=$("$APKSIGNER" verify --print-certs yiju.apk 2>/dev/null \
-            | sed -n 's/.*SHA-256 digest: //p' | head -1 | tr -d ' :\t' | tr 'A-Z' 'a-z')
+            | grep -m1 'SHA-256 digest' | sed 's/.*: //' | tr -d ' :' | tr 'A-Z' 'a-z')
           echo "keystore SHA256 = $KS_SHA"
           echo "APK      SHA256 = $APK_SHA"
           test -n "$KS_SHA" && test "$KS_SHA" = "$APK_SHA" || { echo "签名证书与固定 keystore 不一致"; exit 1; }
@@ -132,6 +146,6 @@ jobs:
           gh release create "$TAG" yiju.apk yiju-release.zip \
             --title "yiju $TAG" --prerelease --verify-tag \
             --notes "离线可玩的古风棋牌合集 · 服务器为可选项、仅供自用。开源技术分享，不提供官方服务器，禁止商用。
-          本版含：APK 壳改用虚拟安全源修复前端脚本不执行；断线可直接与隐士本机对弈（离线 60 局全部走服务端原规则）；浅色统一图标；修仙境界与纯本地签到；文案去繁就简。
+          本版含：强制横屏 + 王者式大厅（顶栏 / 左好友 / 中央对弈 / 右入口 / 底部 tab）；进游戏前登录页，默认本地模式，服务器可填可不填，提示可关；好友凭不重复凭证添加，在线状态只在同棋馆或局域网内可见，不连公网；「对弈」为主推 8 局 + 二级「更多对弈」52 局的弹层，不再整页跳；离线 60 局全部走服务端原规则；装扮独立成页；设置页对比度修复、题记与空状态补齐、提示不再被遮挡；象棋改红黑实心双色；App 图标严格按用户原图 64×64 逐格还原（米白底 + 纯黑墨 #000000 + 朱砂点；无边框、无印章、不改字形），生成 adaptive icon / 512 PNG，CI 逐项核对哈希。
           服务端运行：解压 yiju-release.zip 后 dotnet publish/server/qipai-server.dll（需 .NET 8 Runtime）。
           签名沿用仓库固定 keystore，可与同签名旧版覆盖安装；本版尚未实机验证服务端启动。"

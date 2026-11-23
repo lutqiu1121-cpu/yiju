@@ -214,8 +214,12 @@ BAD_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".woff", ".woff2",
            ".ttf", ".otf", ".mp3", ".wav", ".ogg", ".m4a"}
 bad = [str(p.relative_to(ROOT)) for p in (ROOT / "client").rglob("*")
        if p.suffix.lower() in BAD_EXT]
-bad += [str(p.relative_to(ROOT)) for p in android.rglob("*") if p.suffix.lower() in BAD_EXT]
-check(not bad, "客户端与 APK 无位图/字体/音频资源" + (" → " + ",".join(bad) if bad else ""))
+# 启动图标的两张 512 PNG 是唯一例外：Android 安装页 / 桌面必须读位图，
+# 且由 render_branding.py 从像素网格生成，并记入 branding.sha256 供 CI 核对。
+ICON_ALLOW = {"ic_launcher.png", "ic_launcher_round.png"}
+bad += [str(p.relative_to(ROOT)) for p in android.rglob("*")
+        if p.suffix.lower() in BAD_EXT and p.name not in ICON_ALLOW]
+check(not bad, "除启动图标外客户端与 APK 无位图/字体/音频资源" + (" → " + ",".join(bad) if bad else ""))
 check("feTurbulence" in html or "paperNoise" in html, "纸纹为实时滤镜")
 
 # 9.5) 打字交流 / 派对发言 / 多人席位 / 品牌配置
@@ -382,9 +386,10 @@ for k in ["stage-show", "draw-wrap", "board-list", "clue-wall", "show-ending"]:
 check("scripts" in (ROOT / "build.sh").read_text(encoding="utf-8") and
       "cp -r scripts publish/scripts" in (ROOT / "build.sh").read_text(encoding="utf-8"),
       "运行包带房主剧本库")
-check("yiju.apk \\" in pub_src or "yiju.apk" in pub_src, "Release 只上传 APK")
-check("只上传 1 个文件" in pub_src and "1 个文件 `yiju.apk`" in (ROOT / "RELEASE_LIST.md").read_text(encoding="utf-8"),
-      "发布提示词与清单明确只发 APK")
+check("yiju.apk \\" in pub_src and "yiju-release.zip \\" in pub_src,
+      "Release 同时上传 APK 与服务端包")
+check("上传 2 个文件" in pub_src and "Release 上传 2 个文件" in (ROOT / "RELEASE_LIST.md").read_text(encoding="utf-8"),
+      "发布提示词与清单明确双资产")
 check("60 个玩法" in (ROOT / "README.md").read_text(encoding="utf-8"), "README 玩法数已更新")
 check(not re.search(r"qipai-archive|棋牌档案|WORD //", html_all + app + (ROOT / "README.md").read_text(encoding="utf-8")),
       "无旧品牌残留")
@@ -648,15 +653,82 @@ check(all(f in help_txt for f in ["--url", "--port", "--host", "--hall", "--root
       "--config", "--help", "--version", "QIPAI_URL", "YIJU_CONF"]),
       "启动项全表覆盖参数与环境变量")
 agent = (ROOT / "AGENT_PROMPT.md").read_text(encoding="utf-8")
-check(notice_txt in agent and "只上传 `yiju.apk` 一个文件" in agent and
+check(notice_txt in agent and "v5 修订" in agent and
+      "两个资产 `yiju.apk` + `yiju-release.zip`" in agent and
       "覆盖升级" in agent and "禁止卸载重装" in agent and "报错即停" in agent.replace("任一步失败即停", "报错即停"),
-      "给 agent 的最终提示词自含声明 / 单 APK / 覆盖升级 / 失败即停")
+      "给 agent 的最终提示词自含声明 / 双资产 / 覆盖升级 / 失败即停")
+check((ROOT / "tools/ui-e2e.cjs").exists() and "ui-e2e.cjs" in agent,
+      "横屏 HTML 真浏览器验收脚本随包交付并在提示词里登记")
 check("## 一键启动 · 启动项" in (ROOT / "README.md").read_text(encoding="utf-8") and
       "./start.sh" in (ROOT / "README.md").read_text(encoding="utf-8"),
       "README 有一键启动与启动项说明")
 check("ServerBootSmoke" in (ROOT / "README.md").read_text(encoding="utf-8") or
       "真实 TCP" in (ROOT / "README.md").read_text(encoding="utf-8"),
       "README 如实写明服务器可用性验证方式")
+
+# --- v5：横屏大厅 / 登录 / 好友 / 图标可验证 ---
+shell_css = (ROOT / "client/shell.css").read_text(encoding="utf-8")
+shell_js = (ROOT / "client/shell.js").read_text(encoding="utf-8")
+friends_js = (ROOT / "client/friends.js").read_text(encoding="utf-8")
+html5 = (ROOT / "client/index.html").read_text(encoding="utf-8")
+app5 = (ROOT / "client/app.js").read_text(encoding="utf-8")
+check(all(k in html5 for k in ['id="login"', 'id="hall"', 'id="playPicker"',
+                               'id="friendAdd"', 'id="screen-shop"', 'id="rotateHint"',
+                               'shell.css', 'shell.js'])
+      and "import * as F from './friends.js'" in shell_js,
+      "横屏登录 / 大厅 / 对弈弹层 / 好友 / 独立装扮页 / 旋转提示齐备")
+check("window.YJ" in app5 and "YJ_SHELL.onGo" in app5 and "startGame" in app5,
+      "对局内核向大厅外壳暴露接口，层级联动不重复实现玩法")
+check("screenOrientation=\"landscape\"" in (ROOT / "android/app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
+      and "@mipmap/ic_launcher" in (ROOT / "android/app/src/main/AndroidManifest.xml").read_text(encoding="utf-8"),
+      "Android 强制横屏并引用新 mipmap 图标（不再吃旧 drawable）")
+rb5 = (ROOT / "android/render_branding.py").read_text(encoding="utf-8")
+check(all(k in rb5 for k in ['branding.sha256', 'mipmap-xxxhdpi', 'mipmap-anydpi-v26',
+                             'ic_launcher_foreground']) and
+      ('write_icon_png' in rb5 or 'write_png' in rb5),
+      "图标生成自适应图标 / 512 位图 / 哈希清单，可逐项核对是否进包")
+check((ROOT / "android/branding.sha256").exists() and
+      (ROOT / "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png").exists(),
+      "用户原图逐格还原的图标生成物与哈希清单已落盘")
+# 防再犯：图标必须严格是用户 512×512 原图的 64×64 逐格还原，不许再压成 32×32、
+# 不许加细墨框 / 右下朱砂方印 / 任何额外装饰，不许改三色。
+grid_txt = rb5[rb5.find('ICON_GRID = """'):rb5.find('""".strip')]
+check("assert len(ICON_GRID) == 64" in rb5 and "每行必须是 64 列" in rb5 and
+      len(grid_txt.splitlines()) == 65,
+      "图标网格为 64×64（用户原图每格 8px），不是 32×32")
+check(all(bad not in rb5 for bad in ['seal_rects', '细墨外框', '朱砂方印', 'DISC_RING', 'FRAME']),
+      "图标无额外边框 / 印章 / 装饰，严格照抄原图")
+icon_cfg = json.loads((ROOT / "android/branding.json").read_text(encoding="utf-8"))["icon"]
+check(icon_cfg.get("bg") == "#F5F1E6" and icon_cfg.get("ink") == "#000000" and
+      icon_cfg.get("accent") == "#9B092D",
+      "图标三色取自用户原图：米白 / 纯黑墨 / 朱砂")
+icon_svg5 = (ROOT / "client/icon.svg").read_text(encoding="utf-8")
+check('viewBox="0 0 64 64"' in icon_svg5 and "stroke=" not in icon_svg5,
+      "网页图标同为 64×64 逐格还原、无描边")
+# 生成物与清单逐项一致（CI 会再做一遍，这里先拦住脏包）
+import hashlib as _hl
+_bad5 = []
+for _line in (ROOT / "android/branding.sha256").read_text(encoding="utf-8").splitlines():
+    _h, _rel = _line.split(None, 1)
+    _f = ROOT / _rel.strip()
+    if not _f.exists() or _hl.sha256(_f.read_bytes()).hexdigest() != _h:
+        _bad5.append(_rel.strip())
+check(not _bad5, "图标 8 个生成物与 branding.sha256 逐项一致" + (" → " + ",".join(_bad5) if _bad5 else ""))
+check("apksigner" in (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8") and
+      "yiju.apk yiju-release.zip" in (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8"),
+      "CI 用 apksigner 取指纹且 Release 同时发 APK 与服务端包")
+check("#a3392b" in (ROOT / "client/render.js").read_text(encoding="utf-8") and
+      "#2b2a26" in (ROOT / "client/render.js").read_text(encoding="utf-8"),
+      "象棋红黑实心双色阵营，不再靠淡描边分辨")
+check(".set-group" in shell_css and "var(--shellTile)!important" in shell_css and
+      "#toast" in shell_css and "top:8px!important" in shell_css,
+      "设置页黑底黑字修复 / 提示移到顶部不再被键盘遮挡")
+check("myCode" in friends_js and "validCode" in friends_js and "BroadcastChannel" in friends_js and
+      "statusOf" in friends_js and "不连公网" in shell_js,
+      "好友凭证不重复、在线只在同棋馆或局域网可见、不连公网")
+check("/shell.js" in (ROOT / "client/sw.js").read_text(encoding="utf-8") and
+      "yiju-v6" in (ROOT / "client/sw.js").read_text(encoding="utf-8"),
+      "离线缓存收录横屏外壳并 bump 版本")
 
 print("静态自检： %d 通过 / %d 失败" % (len(ok), len(err)))
 for m in err: print("  FAIL  " + m)
