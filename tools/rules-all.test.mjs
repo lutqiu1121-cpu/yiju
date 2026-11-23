@@ -18,6 +18,7 @@ let opened = 0, played = 0, viewed = 0, ended = 0, rejected = 0;
 const bad = [];
 
 for (const g of games) {
+  if (g.renderer === 'rhythm') continue;   // 轮弦不走棋牌规则引擎
   try {
     const variant = (g.variants || ['常式'])[0];
     const pg = new PortedGame(g.id, variant, g.min || 2);
@@ -83,9 +84,9 @@ for (const id of ['gomoku', 'doudizhu', 'xiangqi', 'yijuan']) {
   netOk++;
 }
 
-console.log('60 局全量验收（原规则）');
+console.log('在册 6 局全量验收（原规则，规则实现保留 60 局存档）');
 console.log('='.repeat(58));
-console.log('登记规则数:', PORTED_COUNT, '/ 60');
+console.log('已搬规则实现数:', PORTED_COUNT, '· 玩法册在册:', games.length);
 console.log('可开局:', opened, '| 连续合法推进 16 手:', played, '| View 正常:', viewed);
 console.log('16 手内自然终局:', ended, '（其余由原规则自身条件决定，不强逼）');
 console.log('定向终局分支:', endings.map(([n, ok]) => n + (ok ? ' ✓' : ' ✗')).join(' / '));

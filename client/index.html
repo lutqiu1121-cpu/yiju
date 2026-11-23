@@ -10,6 +10,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./app.css">
 <link rel="stylesheet" href="./shell.css">
+<link rel="stylesheet" href="./rhythm.css">
 <script src="./offline-assets.js"></script>
 </head>
 <body>
@@ -50,7 +51,7 @@
     <button class="guide-card" id="openGuide">
       <span class="guide-no">小引 · 壹</span>
       <span class="guide-t">初来？且看一遍小引</span>
-      <span class="guide-s">连馆 / 设席 / 闲谈 / 存档 / 段位 · 约一盏茶</span>
+      <span class="guide-s">连馆 / 设席 / 存档 / 段位 · 约一盏茶</span>
       <span class="guide-arrow">▸</span>
     </button>
 
@@ -88,10 +89,7 @@
         <div class="side-block"><div class="side-h">局中 · 情状</div><div id="statusText" class="status-text">—</div>
           <div class="clock"><span id="clockBar"></span></div></div>
         <div class="side-block"><div class="side-h">谱 · 记事</div><div id="logList" class="log-list"></div></div>
-        <div class="side-block"><div class="side-h">闲语 · 席间</div><div id="chatList" class="chat-list"></div>
-          <div id="typingLine" class="typing-line"></div>
-          <div class="quick-row" id="quickRow"></div>
-          <div class="chat-input"><input id="chatText" maxlength="200" placeholder="留一句…"><button id="chatSend">投</button></div></div>
+      <div class="side-block" hidden><div id="chatList" hidden></div><input id="chatText" hidden><button id="chatSend" hidden></button></div>
       </aside>
       <div id="handDock">
         <div id="handHint" class="hand-hint"></div>
@@ -146,7 +144,7 @@
         <button class="btn ghost small" id="mrFillBots">隐士满席</button>
         <button class="btn ghost small" id="mrRemoveBot">－ 送一隐士</button>
       </div>
-      <div class="hint">人未齐亦可开枰：邀隐士后点「壹 · 对局 → 开枰」。真人入席自替隐士；观卷者可投签闲谈，不落子。</div>
+      <div class="hint">人未齐亦可开枰：邀隐士后点「壹 · 对局 → 开枰」。真人入席自替隐士；观卷者只看来去，不落子。</div>
     </div>
     <div class="variant-row" id="variantRow"></div>
   </section>
@@ -287,7 +285,7 @@
       <div class="lg-row"><label>挑个标记</label><div class="rg-avatars" id="rgAvatars"></div></div>
       <div class="rg-err" id="rgErr" hidden></div>
       <button class="lg-go" id="rgGo">创建棋客 · 领凭证</button>
-      <div class="rg-note">注册只做一次。凭证随注册在本机生成，用来和局域网里的好友互相添加；断网也能下完 60 局。</div>
+      <div class="rg-note">注册只做一次。凭证随注册在本机生成，用来和局域网里的好友互相添加；断网也能下完在册 6 局。</div>
     </div>
   </div>
 </div>
@@ -308,13 +306,13 @@
         <div class="lg-code"><b id="lgCode">—</b><button class="lg-mini" id="lgCopy">复制</button></div></div>
       <div class="lg-row"><label>称呼</label><input id="lgName" maxlength="12" placeholder="本机棋客"></div>
       <div class="lg-modes">
-        <button class="lg-mode on" data-mode="local"><b>本地模式 · 可局域网联机</b><small>不连任何服务器也能与隐士下完 60 局；连上同一局域网棋馆后可见好友在线</small></button>
+        <button class="lg-mode on" data-mode="local"><b>本地模式 · 可局域网联机</b><small>不连任何服务器也能与隐士下完在册 6 局；连上同一局域网棋馆后可见好友在线</small></button>
         <button class="lg-mode" data-mode="hall"><b>连接棋馆（可选）</b><small>填局域网地址后，可与同馆玩家设席、赴局、看好友在线</small></button>
       </div>
       <div class="lg-row" id="lgServerRow" hidden><label>棋馆地址（可留空）</label>
         <input id="lgServer" placeholder="例：http://192.168.1.8:5080"></div>
       <div class="lg-notice" id="lgNotice">
-        <span>服务器是<b>可选项</b>：不填就是纯本机自弈，60 局都能下。填了也只连你自己的局域网棋馆，不连公网、不设官方服务器、不设账号服务器。</span>
+        <span>服务器是<b>可选项</b>：不填就是纯本机自弈，在册 6 局都能下。填了也只连你自己的局域网棋馆，不连公网、不设官方服务器、不设账号服务器。</span>
         <label><input type="checkbox" id="lgNoticeChk"> 不再提示</label>
       </div>
       <button class="lg-go" id="lgGo">入 局</button>
@@ -343,7 +341,7 @@
   </aside>
   <div class="hall-main">
     <div class="hall-hero"><h1>落子<em>有痕</em>。</h1>
-      <p>六十局对弈，主推八局，其余收入「更多对弈」。不连服务器也能与隐士下到终局。</p></div>
+      <p>专精六局，另设轮弦副推。不连服务器也能与隐士下到终局；落子有声，不必日日来。</p></div>
     <button class="hall-play" id="hallPlay">对 弈</button>
     <div class="hall-sub">
       <button id="hallSetSeat">设席 · 开房</button>
@@ -355,13 +353,13 @@
   <div class="hall-tabs" id="hallTabs"></div>
 </div>
 
-<!-- 「对弈」层级弹层：主推 8 局 → 更多对弈 52 局，不跳整页 -->
+<!-- 「对弈」层级弹层：专精 6 局 → 副推轮弦，不跳整页 -->
 <div id="playPicker" hidden>
   <div class="pp-card">
     <div class="pp-head"><b>对 弈</b><small>先挑一局，再开枰 · 断网也能下</small><button id="ppClose">合</button></div>
-    <div class="pp-tools"><input id="ppSearch" placeholder="搜局 / 棋 / 牌 / 趣" autocomplete="off"><button id="ppMore">更多对弈 · 52 局 ▾</button></div>
+    <div class="pp-tools"><input id="ppSearch" placeholder="搜局 / 棋 / 牌 / 趣" autocomplete="off"><button id="ppMore">副推 · 轮弦 ▾</button></div>
     <div class="pp-grid" id="ppGrid"></div>
-    <div class="pp-foot">主推：弈卷（四十八家历史人物）＋ 七局原创；其余 52 局在「更多对弈」里。全部 60 局均走服务端原规则。</div>
+    <div class="pp-foot">专精 6 局（五连局 / 楚汉棋 / 番象棋 / 弈卷 / 夺帅局 / 压牌帖）＋ 副推「轮弦」。全部按原规则走，轮弦是竖屏对战音游。</div>
   </div>
 </div>
 
@@ -375,10 +373,12 @@
   </div>
 </div>
 
+<div id="yjFxFlash"></div><div id="yjAfterglow"></div><div id="yjJudge"></div>
 <div id="rotateHint"><div class="rh-card"><div class="rh-ico">▭</div>
   <b>请横屏使用</b><p>弈局按横屏布局设计：左侧好友、中央开枰、右侧入口、底部常驻导航。竖屏下棋盘与信息会挤在一起。</p>
   <button id="rhGo">仍要继续</button></div></div>
 
+<script type="module" src="./event-fx.js"></script>
 <script type="module" src="./app.js"></script>
 <script type="module" src="./shell.js"></script>
 <script>

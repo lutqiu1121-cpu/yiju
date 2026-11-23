@@ -8,7 +8,7 @@ const get = (k, d) => { try { const v = localStorage.getItem(k); return v == nul
 const set = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 const esc = F.escapeHtml;
 
-const MAIN_IDS = ['yijuan', 'houlou', 'duzhou', 'dengying', 'huiwen', 'cuojin', 'shiyi', 'tingyu'];
+const MAIN_IDS = ['yijuan', 'gomoku', 'xiangqi', 'chess', 'doudizhu', 'chudadi'];
 const ENTRIES = [
   { id: 'shop',     ico: '装', name: '装扮' },
   { id: 'stats',    ico: '绩', name: '战绩' },
@@ -142,11 +142,29 @@ function showApp(screen) {
   $$('.ht-tab').forEach(b => b.classList.toggle('on', b.dataset.id === screen));
   YJ && YJ.go(screen);
 }
-function goto(id) {
+/* 导航四层：状态机决策 + 栈记历史 + 双互斥根 + 守卫执行。
+ * 研究结论：单靠中央守卫挡不住「对局中点回大厅」；hall 与 game 是互斥根。 */
+const navStack = [];
+function inMatch() {
+  try { return !!(YJ && YJ.isInMatch && YJ.isInMatch()); } catch (e) { return false; }
+}
+function goto(id, fromBack) {
+  if (id === 'lunxian') { openRhythm(); return; }
+  // 守卫：对局未结束，任何切到大厅/装扮/战绩/设置的请求都要确认
+  if (inMatch() && ['hall','shop','stats','settings','rooms','guide','rhythm'].includes(id)) {
+    if (!window.confirm('对局还没结束，离局算认输。确定离开？')) return;
+    try { YJ && YJ.leaveMatch && YJ.leaveMatch(); } catch (e) {}
+  }
+  if (!fromBack) navStack.push(id === 'hall' ? 'hall' : 'app');
   if (id === 'hall') { showHall(); return; }
   if (id === 'guide') { showApp('settings'); YJ.openGuide(); return; }
   showApp(id);
 }
+function openRhythm() {
+  $('#playPicker').hidden = true;
+  import('./rhythm.js').then(m => m.open()).catch(() => YJ && YJ.toast('轮弦未就绪'));
+}
+window.YJ_RHYTHM_OPEN = openRhythm;
 function renderHallTop() {
   const mode = get('qipai.loginMode', 'local');
   $('#hallMode').textContent = mode === 'hall'
@@ -230,16 +248,17 @@ function renderPicker() {
   const card = (g) => '<button class="pp-card-item" data-id="' + esc(g.id) + '">' +
     '<i>对弈 · ' + g.min + '–' + g.max + ' 人</i><b>' + esc(g.name) + '</b>' +
     '<small>' + esc(g.desc || g.tag || '') + '</small></button>';
-  let html = '<div class="pp-group" style="grid-column:1/-1;font-size:11px;letter-spacing:.14em;color:var(--shellInk2);margin:4px 0 2px">主推 · ' + m.length + ' 局</div>';
+  let html = '<div class="pp-group" style="grid-column:1/-1;font-size:11px;letter-spacing:.14em;color:var(--shellInk2);margin:4px 0 2px">专精 · ' + m.length + ' 局</div>';
   html += m.map(card).join('') || '<div class="empty-guide" style="grid-column:1/-1">没有匹配的对弈</div>';
   if (pickerAll || q) {
-    html += '<div class="pp-group" style="grid-column:1/-1;font-size:11px;letter-spacing:.14em;color:var(--shellInk2);margin:12px 0 2px">更多对弈 · ' + r.length + ' 局</div>';
+    html += '<div class="pp-group" style="grid-column:1/-1;font-size:11px;letter-spacing:.14em;color:var(--shellInk2);margin:12px 0 2px">副推 · ' + r.length + ' 项</div>';
     html += r.map(card).join('') || '<div class="empty-guide" style="grid-column:1/-1">没有匹配的对弈</div>';
   }
   $('#ppGrid').innerHTML = html;
-  $('#ppMore').textContent = pickerAll ? '收起更多对弈' : ('更多对弈 · ' + rest.length + ' 局 ▾');
+  $('#ppMore').textContent = pickerAll ? '收起副推' : ('副推 · ' + rest.length + ' 项 ▾');
   $$('.pp-card-item').forEach(b => b.onclick = () => {
     const id = b.dataset.id;
+    if (id === 'lunxian') { openRhythm(); return; }
     $('#playPicker').hidden = true;
     YJ.startGame(id);
     YJ.toast('已择「' + (games.find(g => g.id === id) || {}).name + '」· 隐士入席');

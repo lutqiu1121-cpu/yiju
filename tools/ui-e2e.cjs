@@ -190,7 +190,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     cards: document.querySelectorAll('.pp-card-item').length,
     more: document.querySelector('#ppMore').textContent
   }));
-  ok('二级「更多对弈」展开后共 60 局', ppAll.cards === 60, String(ppAll.cards));
+  ok('副推展开后共 7 项（专精 6 + 轮弦）', ppAll.cards === 7, String(ppAll.cards));
   await page.fill('#ppSearch', '楚汉');
   await page.waitForTimeout(150);
   const searched = await page.evaluate(() => document.querySelectorAll('.pp-card-item').length);

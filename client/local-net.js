@@ -5,8 +5,8 @@
 import { Net } from './net.js';
 import { PortedRule, PortedGame, PORTED_IDS } from './rules-port/registry.js';
 
-const MAIN = ['yijuan', 'houlou', 'duzhou', 'dengying', 'huiwen', 'cuojin', 'shiyi', 'tingyu'];
-const NAMES = { yijuan: '弈卷', houlou: '候漏', duzhou: '渡舟', dengying: '灯影', huiwen: '回文笺', cuojin: '错金', shiyi: '拾遗', tingyu: '听雨' };
+const MAIN = ['yijuan', 'gomoku', 'xiangqi', 'chess', 'doudizhu', 'chudadi'];
+const NAMES = { yijuan:'弈卷', gomoku:'五连局', xiangqi:'楚汉棋', chess:'番象棋', doudizhu:'夺帅局', chudadi:'压牌帖' };
 const WORDS = ['山', '水', '云', '月', '风'];
 const ROLES = ['墨翟','公输般','扁鹊','李冰','荀况','韩非','司马迁','班昭','张衡','蔡邕','华佗','马钧','裴秀','祖冲之','郦道元','贾思勰','孙思邈','李淳风','一行','沈括','毕昇','苏颂','李诫','宋慈','郭守敬','黄道婆','朱载堉','徐光启','宋应星','徐霞客','顾炎武','王夫之','黄宗羲','戴震','阮元','李时珍','吴又可','叶桂','王清任','燕肃','赵友钦','王祯','秦九韶','李冶','杨辉','朱世杰','程大位','贾宪'];
 const APP_HOST = typeof location !== 'undefined' && location.hostname === 'yiju.local';
@@ -319,10 +319,10 @@ function finish(s, w, result) {
 }
 
 
-/* ---- 其余 52 局：本机简式对局 ----
+/* ---- 未开放规则实现保留存档，玩法册只开 6 局 ----
  * 联机时走服务端完整规则；离线时按该局真实的人数 / 棋盘规格 / 名称开局，
  * 由隐士轮流应手，可落子、可过手、可走到终局并写回战绩。
- * 这样 60 局在断网下都能真正开枰，而不是弹一句「需连棋馆」。
+ * 专精后 6 局断网都能按服务端原规则开枰到终局，不弹「需连棋馆」。
  */
 const BOARD_SIZE = {
   xiangqi:[9,10], jieqi:[9,10], xiangqidark:[9,10], chess:[8,8], chess960:[8,8],

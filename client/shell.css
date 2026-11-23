@@ -259,3 +259,29 @@ body.fx-off .hall-play::after{animation:none}
 }
 #backHall{display:none;background:none;border:1px solid var(--shellLine);border-radius:5px;
   padding:4px 10px;color:var(--shellInk2);font-size:11px;cursor:pointer;margin-left:10px}
+
+
+/* ===== v6 · 研究结论落地：黑边根治（原生 inset 为唯一几何源） =====
+ * 不是把黑边染成米白：html/body/根容器统一 100dvh + viewport-fit=cover 的 env()，
+ * 固定容器不再自己算高度；键盘/安全区由原生下发，前端只消费。 */
+html,body{width:100%;height:100dvh;min-height:100dvh;max-height:100dvh;
+  background:#f4f0e6;overflow:hidden}
+#screens,#hall,#login,#register,#playPicker,#yjRhythm{
+  padding-top:env(safe-area-inset-top,0px)!important;
+  padding-bottom:env(safe-area-inset-bottom,0px)!important;
+  padding-left:env(safe-area-inset-left,0px)!important;
+  padding-right:env(safe-area-inset-right,0px)!important}
+/* 对局独立沉浸：按形态放大主区，棋盘占满可用高度，不再小得看不清 */
+@media (orientation:landscape) and (min-width:720px){
+  #screen-play.active{max-width:none}
+  #boardWrap{max-width:none!important;width:min(78vh,72vw)!important;
+    max-height:calc(100dvh - 150px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;
+    aspect-ratio:1/1;margin:0 auto!important}
+  #screen-play.active #sideInfo{max-width:230px}
+  /* 对局中：底部 tab 与顶栏「回大厅」不再抢主区，由导航守卫兜底 */
+  body.in-match #nav,body.in-match #backHall{display:none!important}
+}
+/* 终局大字与余韵层：独立层叠上下文，不穿模 */
+.yj-ripple2{position:absolute;left:50%;top:50%;width:18px;height:18px;border:2px solid #9b092d;
+  border-radius:50%;animation:yjrp .55s ease-out forwards;pointer-events:none}
+@keyframes yjrp{to{width:90px;height:90px;opacity:0;margin:-36px 0 0 -36px}}

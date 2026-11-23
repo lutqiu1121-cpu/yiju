@@ -7,8 +7,7 @@ const FILES = [
   '/icon.svg', '/offline-assets.js', '/local-net.js', '/cultivation.js',
   '/rules-port/base.js', '/rules-port/cs-runtime.js', '/rules-port/all-rules.js',
   '/rules-port/registry.js', '/settings.js', '/wear.js', '/manifest.webmanifest',
-  '/rules/manifest.json', '/rules/vectors.json', '/themes/themes.json'
-];
+  '/rules/manifest.json', '/rules/vectors.json', '/themes/themes.json','./gu-yue.js','./event-fx.js','./rhythm.js','./rhythm.css'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
 });

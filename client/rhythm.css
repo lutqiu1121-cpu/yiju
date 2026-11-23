@@ -1,0 +1,75 @@
+/* 轮弦 · 竖弦五音：唯一竖屏形态。主体大厅/对局仍横屏，音游按形态分族。
+ * 研究结论：60 局不该共用一张方盘；对局按状态与形态各自求主区。
+ * 单面板、一套五色键；非活动态整片变暗；无聊天、无对话。 */
+#yjRhythm{position:fixed;inset:0;z-index:260;display:none;align-items:flex-start;justify-content:center;
+  padding:calc(8px + env(safe-area-inset-top,0px)) 10px calc(8px + env(safe-area-inset-bottom,0px));
+  background:radial-gradient(circle at 50% 20%,#fbf8ef,#eee7d8 70%,#e7dfcd);overflow-y:auto}
+#yjRhythm.on{display:flex}
+.yj-rh{width:min(430px,94vw);background:#fbf8ef;border:1px solid #d5cebc;padding:12px 14px;border-radius:10px;
+  box-shadow:0 18px 60px rgba(60,48,30,.22)}
+.yj-rh h2{font-size:15px;letter-spacing:.22em;border-left:3px solid #9b092d;padding-left:9px;margin:2px 0 6px}
+.yj-rh .tip{font-size:11px;line-height:1.8;color:#5c574b;margin:0 0 9px}
+.yj-rh .row{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:9px}
+.yj-rh button{font:inherit;font-size:11px;border:1px solid #d5cebc;background:#efe8d6;color:#2b2a26;
+  padding:6px 10px;border-radius:5px;cursor:pointer}
+.yj-rh button.primary{background:#9b092d;color:#fff6ec;border-color:#9b092d}
+.yj-rh button[aria-pressed="true"]{background:#9b092d;color:#fff6ec;border-color:#9b092d}
+.yj-rh .chip{font-size:10px;color:#5c574b;border:1px solid #d5cebc;padding:3px 7px}
+#yjStage{position:relative;height:min(50dvh,330px);border:1px solid #d5cebc;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,253,247,.95),rgba(238,231,216,.7));
+  transition:opacity .35s,filter .35s}
+#yjStage.dim{opacity:.22;filter:grayscale(1);pointer-events:none}
+#yjStage .seat{position:absolute;top:5px;left:7px;z-index:4;font-size:11px;letter-spacing:.2em;
+  color:#5c574b;background:rgba(251,248,239,.92);padding:1px 7px;border:1px solid #d5cebc}
+#yjStage.dim .seat{color:#9b092d;border-color:#9b092d}
+.yj-tracks{position:absolute;inset:0 0 56px 0;display:grid;grid-template-columns:repeat(5,1fr)}
+.yj-track{position:relative;border-right:1px dashed rgba(95,90,80,.16)}
+.yj-track:last-child{border-right:0}
+.yj-track::after{content:attr(data-n);position:absolute;top:26px;left:50%;transform:translateX(-50%);
+  font-size:11px;color:rgba(95,90,80,.42);writing-mode:vertical-rl;letter-spacing:.15em}
+.yj-hui{position:absolute;left:0;right:0;bottom:56px;height:2px;background:#9b092d;opacity:.85;z-index:2}
+.yj-hui::after{content:'徽';position:absolute;right:3px;top:-17px;font-size:10px;color:#9b092d}
+.yj-keys{position:absolute;left:0;right:0;bottom:0;height:56px;display:grid;grid-template-columns:repeat(5,1fr);z-index:3}
+.yj-key{border:0!important;border-right:1px solid rgba(0,0,0,.12)!important;border-radius:0!important;
+  color:#fff9ee!important;font-size:12px;letter-spacing:.1em;text-shadow:0 1px 2px rgba(0,0,0,.35);padding:0!important}
+.yj-key:last-child{border-right:0!important}
+.yj-key[data-l="0"]{background:#c9a24b!important}
+.yj-key[data-l="1"]{background:#d9d2be!important;color:#2b2a26!important;text-shadow:none!important}
+.yj-key[data-l="2"]{background:#6f8c77!important}
+.yj-key[data-l="3"]{background:#b4552d!important}
+.yj-key[data-l="4"]{background:#3b4a55!important}
+.yj-key.hit{filter:brightness(.85)}
+.yj-note{position:absolute;width:25px;height:25px;border-radius:50%;z-index:2;left:50%;transform:translateX(-50%);
+  border:2px solid rgba(0,0,0,.28);box-shadow:0 2px 5px rgba(0,0,0,.18);display:flex;align-items:center;
+  justify-content:center;font-size:11px;color:#fff9ee;text-shadow:0 1px 2px rgba(0,0,0,.45);will-change:top}
+.yj-note[data-l="0"]{background:#c9a24b}.yj-note[data-l="1"]{background:#d9d2be;color:#2b2a26;text-shadow:none}
+.yj-note[data-l="2"]{background:#6f8c77}.yj-note[data-l="3"]{background:#b4552d}.yj-note[data-l="4"]{background:#3b4a55}
+.yj-note.bot{border-style:dashed;border-color:rgba(155,9,45,.75)}
+.yj-note.done{background:rgba(95,90,80,.18)!important;border-style:solid;color:transparent;box-shadow:none}
+.yj-ripple2{position:absolute;width:18px;height:18px;border:2px solid #9b092d;border-radius:50%;
+  animation:yjrp .55s ease-out forwards;pointer-events:none}
+@keyframes yjrp{to{width:90px;height:90px;opacity:0;margin:-36px 0 0 -36px}}
+.yj-ripple{position:absolute;width:20px;height:20px;border-radius:50%;border:2px solid #9b092d;
+  left:50%;bottom:45px;transform:translateX(-50%);z-index:3;animation:yjrp2 .55s ease-out forwards}
+@keyframes yjrp2{to{width:100px;height:100px;opacity:0;margin-left:-40px;margin-bottom:-40px}}
+#yjTurn{text-align:center;font-size:13px;letter-spacing:.3em;color:#9b092d;margin:8px 0 2px;min-height:19px}
+#yjTurn.me{color:#2b2a26}
+.yj-score{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:11px;color:#5c574b;margin-top:6px}
+.yj-score b{color:#2b2a26;font-size:13px}
+#yjQi{display:inline-block;width:52px;height:6px;border:1px solid #d5cebc;vertical-align:middle}
+#yjQiFill{display:block;height:100%;background:#9b092d;width:0}
+.yj-readout{font-size:10px;color:#5c574b;line-height:1.8;border-top:1px dashed #d5cebc;margin-top:9px;padding-top:7px}
+/* 事件反馈与终局大字：全局层，独立于任何面板，不穿模 */
+#yjFxFlash{position:fixed;inset:0;pointer-events:none;z-index:245;opacity:0;
+  background:radial-gradient(circle at 50% 50%,rgba(180,85,45,.28),transparent 62%)}
+#yjFxFlash.on{animation:yjfx .42s ease-out}
+@keyframes yjfx{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
+.yj-ripple2{animation:yjrp .55s ease-out}
+#yjAfterglow{position:fixed;inset:0;z-index:250;pointer-events:none;opacity:0;transition:opacity .7s;
+  background:radial-gradient(circle at 50% 45%,rgba(155,9,45,.13),rgba(245,241,230,.94) 72%)}
+#yjAfterglow.on{opacity:1}
+#yjJudge{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:270;
+  font-size:40px;letter-spacing:.3em;color:#9b092d;opacity:0;pointer-events:none;text-align:center}
+#yjJudge.final{opacity:.94}
+#yjJudge.final.fade{opacity:0;transition:opacity .7s ease}
+@media (prefers-reduced-motion:reduce){#yjStage,.yj-ripple,.yj-ripple2,#yjAfterglow,#yjJudge{animation:none!important;transition:none!important}}

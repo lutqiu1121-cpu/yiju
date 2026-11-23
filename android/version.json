@@ -1,6 +1,6 @@
 {
   "applicationId": "app.yiju.archive",
-  "versionCode": 4,
-  "versionName": "1.2.0",
+  "versionCode": 5,
+  "versionName": "1.3.0",
   "note": "每次发版只把 versionCode +1、versionName 递增；applicationId 与 keystore 永不变，才能覆盖升级"
 }

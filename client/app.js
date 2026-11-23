@@ -3,6 +3,7 @@ import { Cultivation } from './cultivation.js';
 import { Sound } from './audio.js';
 import * as R from './render.js';
 import { Fx } from './fx.js';
+import { fire as fxFire, bigResult, afterglow as fxGlow, setFx, setReduced } from './event-fx.js';
 import { Settings, GROUPS, DEFAULTS } from './settings.js';
 import { applyWear, WEAR_LIST, WEAR_KINDS, WEAR_RARITY, WEAR_SETS } from './wear.js';
 
@@ -379,7 +380,7 @@ function onFrame(m) {
       S.predict = null; S.selected.clear();
       renderAll(); break;
     }
-    case 'chat': S.chat.push(m.msg); renderChat(); break;
+    case 'chat': break;   // 闲谈已从界面移除，不渲染
     case 'typing': onTyping(m); break;
     case 'error': toast(m.text || '此令未行'); Sound.alert(); break;
     case 'note': toast(m.text || ''); break;
@@ -532,7 +533,7 @@ function renderStatus() {
   $('#clockBar').style.width = (c * 100).toFixed(1) + '%';
 }
 function renderChat() {
-  const el = $('#chatList'); if (!el) return;
+  const el = $('#chatList'); if (!el || el.hidden) return;
   el.innerHTML = (S.chat || []).slice(-30).map(c => {
     const tag = c.spectator ? '旁观' : (typeof c.seat === 'number' && c.seat >= 0 ? '座位 ' + c.seat : '');
     const who = escapeHtml(c.name || '访客') + (tag ? ` <small>${tag}</small>` : '');
@@ -562,10 +563,11 @@ function renderTyping() {
 function sendTyping(on) { if (S.net) S.net.send({ t: 'typing', v: !!on }); }
 function renderQuick() {
   const el = $('#quickRow'); if (!el) return;
-  el.innerHTML = S.quickPhrases.map(p =>
+  const qp = $('#quickPhrases'); if (!qp || qp.hidden) return;
+  qp.innerHTML = S.quickPhrases.map(p =>
     `<button class="qp" data-p="${escapeHtml(p)}">${escapeHtml(p)}</button>`).join('');
   el.querySelectorAll('.qp').forEach(b => b.onclick = () => {
-    $('#chatText').value = b.dataset.p; sendChat(); tap();
+    if ($('#chatText')) $('#chatText').value = b.dataset.p; sendChat(); tap();
   });
 }
 function renderLog() {
@@ -915,9 +917,9 @@ function bindUI() {
   $('#roomCode').onkeydown = (e) => { if (e.key === 'Enter') joinRoom(); };
   $('#refreshRooms').onclick = () => S.net.send({ t:'rooms' });
   $('#gameSearch').oninput = (e) => { S.search = e.target.value; renderGames(); };
-  $('#chatSend').onclick = sendChat;
-  $('#chatText').onkeydown = (e) => { if (e.key === 'Enter') sendChat(); };
-  $('#chatText').oninput = () => {
+  if ($('#chatSend')) $('#chatSend').onclick = sendChat;
+  if ($('#chatText')) $('#chatText').onkeydown = (e) => { if (e.key === 'Enter') sendChat(); };
+  if ($('#chatText')) $('#chatText').oninput = () => {
     const now = Date.now();
     if (now - S.lastTypingSent > 1200) { S.lastTypingSent = now; sendTyping(true); }
     clearTimeout(S.typingOff);
@@ -964,7 +966,7 @@ function bindUI() {
   const st = $('#soundToggle'); st.classList.toggle('on', Sound.isEnabled()); st.textContent = Sound.isEnabled() ? '开' : '关';
 }
 function sendChat() {
-  const el = $('#chatText'), t = (el.value || '').trim();
+  const el = $('#chatText'); if (!el) return; const t = (el.value || '').trim();
   if (!t) return;
   S.net.send({ t:'chat', text:t }); el.value = '';
   clearTimeout(S.typingOff); sendTyping(false);
@@ -1689,7 +1691,7 @@ onStatus = function (s) {
   if (bar) {
     const off = s !== 'online' && Settings.get('offlineNotice');
     bar.hidden = !off;
-    if (off) bar.innerHTML = '<span class="ob-mark">◈</span><span>本机自弈：60 局都能点「寻局」与隐士开枰；玩法册、纸色、设置、装扮、战绩与剧本皆可用。联机请填棋馆地址。</span><button class="btn ghost small" id="obFix">连棋馆</button>';
+    if (off) bar.innerHTML = '<span class="ob-mark">◈</span><span>本机自弈：在册 6 局都能点「寻局」与隐士开枰；玩法册、纸色、设置、装扮、战绩与剧本皆可用。联机请填棋馆地址。</span><button class="btn ghost small" id="obFix">连棋馆</button>';
     const b = $('#obFix'); if (b) b.onclick = () => askServerUrl(false);
   }
 };
@@ -1890,7 +1892,7 @@ function installLifecycle() {
 }
 function showOfflineHint() {
   if (!Settings.get('offlineNotice')) return;
-  toast('本机自弈已就位 · 60 局皆可与隐士开枰，联机需填棋馆地址');
+  toast('本机自弈已就位 · 在册 6 局皆可与隐士开枰，联机需填棋馆地址');
 }
 
 renderShop = function () {
@@ -1995,7 +1997,7 @@ openGuide = function () {
   modal('入门小引 · 与君同弈', `
     <div class="guide">
       <div class="guide-step"><b>壹 · 三种用法，服务器只是可选项</b>
-        <p><b>本机自弈（完全不联网）</b>：在本机跑棋馆程序，本页连本机回环即可。60 局、隐士陪玩、加密存档、段位、装扮、制本、神的领域全部可用；仅「多人联机」需另有人入席。</p>
+        <p><b>本机自弈（完全不联网）</b>：在本机跑棋馆程序，本页连本机回环即可。在册 6 局、隐士陪玩、加密存档、段位、装扮、制本、神的领域全部可用；仅「多人联机」需另有人入席。</p>
         <p><b>局域网联机</b>：同一 WiFi 填房主棋馆地址，多人对局与房内闲谈照常，依然不需要任何外部服务器。</p>
         <p><b>外部服务（默认开、可全关）</b>：棋馆名录、赛季校时、公共榜单。设置里逐项可关；关掉或挂了，前两种用法一点不缺。纯本机时哪怕没网，段位照常记，只标「未校天时」。</p></div>
       <div class="guide-step"><b>贰 · 连上本机棋馆</b>
@@ -2005,7 +2007,7 @@ openGuide = function () {
         <p>挑一局，可题雅号、设暗语、许旁观、定每步思考 / 出牌之刻、选超时之法与隐士棋力；每局另有本局专属规制，皆在「房规」里。记五字房号邀人，未齐可请隐士补满。</p></div>
       <div class="guide-step"><b>肆 · 落子出牌与卷面</b>
         <p>棋盘小圆点是可落处；走子类先点己子再点目标格，牌类先点手牌再按「落牌」，也可双击快捷出牌。折狱录跟幕卡走：旁白逐句、线索翻牌、轮流发言、终幕指认，私本只你可见。弈卷两席同时覆简，启简后界墨推移。</p>
-        <p>全 60 局共用一套界面特效；画质、字大、高对比、色觉辅助、音量分路、动效浓淡都在「案牍 · 设置」，随系统减动效亦自动收敛。</p></div>
+        <p>在册 6 局共用一套事件反馈谱；画质、字大、高对比、色觉辅助、音量分路、动效浓淡都在「案牍 · 设置」，随系统减动效亦自动收敛。</p></div>
       <div class="guide-step"><b>伍 · 装扮 / 段位 / 神的领域</b>
         <p>弈株只由终局相赠（每日至多六十枚），不入局内、不兑换、无充值。装扮 49 件分十一类、四品阶、四套系，可搜、可筛、可预览试穿、可一键素妆；纸色十品与微调笔意也在设置里。</p>
         <p>段位七阶按赛季重置；此局至顶阶「弈圣」方可叩「神的领域」三尊青冥 / 玄枢 / 太虚，胜首尊即弈神，再胜加前缀为玄弈神、太玄弈神。</p></div>
@@ -2075,6 +2077,13 @@ window.YJ = {
   setTodayLine,
   settings: Settings,
   games: () => S.games,
+  isInMatch: () => !!(S.view && !S.view.ended && S.screen === 'play'),
+  leaveMatch: () => { try { S.net && S.net.send({ t: 'leave' }); } catch (e) {} S.view = null; },
+  fx: (name, el) => fxFire(name, el),
+  fxResult: (txt) => bigResult(txt),
+  fxGlow: (on) => fxGlow(on),
+  setFx, setReduced,
+  noteRhythm: (mode, my, bot) => { try { S.stats.plays++; save('qipai.stats', S.stats); } catch (e) {} },
   mainIds: ['yijuan','houlou','duzhou','dengying','huiwen','cuojin','shiyi','tingyu'],
   presenceCodes: () => {
     const out = [];

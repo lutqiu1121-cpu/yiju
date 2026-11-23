@@ -50,6 +50,11 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(PAPER);
 
         web = new WebView(this);
+        // v6：窗口底色与纸色一致，inset 由系统下发、前端用 env() 消费；
+        // 不再用 overview 缩放去「盖」黑边，也不在原生层另算一套几何。
+        getWindow().setBackgroundDrawableResource(R.drawable.window_bg);
+        web.setBackgroundColor(0xFFF4F0E6);
+        web.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
         root.addView(web, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));

@@ -38,14 +38,15 @@ vectors = data.get("rules/vectors.json", {})
 games = manifest.get("games", [])
 ids = [g["id"] for g in games]
 check(len(ids) == len(set(ids)), "玩法 id 无重复")
-check(len(ids) == 60, "玩法数量 = 60（实际 %d）" % len(ids))
+check(len(ids) == 7, "玩法册 = 专精 6 局 + 轮弦副推（实际 %d）" % len(ids))
 check(len(themes.get("themes", [])) == 10, "主题数量 = 10")
-check(len(vectors.get("rules", [])) == 60, "回归向量覆盖 60 个玩法")
+check(len(vectors.get("rules", [])) == 6, "回归向量覆盖专精 6 局（轮弦不走规则引擎）")
 
 # 2) 每个 manifest id 都在规则源码里注册；元数据合法
 rules_src = "\n".join(
     p.read_text(encoding="utf-8") for p in sorted((ROOT / "server" / "Rules").glob("*.cs")))
 for i in ids:
+    if i == "lunxian": continue   # 音游不走棋牌规则引擎
     check(('"%s"' % i) in rules_src, "已注册 " + i)
 for g in games:
     check(g.get("renderer") in (manifest.get("renderers") or []), "渲染器有效 " + g["id"])
@@ -223,7 +224,7 @@ check(not bad, "除启动图标外客户端与 APK 无位图/字体/音频资源
 check("feTurbulence" in html or "paperNoise" in html, "纸纹为实时滤镜")
 
 # 9.5) 打字交流 / 派对发言 / 多人席位 / 品牌配置
-check('id="typingLine"' in html and 'id="quickRow"' in html, "聊天区含正在输入与快捷短语容器")
+check('闲语 · 席间' not in html and 'id="quickRow"' not in html and 'id="chatText" hidden' in html, "闲谈 / 对话已从界面移除（从简）")
 for fn in ["onTyping", "sendTyping", "renderQuick", "onFrame"]:
     check(fn in app_src, "客户端接线 " + fn)
 hub_src = (ROOT / "server/Core/Hub.cs").read_text(encoding="utf-8")
@@ -263,7 +264,7 @@ check('RankBotLevelFor' in hub_src and 'RankBotLabelFor' in (ROOT / 'server/Core
       "自定义房间按席中最高段位自动定隐士棋力（开枰动态生效）")
 check('"botByRank"' in (ROOT / 'server/Core/RoomOptions.cs').read_text(encoding='utf-8') and
       all(any(o.get('key') == 'botByRank' for o in g.get('options', [])) for g in manifest.get('games', [])),
-      "60 局房规都带「隐士随本席最高段位」开关")
+      "在册 7 项房规都带「隐士随本席最高段位」开关")
 check('matchBar' in (ROOT / 'client/index.html').read_text(encoding='utf-8') and
       'renderMatchState' in app_src and 'startMatch' in app_src and
       'matchMaxWait' in (ROOT / 'client/settings.js').read_text(encoding='utf-8'),
@@ -280,10 +281,12 @@ check('"title", kv.Value.Title' in hub_src and '"bots", kv.Value.BotCount()' in 
 check('split(\',\')' in app_src or "split(',')" in app_src, "客户端按阵营判定胜负")
 # 人数上限如实登记
 mm = {g["id"]: (g["min"], g["max"]) for g in games}
-check(mm.get("werewolf") == (6, 12), "狼人杀 6–12 人")
-check(mm.get("undercover") == (3, 9), "卧底 3–9 人")
-check(mm.get("uno") == (2, 8) and mm.get("tingyu") == (3, 6) and mm.get("shiyi") == (2, 4),
-      "云笺令 2–8 / 听雨 3–6 / 拾遗 2–4")
+check(all(mm.get(x) == v for x, v in
+      {"gomoku":(2,2),"xiangqi":(2,2),"chess":(2,2),"yijuan":(2,2),"doudizhu":(3,3),"chudadi":(4,4)}.items()),
+      "专精 6 局人数如实登记")
+_rules_js = (ROOT/"client/rules-port/all-rules.js").read_text(encoding="utf-8")
+check(all(('"%s"' % x) in _rules_js for x in ["werewolf","undercover","uno","tingyu","shiyi","mahjong","shisanszhang"]),
+      "未开放玩法的人数与规则实现保留存档")
 
 brand = ROOT / "android/branding.json"
 check(brand.exists(), "APK 品牌配置 branding.json 存在")
@@ -322,20 +325,16 @@ aud = (ROOT / "client/audio.js").read_text(encoding="utf-8")
 css = (ROOT / "client/app.css").read_text(encoding="utf-8")
 html_all = (ROOT / "client/index.html").read_text(encoding="utf-8")
 
-NEW_IDS = ["dots","hex","nim","endgame","junqi4","gouji","baohuang","chudadi","shuangkou",
-           "avalon","turtlesoup","mastermind","drawguess",
-           "juben","tournament"]
-check(all(x in ids for x in NEW_IDS), "15 个新玩法都在 manifest")
-check(all(('"'+x+'"') in registry or "new ExtraGame(\"" + x + "\")" in registry or x == "juben" or x == "tournament"
-          for x in NEW_IDS), "15 个新玩法都已注册")
-check(all(x in ids for x in ["houlou","duzhou","dengying","huiwen","cuojin","shiyi","tingyu"]) and
-      all(('new OrigSevenGame("'+x+'")') in registry for x in ["houlou","duzhou","dengying","huiwen","cuojin","shiyi","tingyu"]),
-      "七局原创小戏入清单并注册")
+NEW_IDS = ["chudadi"]   # v6 专精后玩法册只开 6 局 + 轮弦，其余规则实现保留存档
+check(all(x in ids for x in NEW_IDS), "压牌帖仍在专精册")
+check(('"chudadi"') in registry, "压牌帖规则仍已注册")
+check(all(('new OrigSevenGame("'+x+'")') in registry for x in ["houlou","duzhou","dengying","huiwen","cuojin","shiyi","tingyu"]),
+      "七局原创规则实现保留存档（已从玩法册撤下）")
 check(not any(x in ids for x in ["texas","showhand","blackjack","zhajinhua","niuniu","sangong","liarsdice"]),
       "七局赌场原型已撤下，竹牌戏保留")
-check("mahjong" in ids and "shisanszhang" in ids, "竹牌戏与三道笺保留")
+check("mahjong" in _rules_js and "shisanszhang" in _rules_js, "竹牌戏与三道笺规则实现保留存档")
 check("yijuan" in ids and "new YiJuanGame()" in registry,
-      "第 60 局弈卷已入清单并注册")
+      "弈卷在专精册并已注册")
 check("class DirectorGame" in extra_src and "class TournamentGame" in extra_src,
       "剧本导演与多轮积分赛规则存在")
 check("ScriptGateway.GetForRoom" in extra_src and "PutRoom" in local and "ScriptGateway.List" in local, "剧本现场导入按房间挂且网关已注入")
@@ -390,7 +389,7 @@ check("yiju.apk \\" in pub_src and "yiju-release.zip \\" in pub_src,
       "Release 同时上传 APK 与服务端包")
 check("上传 2 个文件" in pub_src and "Release 上传 2 个文件" in (ROOT / "RELEASE_LIST.md").read_text(encoding="utf-8"),
       "发布提示词与清单明确双资产")
-check("60 个玩法" in (ROOT / "README.md").read_text(encoding="utf-8"), "README 玩法数已更新")
+check("6 局专精" in (ROOT / "README.md").read_text(encoding="utf-8"), "README 已写明 6 局专精")
 check(not re.search(r"qipai-archive|棋牌档案|WORD //", html_all + app + (ROOT / "README.md").read_text(encoding="utf-8")),
       "无旧品牌残留")
 
@@ -484,8 +483,8 @@ SKIP = {".git", "publish", ".probe", "obj", "bin", "build", ".gradle", "assets"}
 all_raw = sum(p.stat().st_size for p in ROOT.rglob("*")
               if p.is_file() and not (set(p.relative_to(ROOT).parts) & SKIP)
               and not p.name.startswith("yiju-") and p.suffix not in {".bundle", ".apk"})
-check(raw < 736 * 1024, "客户端原始 < 736 KiB（%.1f KiB，含 60 局完整原规则引擎 + 离线册 + 49 件妆奁 + 注册/登录两栏铺满样式）" % (raw / 1024))
-check(gz < 190 * 1024, "客户端 gzip < 190 KiB（%.1f KiB，含 60 局完整原规则引擎）" % (gz / 1024))
+check(raw < 800 * 1024, "客户端原始 < 800 KiB（%.1f KiB，含 60 局规则实现存档 + 古乐合成器 + 竖弦 + 离线册 + 注册/登录两栏铺满样式）" % (raw / 1024))
+check(gz < 215 * 1024, "客户端 gzip < 215 KiB（%.1f KiB，含古乐合成器 + 竖弦 + 60 局规则实现存档）" % (gz / 1024))
 
 print("=" * 52)
 for m in ok: print("  PASS  " + m)
@@ -555,8 +554,8 @@ sw3 = (ROOT / "client/sw.js").read_text(encoding="utf-8")
 check("GOD_NAMES" in acc3 and "弈神" in acc3 and "玄弈神" in acc3 and "太玄弈神" in acc3,
       "神域三尊与逐字加前缀的神衔")
 games3 = json.loads((ROOT / "rules/manifest.json").read_text(encoding="utf-8"))["games"]
-check(sum(1 for g in games3 if any(o["key"] == "godMode" for o in g.get("options", []))) == 60,
-      "60 局皆设神的领域开关")
+check(sum(1 for g in games3 if any(o["key"] == "godMode" for o in g.get("options", []))) == len(games3),
+      "在册玩法皆设神的领域开关")
 check("idx < 6" in acc3 and "800 - pts" in acc3 and "GodGate" in hub3,
       "叩域硬前提为此局至弈圣，且由棋馆校验")
 check("rb.GodPick(S, seat, GodTier, legal)" in room3 and "GodRollout" in rule3 and "GodPeek" in rule3,
@@ -749,6 +748,38 @@ check("myCode" in friends_js and "validCode" in friends_js and "BroadcastChannel
 check("/shell.js" in (ROOT / "client/sw.js").read_text(encoding="utf-8") and
       "yiju-v6" in (ROOT / "client/sw.js").read_text(encoding="utf-8"),
       "离线缓存收录横屏外壳并 bump 版本")
+
+
+
+# ===== v6：研究结论落地的硬断言（不是报告，是防回退） =====
+check("lunxian" in ids and "rhythm" in (ROOT/"rules/manifest.json").read_text(encoding="utf-8"),
+      "轮弦副推已入册且为独立 rhythm 形态")
+check((ROOT/"client/gu-yue.js").exists() and (ROOT/"client/event-fx.js").exists()
+      and (ROOT/"client/rhythm.js").exists() and (ROOT/"client/rhythm.css").exists(),
+      "古乐合成器 / 事件反馈谱 / 竖弦音游四件齐备")
+check("Karplus" in (ROOT/"client/gu-yue.js").read_text(encoding="utf-8")
+      or "ksBuffer" in (ROOT/"client/gu-yue.js").read_text(encoding="utf-8"),
+      "古琴为物理建模拨弦，不是方波电音")
+check(("heavyFinish" in (ROOT/"client/gu-yue.js").read_text(encoding="utf-8")
+      and "dec:9" not in (ROOT/"client/gu-yue.js").read_text(encoding="utf-8")
+      and "9.5" not in (ROOT/"client/gu-yue.js").read_text(encoding="utf-8")),
+      "终局三钟与突破五钟仍在，余韵已收短")
+check("yjJudge" in (ROOT/"client/rhythm.js").read_text(encoding="utf-8")
+      and "classList.add('fade')" in (ROOT/"client/rhythm.js").read_text(encoding="utf-8"),
+      "终局大字会自动淡出，不残留")
+check("env(safe-area-inset" in (ROOT/"client/shell.css").read_text(encoding="utf-8"),
+      "黑边根治：原生 inset 作为唯一几何源")
+check("inMatch" in (ROOT/"client/shell.js").read_text(encoding="utf-8")
+      and "navStack" in (ROOT/"client/shell.js").read_text(encoding="utf-8"),
+      "导航为状态机 + 栈 + 互斥根 + 守卫四层")
+check("yjRhythm" in (ROOT/"client/rhythm.css").read_text(encoding="utf-8")
+      and "grid-template-columns:repeat(5,1fr)" in (ROOT/"client/rhythm.css").read_text(encoding="utf-8"),
+      "竖弦为单面板五弦")
+check("闲语 · 席间" not in (ROOT/"client/index.html").read_text(encoding="utf-8"),
+      "闲谈 / 对话已从界面移除")
+check("6 局专精" in (ROOT/"client/index.html").read_text(encoding="utf-8")
+      or "专精六局" in (ROOT/"client/index.html").read_text(encoding="utf-8"),
+      "首屏写明专精，不再六十局")
 
 print("静态自检： %d 通过 / %d 失败" % (len(ok), len(err)))
 for m in err: print("  FAIL  " + m)

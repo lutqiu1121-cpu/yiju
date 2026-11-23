@@ -58,5 +58,5 @@ for (const g of vectors.games) {
 }
 console.log('='.repeat(58));
 console.log(`已搬局验收：${pass} 通过 / ${bad} 失败 / ${skip} 待搬`);
-console.log(`当前登记完整规则的局数：${PORTED.size} / 60`);
+console.log(`已搬规则实现：${PORTED.size} 局 · 玩法册在册 6 局 + 轮弦`);
 if (bad) process.exit(1);
