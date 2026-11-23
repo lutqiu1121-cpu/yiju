@@ -270,27 +270,56 @@
 
 <div id="privacyLock" class="privacy-lock" hidden><div class="pl-card"><div class="pl-seal">缄</div><b>卷已暂缄</b><p>回到页面即续前局</p></div></div>
 
-<!-- 登录 / 身份凭证：服务器为可选项，默认本地模式 -->
+<!-- 首次进入：本机注册。像游戏创建角色一样填信息，不用手机号 / 密码 / 邮箱，不上传、不联网 -->
+<div id="register" hidden>
+  <div class="lg-card">
+    <div class="lg-col lg-brand">
+      <div class="lg-title">弈 局</div>
+      <div class="lg-sub">一室棋牌 · 一页档案 · 横屏开枰</div>
+      <div class="rg-lead"><b>创建棋客</b>
+        <p>先起个称呼、挑个标记，就能开枰。资料只写在这台手机里，不上传、不联网、不用手机号，也没有账号服务器。</p></div>
+      <div class="rg-steps"><span>① 起名</span><span>② 领凭证</span><span>③ 入局</span></div>
+      <div class="lg-foot">开源技术分享 · 禁止商用 · 不提供官方服务器 · 可完全离线</div>
+    </div>
+    <div class="lg-col lg-form">
+      <div class="lg-row"><label>称呼 <i>必填 · 2–12 字</i></label>
+        <input id="rgName" maxlength="12" placeholder="给自己起个称呼" autocomplete="off"></div>
+      <div class="lg-row"><label>挑个标记</label><div class="rg-avatars" id="rgAvatars"></div></div>
+      <div class="rg-err" id="rgErr" hidden></div>
+      <button class="lg-go" id="rgGo">创建棋客 · 领凭证</button>
+      <div class="rg-note">注册只做一次。凭证随注册在本机生成，用来和局域网里的好友互相添加；断网也能下完 60 局。</div>
+    </div>
+  </div>
+</div>
+
+<!-- 注册完成后 / 已注册：凭证 + 登录页。服务器为可选项，默认本地模式 -->
 <div id="login" hidden>
   <div class="lg-card">
-    <div class="lg-title">弈 局</div>
-    <div class="lg-sub">一室棋牌 · 一页档案 · 横屏开枰</div>
-    <div class="lg-row"><label>你的凭证（只存本机，发给好友即可互相添加）</label>
-      <div class="lg-code"><b id="lgCode">—</b><button class="lg-mini" id="lgCopy">复制</button></div></div>
-    <div class="lg-row"><label>称呼</label><input id="lgName" maxlength="12" placeholder="本机棋客"></div>
-    <div class="lg-modes">
-      <button class="lg-mode on" data-mode="local"><b>本地模式 · 可局域网联机</b><small>不连任何服务器也能与隐士下完 60 局；连上同一局域网棋馆后可见好友在线</small></button>
-      <button class="lg-mode" data-mode="hall"><b>连接棋馆（可选）</b><small>填局域网地址后，可与同馆玩家设席、赴局、看好友在线</small></button>
+    <div class="lg-col lg-brand">
+      <div class="lg-title">弈 局</div>
+      <div class="lg-sub">一室棋牌 · 一页档案 · 横屏开枰</div>
+      <div class="rg-lead"><b id="lgHello">欢迎回来</b>
+        <p>凭证只存本机，发给好友即可互相添加；同一棋馆 / 局域网内才能看到对方在线，不连公网。</p></div>
+      <div class="lg-foot">开源技术分享 · 禁止商用 · 不提供官方服务器 · 可完全离线</div>
     </div>
-    <div class="lg-row" id="lgServerRow" hidden><label>棋馆地址（可留空）</label>
-      <input id="lgServer" placeholder="例：http://192.168.1.8:5080"></div>
-    <div class="lg-notice" id="lgNotice">
-      <span>服务器是<b>可选项</b>：不填就是纯本机自弈，60 局都能下。填了也只连你自己的局域网棋馆，不连公网、不设官方服务器、不需要注册账号。</span>
-      <label><input type="checkbox" id="lgNoticeChk"> 不再提示</label>
+    <div class="lg-col lg-form">
+      <div class="rg-new" id="lgNew" hidden>凭证已生成 · 只存本机，记好它</div>
+      <div class="lg-row"><label>你的凭证（发给好友即可互相添加）</label>
+        <div class="lg-code"><b id="lgCode">—</b><button class="lg-mini" id="lgCopy">复制</button></div></div>
+      <div class="lg-row"><label>称呼</label><input id="lgName" maxlength="12" placeholder="本机棋客"></div>
+      <div class="lg-modes">
+        <button class="lg-mode on" data-mode="local"><b>本地模式 · 可局域网联机</b><small>不连任何服务器也能与隐士下完 60 局；连上同一局域网棋馆后可见好友在线</small></button>
+        <button class="lg-mode" data-mode="hall"><b>连接棋馆（可选）</b><small>填局域网地址后，可与同馆玩家设席、赴局、看好友在线</small></button>
+      </div>
+      <div class="lg-row" id="lgServerRow" hidden><label>棋馆地址（可留空）</label>
+        <input id="lgServer" placeholder="例：http://192.168.1.8:5080"></div>
+      <div class="lg-notice" id="lgNotice">
+        <span>服务器是<b>可选项</b>：不填就是纯本机自弈，60 局都能下。填了也只连你自己的局域网棋馆，不连公网、不设官方服务器、不设账号服务器。</span>
+        <label><input type="checkbox" id="lgNoticeChk"> 不再提示</label>
+      </div>
+      <button class="lg-go" id="lgGo">入 局</button>
+      <div class="lg-foot" id="lgModeTag">本地模式 · 可局域网联机</div>
     </div>
-    <button class="lg-go" id="lgGo">入 局</button>
-    <div class="lg-foot" id="lgModeTag">本地模式 · 可局域网联机</div>
-    <div class="lg-foot">开源技术分享 · 禁止商用 · 不提供官方服务器 · 可完全离线</div>
   </div>
 </div>
 
@@ -339,7 +368,7 @@
 <div id="friendAdd" hidden>
   <div class="fa-card">
     <h3>加好友 · 凭证</h3>
-    <p>让对方把登录页上的凭证发给你，填在下面。凭证只存本机，不上传、不联网核对；同一棋馆 / 局域网内才能看到在线状态。</p>
+    <p>让对方把注册后生成的凭证发给你，填在下面。凭证只存本机，不上传、不联网核对；同一棋馆 / 局域网内才能看到在线状态。</p>
     <input id="faCode" placeholder="YJ-XXXX-XXXX-XXXX" autocomplete="off">
     <input class="fa-name" id="faName" maxlength="12" placeholder="备注称呼（可留空）">
     <div class="fa-btns"><button class="fa-ok" id="faOk">加入名录</button><button class="fa-no" id="faCancel">取消</button></div>

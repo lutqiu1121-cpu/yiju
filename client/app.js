@@ -706,6 +706,8 @@ function closeModal() { $('#modal').hidden = true; }
 let toastTimer;
 function toast(text) {
   const el = $('#toast'); if (!el || !text) return;
+  // 注册 / 登录页还没入局：浮条会盖住表单标签，一律留到大厅再弹
+  if (document.querySelector('#register:not([hidden]), #login:not([hidden])')) return;
   el.textContent = text; el.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
 }

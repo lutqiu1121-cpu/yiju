@@ -484,7 +484,7 @@ SKIP = {".git", "publish", ".probe", "obj", "bin", "build", ".gradle", "assets"}
 all_raw = sum(p.stat().st_size for p in ROOT.rglob("*")
               if p.is_file() and not (set(p.relative_to(ROOT).parts) & SKIP)
               and not p.name.startswith("yiju-") and p.suffix not in {".bundle", ".apk"})
-check(raw < 720 * 1024, "客户端原始 < 720 KiB（%.1f KiB，含 60 局完整原规则引擎 + 离线册 + 49 件妆奁）" % (raw / 1024))
+check(raw < 736 * 1024, "客户端原始 < 736 KiB（%.1f KiB，含 60 局完整原规则引擎 + 离线册 + 49 件妆奁 + 注册/登录两栏铺满样式）" % (raw / 1024))
 check(gz < 190 * 1024, "客户端 gzip < 190 KiB（%.1f KiB，含 60 局完整原规则引擎）" % (gz / 1024))
 
 print("=" * 52)
@@ -653,7 +653,7 @@ check(all(f in help_txt for f in ["--url", "--port", "--host", "--hall", "--root
       "--config", "--help", "--version", "QIPAI_URL", "YIJU_CONF"]),
       "启动项全表覆盖参数与环境变量")
 agent = (ROOT / "AGENT_PROMPT.md").read_text(encoding="utf-8")
-check(notice_txt in agent and "v5 修订" in agent and
+check(notice_txt in agent and ("v5 修订" in agent or "v5.2 修订" in agent) and
       "两个资产 `yiju.apk` + `yiju-release.zip`" in agent and
       "覆盖升级" in agent and "禁止卸载重装" in agent and "报错即停" in agent.replace("任一步失败即停", "报错即停"),
       "给 agent 的最终提示词自含声明 / 双资产 / 覆盖升级 / 失败即停")
@@ -672,11 +672,31 @@ shell_js = (ROOT / "client/shell.js").read_text(encoding="utf-8")
 friends_js = (ROOT / "client/friends.js").read_text(encoding="utf-8")
 html5 = (ROOT / "client/index.html").read_text(encoding="utf-8")
 app5 = (ROOT / "client/app.js").read_text(encoding="utf-8")
-check(all(k in html5 for k in ['id="login"', 'id="hall"', 'id="playPicker"',
+check(all(k in html5 for k in ['id="login"', 'id="register"', 'id="hall"', 'id="playPicker"',
                                'id="friendAdd"', 'id="screen-shop"', 'id="rotateHint"',
                                'shell.css', 'shell.js'])
       and "import * as F from './friends.js'" in shell_js,
-      "横屏登录 / 大厅 / 对弈弹层 / 好友 / 独立装扮页 / 旋转提示齐备")
+      "横屏注册 / 登录 / 大厅 / 对弈弹层 / 好友 / 独立装扮页 / 旋转提示齐备")
+# 防再犯：首次进入必须是注册，凭证由注册签发，不能一开页就分配
+check(all(k in friends_js for k in ['hasProfile', 'createProfile', 'issueCode', 'peekCode', 'AVATARS'])
+      and "F.createProfile(name, rgAvatar)" in shell_js
+      and "F.peekCode()" in shell_js
+      and 'id="rgGo"' in html5 and 'id="rgName"' in html5,
+      "首次进入先注册，凭证在「创建棋客」那一刻才签发并展示")
+check('不用手机号' in html5 and '不设账号服务器' in html5 and '不注册账号' not in html5,
+      "注册口径：本机填信息、不用手机号、不设账号服务器")
+# 防再犯：横屏铺满无黑边、内容可滚动不裁底
+check('100dvh' in shell_css and 'overflow-y:auto' in shell_css
+      and 'grid-template-columns:minmax(0,.92fr)' in shell_css
+      and 'position:sticky;bottom:0' in shell_css,
+      "注册 / 登录页横屏两栏铺满、可滚动、主按钮常驻可见")
+manifest5 = (ROOT / "android/app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
+main_java = (ROOT / "android/app/src/main/java/app/yiju/archive/MainActivity.java").read_text(encoding="utf-8")
+check('resizeableActivity="true"' in manifest5 and '@style/YijuTheme' in manifest5
+      and (ROOT / "android/app/src/main/res/values/styles.xml").exists()
+      and (ROOT / "android/app/src/main/res/drawable/window_bg.xml").exists()
+      and 'setLoadWithOverviewMode(false)' in main_java,
+      "米白窗口底色 + 关掉 overview 缩放，消除强制横屏黑边")
 check("window.YJ" in app5 and "YJ_SHELL.onGo" in app5 and "startGame" in app5,
       "对局内核向大厅外壳暴露接口，层级联动不重复实现玩法")
 check("screenOrientation=\"landscape\"" in (ROOT / "android/app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")

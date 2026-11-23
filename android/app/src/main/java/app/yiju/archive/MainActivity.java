@@ -90,7 +90,9 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);                  // 主题 / 昵称 / 战绩 / 本地存档
         s.setAllowFileAccess(false);
         s.setAllowContentAccess(false);
-        s.setLoadWithOverviewMode(true);
+        // overview 模式会把页面整体缩放居中，横屏下左右露出底色（看起来像黑边）。
+        // viewport meta 已声明 width=device-width，关掉 overview 才会真正铺满。
+        s.setLoadWithOverviewMode(false);
         s.setUseWideViewPort(true);
         s.setSupportZoom(false);
         s.setBuiltInZoomControls(false);

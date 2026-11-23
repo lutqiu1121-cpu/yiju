@@ -31,20 +31,83 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   await page.goto(BASE, { waitUntil: 'networkidle', timeout: 30000 });
   await page.waitForTimeout(900);
 
-  /* 1. 登录页 */
-  const login = await page.evaluate(() => ({
-    shown: !document.querySelector('#login').hidden,
+  /* 1. 首次进入 = 注册页，不是直接发凭证 */
+  const first = await page.evaluate(() => ({
+    reg: !document.querySelector('#register').hidden,
+    loginHidden: document.querySelector('#login').hidden,
+    codeShown: document.querySelector('#lgCode').textContent.trim(),
+    registered: localStorage.getItem('qipai.registered'),
+    docW: document.documentElement.scrollWidth, vw: window.innerWidth,
+    layerW: document.querySelector('#register').getBoundingClientRect().width,
+    goRect: (() => { const r = document.querySelector('#rgGo').getBoundingClientRect();
+                      return { bottom: r.bottom, top: r.top, h: r.height }; })(),
+    vh: window.innerHeight
+  }));
+  ok('首次进入是「创建棋客」注册页，登录页不出现', first.reg && first.loginHidden, JSON.stringify(first));
+  ok('注册前不显示、不预分配凭证', first.codeShown === '—' && !first.registered, first.codeShown);
+  ok('注册页横向铺满、无左右黑边',
+    first.docW <= first.vw + 1 && first.layerW >= first.vw - 2, `docW=${first.docW} vw=${first.vw} layerW=${first.layerW}`);
+  ok('注册按钮在首屏内、底部不被裁', first.goRect.bottom <= first.vh + 1 && first.goRect.top >= 0,
+    JSON.stringify(first.goRect) + ' vh=' + first.vh);
+  const cover = await page.evaluate(() => {
+    const r = document.querySelector('#rgName').getBoundingClientRect();
+    const top = (document.elementsFromPoint(r.left + 20, r.top + 10) || [])[0];
+    return { toastShown: document.querySelector('#toast').classList.contains('show'),
+      top: String((top && (top.id || top.className || top.tagName)) || '') };
+  });
+  ok('注册页无自动浮条遮挡表单标签', !cover.toastShown && !/toast/i.test(cover.top), JSON.stringify(cover));
+  await page.screenshot({ path: path.join(SHOTS, '00-register.png') });
+
+  /* 1.5 注册校验：空 / 单字被拦，错误就地显示 */
+  await page.click('#rgGo');
+  const err = await page.evaluate(() => ({ shown: !document.querySelector('#rgErr').hidden,
+    txt: document.querySelector('#rgErr').textContent.trim() }));
+  ok('称呼为空时拦下并就地给提示', err.shown && /2–12/.test(err.txt), err.txt);
+
+  /* 1.6 填称呼 + 选标记 → 注册完成后才给凭证 */
+  await page.fill('#rgName', '阿弈');
+  await page.click('.rg-av[data-id="zhu"]');
+  await page.click('#rgGo');
+  await page.waitForTimeout(200);
+  const regDone = await page.evaluate(() => ({
+    regHidden: document.querySelector('#register').hidden,
+    loginShown: !document.querySelector('#login').hidden,
+    newTag: !document.querySelector('#lgNew').hidden,
+    hello: document.querySelector('#lgHello').textContent.trim(),
+    code: document.querySelector('#lgCode').textContent.trim(),
+    registered: localStorage.getItem('qipai.registered'),
+    avatar: localStorage.getItem('qipai.avatar')
+  }));
+  ok('注册完成后才展示凭证，且格式为 YJ-XXXX-XXXX-XXXX',
+    regDone.regHidden && regDone.loginShown && regDone.newTag &&
+    /^YJ-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(regDone.code), JSON.stringify(regDone));
+  ok('称呼与标记写进本机、注册标记已落盘',
+    /阿弈/.test(regDone.hello) && regDone.registered === 'true' && /zhu/.test(regDone.avatar || ''), JSON.stringify(regDone));
+  await page.screenshot({ path: path.join(SHOTS, '01-login.png') });
+
+  /* 1.7 二次进入：直接登录页，不再要求注册，凭证不变 */
+  const codeBefore = regDone.code;
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(500);
+  const second = await page.evaluate(() => ({
+    regHidden: document.querySelector('#register').hidden,
+    loginShown: !document.querySelector('#login').hidden,
+    code: document.querySelector('#lgCode').textContent.trim(),
     localOn: document.querySelector('.lg-mode[data-mode="local"]').classList.contains('on'),
     serverHidden: document.querySelector('#lgServerRow').hidden,
-    notice: document.querySelector('#lgNotice') && !document.querySelector('#lgNotice').hidden,
-    code: document.querySelector('#lgCode').textContent.trim(),
-    tag: document.querySelector('#lgModeTag').textContent.trim()
+    notice: !document.querySelector('#lgNotice').hidden,
+    tag: document.querySelector('#lgModeTag').textContent.trim(),
+    goBottom: document.querySelector('#lgGo').getBoundingClientRect().bottom,
+    vh: window.innerHeight,
+    docW: document.documentElement.scrollWidth, vw: window.innerWidth
   }));
-  ok('登录页出现且默认「本地模式 · 可局域网联机」', login.shown && login.localOn && /本地模式/.test(login.tag), login.tag);
-  ok('服务器地址默认隐藏（可选项）', login.serverHidden);
-  ok('提示条存在且可关', login.notice);
-  ok('本机凭证格式不重复且能复制', /^YJ-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(login.code), login.code);
-  await page.screenshot({ path: path.join(SHOTS, '01-login.png') });
+  ok('已注册后直接进登录页，不再要求注册', second.regHidden && second.loginShown, JSON.stringify(second));
+  ok('凭证保持不变，默认「本地模式 · 可局域网联机」',
+    second.code === codeBefore && second.localOn && /本地模式/.test(second.tag), JSON.stringify(second));
+  ok('服务器地址默认隐藏（可选项）、提示条可关', second.serverHidden && second.notice);
+  ok('登录页横向铺满、入局按钮在首屏内不被裁',
+    second.docW <= second.vw + 1 && second.goBottom <= second.vh + 1,
+    `docW=${second.docW} vw=${second.vw} goBottom=${second.goBottom} vh=${second.vh}`);
 
   /* 2. 关提示并入局 */
   await page.click('#lgNoticeChk');
@@ -266,6 +329,48 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   await page.setViewportSize({ width: 1280, height: 720 });
   const rotOff = await page.evaluate(() => getComputedStyle(document.querySelector('#rotateHint')).display === 'none');
   ok('「仍要继续」可关掉横屏提示', rotOff);
+
+  /* 10.5 矮横屏（手机横屏 CSS 高度常 360–400）：铺满、主按钮可见、能滚到底 */
+  const ctx2 = await browser.newContext({
+    serviceWorkers: 'block', viewport: { width: 960, height: 400 }, deviceScaleFactor: 1
+  });
+  const p2 = await ctx2.newPage();
+  const errs2 = [];
+  p2.on('pageerror', e => errs2.push(e.message));
+  await p2.goto(BASE, { waitUntil: 'networkidle', timeout: 30000 });
+  await p2.waitForTimeout(600);
+  const small = await p2.evaluate(() => {
+    const card = document.querySelector('#register .lg-card');
+    const r = document.querySelector('#rgGo').getBoundingClientRect();
+    return { reg: !document.querySelector('#register').hidden,
+      docW: document.documentElement.scrollWidth, vw: innerWidth, vh: innerHeight,
+      goTop: r.top, goBottom: r.bottom,
+      cardScroll: card.scrollHeight, cardClient: card.clientHeight,
+      layerScroll: document.querySelector('#register').scrollHeight,
+      layerClient: document.querySelector('#register').clientHeight };
+  });
+  ok('矮横屏 960×400：注册页铺满、主按钮仍在首屏',
+    small.reg && small.docW <= small.vw + 1 && small.goBottom <= small.vh + 1 && small.goTop >= 0,
+    JSON.stringify(small));
+  ok('矮横屏内容超出时可滚动，不会裁掉底部',
+    small.cardScroll > 0 && small.layerScroll >= small.layerClient, JSON.stringify(small));
+  await p2.screenshot({ path: path.join(SHOTS, '00-register-small.png') });
+  await p2.fill('#rgName', '小屏');
+  await p2.click('#rgGo');
+  await p2.waitForTimeout(180);
+  const small2 = await p2.evaluate(() => {
+    const r = document.querySelector('#lgGo').getBoundingClientRect();
+    return { goTop: r.top, goBottom: r.bottom, vh: innerHeight,
+      docW: document.documentElement.scrollWidth, vw: innerWidth,
+      layerScroll: document.querySelector('#login').scrollHeight,
+      layerClient: document.querySelector('#login').clientHeight };
+  });
+  ok('矮横屏登录页：入局按钮常驻可见、可滚不裁底',
+    small2.goBottom <= small2.vh + 1 && small2.goTop >= 0 && small2.docW <= small2.vw + 1,
+    JSON.stringify(small2));
+  await p2.screenshot({ path: path.join(SHOTS, '01-login-small.png') });
+  await ctx2.close();
+  ok('矮横屏无 JS 异常', errs2.length === 0, errs2.slice(0, 2).join(' | '));
 
   /* 11. 控制台无报错 */
   ok('页面无 JS 异常与控制台错误', errs.length === 0, errs.slice(0, 4).join(' | '));

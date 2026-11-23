@@ -1,6 +1,6 @@
 
-const CACHE = 'yiju-v6';
-const LEGACY = ['yiju-v5', 'yiju-v4', 'yiju-v3'];
+const CACHE = 'yiju-v7';
+const LEGACY = ['yiju-v6', 'yiju-v5', 'yiju-v4', 'yiju-v3'];
 const FILES = [
   '/', '/index.html', '/app.css', '/shell.css', '/app.js', '/shell.js', '/friends.js',
   '/net.js', '/render.js', '/audio.js', '/fx.js',

@@ -29,23 +29,54 @@ function waitYJ(cb, n = 0) {
   setTimeout(() => waitYJ(cb, n + 1), 50);
 }
 
-/* ---------------- 登录页 ---------------- */
-function initLogin() {
+/* ---------------- 首次进入：本机注册（不用手机号 / 密码 / 联网） ---------------- */
+let rgAvatar = 'mo';
+function initRegister() {
+  const box = $('#rgAvatars');
+  box.innerHTML = F.AVATARS.map(a =>
+    '<button type="button" class="rg-av' + (a.id === rgAvatar ? ' on' : '') +
+    '" data-id="' + a.id + '" style="background:' + a.bg + '" title="' + esc(a.ch) + '">' + esc(a.ch) + '</button>'
+  ).join('');
+  $$('.rg-av').forEach(b => b.onclick = () => {
+    rgAvatar = b.dataset.id;
+    $$('.rg-av').forEach(x => x.classList.toggle('on', x === b));
+  });
+  $('#rgGo').onclick = () => {
+    const name = String($('#rgName').value || '').trim();
+    const err = $('#rgErr');
+    if (name.length < 2 || name.length > 12) {
+      err.textContent = '称呼要 2–12 个字，随便起一个就行';
+      err.hidden = false;
+      $('#rgName').focus();
+      return;
+    }
+    err.hidden = true;
+    const p = F.createProfile(name, rgAvatar);   // 凭证在这一刻才签发
+    F.startPresence && F.startPresence();        // 注册后才参与局域网在线状态
+    $('#register').hidden = true;
+    bindLogin(true);                             // 展示注册得到的凭证
+    $('#lgNew').hidden = false;
+    $('#lgNew').textContent = '棋客已创建 · 凭证只存本机，记好它';
+    $('#lgHello').textContent = '欢迎，' + p.name;
+  };
+}
+
+/* ---------------- 登录页（已注册 / 注册完成后） ---------------- */
+function bindLogin(justRegistered) {
   $('#login').hidden = false;
-  const code = F.myCode();
-  $('#lgCode').textContent = code;
+  $('#lgCode').textContent = F.peekCode() || '—';
   $('#lgName').value = F.myName();
   const savedMode = get('qipai.loginMode', 'local');
   const savedUrl = get('qipai.loginServer', '');
   setMode(savedMode);
   $('#lgServer').value = savedUrl;
-  if (get('qipai.loginHintOff', '') === '1') {
-    $('#lgNoticeChk').checked = true;
-    $('#lgNotice').hidden = true;
-  }
+  $('#lgNoticeChk').checked = get('qipai.loginHintOff', '') === '1';
+  $('#lgNotice').hidden = $('#lgNoticeChk').checked;
+  $('#lgNew').hidden = !justRegistered;
+  if (!justRegistered) $('#lgHello').textContent = '欢迎回来，' + F.myName();
   $$('.lg-mode').forEach(b => b.onclick = () => setMode(b.dataset.mode));
   $('#lgCopy').onclick = () => {
-    const t = code;
+    const t = F.peekCode();
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).catch(() => {});
     const r = document.createRange(); r.selectNodeContents($('#lgCode'));
     const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
@@ -62,16 +93,20 @@ function initLogin() {
     set('qipai.loginMode', mode);
     set('qipai.loginServer', url);
     set('qipai.entered', '1');
-    if (mode === 'hall' && url) {
-      YJ.settings.set('serverUrl', url);
-      YJ.reconnect();
-    } else {
-      YJ.settings.set('serverUrl', '');
-      YJ.reconnect();
-    }
+    if (mode === 'hall' && url) { YJ.settings.set('serverUrl', url); YJ.reconnect(); }
+    else { YJ.settings.set('serverUrl', ''); YJ.reconnect(); }
     $('#login').hidden = true;
     showHall();
   };
+}
+
+function initLogin() {
+  const registered = F.hasProfile();
+  $('#register').hidden = registered;
+  $('#login').hidden = true;
+  if (!registered) { initRegister(); return; }
+  F.startPresence && F.startPresence();
+  bindLogin(false);
   // 已入局过且关过提示：下次直接进大厅（凭证与模式都还在本机）
   if (get('qipai.entered', '') === '1' && get('qipai.loginHintOff', '') === '1') {
     $('#login').hidden = true;
@@ -116,7 +151,7 @@ function renderHallTop() {
   const mode = get('qipai.loginMode', 'local');
   $('#hallMode').textContent = mode === 'hall'
     ? '已连棋馆 · ' + (get('qipai.loginServer', '') || '局域网') : '本地模式 · 可局域网联机';
-  $('#hallCode').textContent = F.myCode().slice(3);
+  $('#hallCode').textContent = (F.peekCode() || 'YJ-').slice(3);
   const c = cultivation();
   $('#hallRealm').textContent = c.name + ' · 第 ' + c.idx + ' 境';
   const bal = $('#shopBalance');
@@ -153,7 +188,7 @@ function renderHallNote() {
 function renderFriends() {
   const box = $('#frList'); if (!box) return;
   const presence = YJ ? YJ.presenceCodes() : [];
-  const mine = { code: F.myCode(), name: F.myName() + '（我）' };
+  const mine = { code: F.peekCode(), name: F.myName() + '（我）' };
   const rows = [mine].concat(F.list());
   const realCount = F.list().length;
   box.innerHTML = rows.map(r => {
@@ -165,7 +200,7 @@ function renderFriends() {
       (st.on ? 'on' : '') + '"></i>' + esc(st.text) + '</small></span></div>';
   }).join('') + (realCount === 0
     ? '<div class="fr-empty"><b>还没有好友</b>把你的凭证发给对方，或点下面「凭凭证加好友」填对方的凭证。</div>'
-    : '<div class="fr-info"><b>在线怎么看</b>连上同一棋馆，或在同一局域网里开第二个窗口，才会亮起绿点；不连公网、不注册账号。</div>');
+    : '<div class="fr-info"><b>在线怎么看</b>连上同一棋馆，或在同一局域网里开第二个窗口，才会亮起绿点；不连公网、不设账号服务器。</div>');
   $('#frTip').textContent = '凭证只存本机。连同一棋馆 / 局域网时才能看到对方在线，不连公网。';
 }
 function initFriends() {
@@ -260,7 +295,7 @@ window.YJ_SHELL = {
       YJ = window.YJ;
       initLogin(); initFriends(); initPicker(); initEntries();
       this.ready = true;
-      if ($('#login').hidden && $('#hall').hidden) showHall();
+      if ($('#login').hidden && $('#register') && $('#register').hidden && $('#hall').hidden) showHall();
       renderHallTop(); renderHallNote();
     });
   }

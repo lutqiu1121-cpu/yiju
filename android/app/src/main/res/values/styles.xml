@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 由仓库维护，不要手改生成物 res/mipmap* 图标；本文件只管窗口底色。
+     强制横屏在部分系统会 letterbox 出黑边，windowBackground 铺米白即可与内页一致。 -->
+<resources>
+    <style name="YijuTheme" parent="@android:style/Theme.NoTitleBar">
+        <item name="android:windowBackground">@drawable/window_bg</item>
+        <item name="android:colorBackground">#F4F0E6</item>
+        <item name="android:statusBarColor">#F4F0E6</item>
+        <item name="android:navigationBarColor">#F4F0E6</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

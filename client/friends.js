@@ -3,6 +3,18 @@
 const KEY_CODE = 'qipai.friendCode';
 const KEY_NAME = 'qipai.friendName';
 const KEY_LIST = 'qipai.friends';
+const KEY_AVATAR = 'qipai.avatar';
+const KEY_REG = 'qipai.registered';
+
+// 本机注册时挑的标记：纯 CSS 色块 + 一字，不引外部图片、不上传
+export const AVATARS = [
+  { id: 'mo',  bg: '#2b2a26', ch: '弈' },
+  { id: 'zhu', bg: '#a3392b', ch: '朱' },
+  { id: 'qing',bg: '#26302b', ch: '青' },
+  { id: 'jin', bg: '#8a6a2f', ch: '金' },
+  { id: 'zhu2',bg: '#4f5d3a', ch: '竹' },
+  { id: 'zi',  bg: '#4b3a55', ch: '紫' },
+];
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 去掉 0/O/1/I 等易混字符
 const $ = (s) => document.querySelector(s);
@@ -17,13 +29,44 @@ function randomBlock(n) {
   return Array.from(a, x => ALPHABET[x % ALPHABET.length]).join('');
 }
 
+export function peekCode() {
+  const c = read(KEY_CODE, null);
+  return (c && /^YJ-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(c)) ? c : '';
+}
+
 export function myCode() {
-  let c = read(KEY_CODE, null);
-  if (!c || !/^YJ-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(c)) {
-    c = 'YJ-' + randomBlock(4) + '-' + randomBlock(4) + '-' + randomBlock(4);
-    write(KEY_CODE, c);
-  }
+  const c = peekCode();
+  if (c) return c;
+  return issueCode();
+}
+
+// 注册完成那一刻才签发凭证：覆盖任何早期占位，保证「凭证由注册产生」
+export function issueCode() {
+  const c = 'YJ-' + randomBlock(4) + '-' + randomBlock(4) + '-' + randomBlock(4);
+  write(KEY_CODE, c);
   return c;
+}
+
+export function hasProfile() {
+  return read(KEY_REG, false) === true && !!peekCode();
+}
+
+export function myAvatar() {
+  const a = read(KEY_AVATAR, null);
+  return AVATARS.find(x => x.id === a) || AVATARS[0];
+}
+export function setAvatar(id) {
+  const a = AVATARS.find(x => x.id === id) || AVATARS[0];
+  write(KEY_AVATAR, a.id);
+  return a;
+}
+
+export function createProfile(name, avatarId) {
+  setName(name);
+  setAvatar(avatarId);
+  const code = issueCode();
+  write(KEY_REG, true);
+  return { name: myName(), avatar: myAvatar(), code };
 }
 
 export function myName() {
@@ -50,7 +93,7 @@ export function list() {
 export function add(code, name) {
   const c = normalize(code);
   if (!validCode(c)) return { ok: false, msg: '凭证格式不对 · 应形如 YJ-XXXX-XXXX-XXXX' };
-  if (c === myCode()) return { ok: false, msg: '这是你自己的凭证' };
+  if (c === peekCode()) return { ok: false, msg: '这是你自己的凭证' };
   const arr = list();
   if (arr.some(x => x.code === c)) return { ok: false, msg: '这位已在好友名录里' };
   arr.push({ code: c, name: String(name || '').trim().slice(0, 12) || ('棋客 ' + c.slice(3, 7)) });
@@ -64,8 +107,10 @@ export function remove(code) {
 // 在线来源：本机凭证 + 同棋馆 presence + 同源多标签 BroadcastChannel 心跳。
 // 不连棋馆时好友一律显示「离线」，不会伪装在线。
 const peers = new Map();
-let chan = null;
+let chan = null, presenceStarted = false;
 export function startPresence() {
+  if (presenceStarted || !hasProfile()) return;   // 未注册不发心跳，也不提前占用凭证
+  presenceStarted = true;
   if (typeof BroadcastChannel !== 'undefined') {
     try {
       chan = new BroadcastChannel('yiju-presence');
@@ -85,7 +130,7 @@ export function startPresence() {
 }
 
 export function statusOf(code, presenceCodes) {
-  if (code === myCode()) return { text: '本机 · 在线', on: true };
+  if (code === peekCode()) return { text: '本机 · 在线', on: true };
   const p = peers.get(code);
   if (p && Date.now() - (p.at || 0) < 20000) return { text: '同一局域网 · 在线', on: true };
   const set = presenceCodes || (window.YJ && window.YJ.presenceCodes ? window.YJ.presenceCodes() : []);
